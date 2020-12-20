@@ -5,8 +5,10 @@ import * as _ from "lodash"
 import { MIN, MAX, QueryValue, QueryTuple } from "./compareTuple"
 import * as elen from "elen"
 import * as json from "../helpers/json"
-import { Tuple } from "./types"
+import { Sort, Tuple } from "./types"
 import { compare } from "../helpers/compare"
+import { resolveTripleslashReference } from "typescript"
+import { string } from "parsimmon"
 
 // MIN < null < object < array < number < string < boolean < MAX
 const encodeType = {
@@ -83,12 +85,21 @@ export function decodeQueryValue(str: string): QueryValue {
 	throw new Error("Invalid encoding: " + encoding)
 }
 
-export function encodeQueryTuple(tuple: QueryTuple) {
+function invertString(str: string) {
+	return str
+		.split("")
+		.map((char) => String.fromCharCode(~char.charCodeAt(0)))
+		.join("")
+}
+
+export function encodeQueryTuple(tuple: QueryTuple, sort: Sort = []) {
 	return tuple
-		.map((value) => {
+		.map((value, i) => {
+			const dir = sort[i] || 1
 			const encoded = encodeQueryValue(value)
+			const sorted = dir === 1 ? encoded : invertString(encoded)
 			return (
-				encoded
+				sorted
 					// B -> BB
 					.replace(/\x01/g, "\x01\x01")
 					// A -> BA
@@ -98,7 +109,7 @@ export function encodeQueryTuple(tuple: QueryTuple) {
 		.join("")
 }
 
-export function decodeQueryTuple(str: string) {
+export function decodeQueryTuple(str: string, sort: Sort = []) {
 	if (str === "") {
 		return []
 	}
@@ -123,7 +134,10 @@ export function decodeQueryTuple(str: string) {
 			.replace(/\x01\x01/g, "\x01")
 			// BA -> A
 			.replace(/\x01\x00/g, "\x00")
-		tuple.push(decodeQueryValue(unescaped))
+		const dir = sort[tuple.length] || 1
+		const unsorted = dir === 1 ? unescaped : invertString(unescaped)
+		const decoded = decodeQueryValue(unsorted)
+		tuple.push(decoded)
 		// Skip over the \x00.
 		start = end + 1
 	}

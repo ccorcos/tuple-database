@@ -449,7 +449,7 @@ storageTestSuite(
 	() => new FileStorage(rootPath("build", randomId()))
 )
 
-storageTestSuite(
-	"SQLiteStorage",
-	() => new SQLiteStorage(rootPath("build", randomId() + ".db"))
-)
+// storageTestSuite(
+// 	"SQLiteStorage",
+// 	() => new SQLiteStorage(rootPath("build", randomId() + ".db"))
+// )
