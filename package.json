@@ -25,6 +25,7 @@
   "dependencies": {
     "better-sqlite3": "^7.1.2",
     "cuid": "^2.1.8",
+    "elen": "^1.0.10",
     "fractional-indexing": "^1.2.1",
     "fs-extra": "^9.0.1",
     "json-stable-stringify": "^1.0.1",
