@@ -40,45 +40,43 @@ export class SQLiteStorage implements Storage {
 			}
 		}
 
-		const prefix = getScanPrefix(args)
-		for (let i = 0; i < prefix.length; i++) {
-			sqlArgs[`prefix${i}`] = encodeQueryValue(prefix[i])
-		}
-
 		const where = [
-			...prefix.map((value, i) => {
-				return `col${i} = $prefix${i}`
-			}),
 			...(args.end || []).map((value, i) => {
-				if (i < prefix.length) {
-					return
-				}
 				const dir = index.sort[i]
 				const cmp = dir === 1 ? `<=` : `>=`
 				return `col${i} ${cmp} $end${i}`
 			}),
-			...(args.endBefore || []).map((value, i) => {
-				if (i < prefix.length) {
-					return
-				}
+			...(args.endBefore || []).map((value, i, arr) => {
 				const dir = index.sort[i]
-				const cmp = dir === 1 ? `<` : `>`
+				// Only do the not-equal comparison on the last column so we can match the
+				// prefix and treat the set of columns as a sorted tuple.
+				const cmp =
+					i === arr.length - 1
+						? dir === 1
+							? `<`
+							: `>`
+						: dir === 1
+						? `<=`
+						: `>=`
 				return `col${i} ${cmp} $endBefore${i}`
 			}),
 			...(args.start || []).map((value, i) => {
-				if (i < prefix.length) {
-					return
-				}
 				const dir = index.sort[i]
 				const cmp = dir === 1 ? `>=` : `<=`
 				return `col${i} ${cmp} $start${i}`
 			}),
-			...(args.startAfter || []).map((value, i) => {
-				if (i < prefix.length) {
-					return
-				}
+			...(args.startAfter || []).map((value, i, arr) => {
 				const dir = index.sort[i]
-				const cmp = dir === 1 ? `>` : `<`
+				// Only do the not-equal comparison on the last column so we can match the
+				// prefix and treat the set of columns as a sorted tuple.
+				const cmp =
+					i === arr.length - 1
+						? dir === 1
+							? `>`
+							: `<`
+						: dir === 1
+						? `>=`
+						: `<=`
 				return `col${i} ${cmp} $startAfter${i}`
 			}),
 		]
