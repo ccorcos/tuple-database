@@ -1,5 +1,5 @@
 import { InMemoryStorage } from "./InMemoryStorage"
-import { Index, ScanArgs } from "./storage"
+import { Index, ScanArgs } from "./types"
 import { randomId } from "../helpers/randomId"
 import * as json from "../helpers/json"
 
@@ -14,10 +14,7 @@ const docList: Index = {
 const zero = "a0000"
 const docId = randomId()
 
-storage
-	.transact()
-	.set(docList, [zero, docId])
-	.commit()
+storage.transact().set(docList, [zero, docId]).commit()
 
 const blocks: Index = {
 	name: "block",

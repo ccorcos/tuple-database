@@ -1,8 +1,8 @@
 import * as _ from "lodash"
 import { QueryTuple, MIN, MAX } from "../database/compareTuple"
+import { Tuple } from "../database/types"
 
-export const sortedValues: QueryTuple = [
-	MIN,
+export const sortedValues: Tuple = [
 	null,
 	{},
 	{ a: 1 },
@@ -53,5 +53,6 @@ export const sortedValues: QueryTuple = [
 	"B",
 	false,
 	true,
-	MAX,
 ]
+
+export const sortedQueryValues: QueryTuple = [MIN, ...sortedValues, MAX]

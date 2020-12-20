@@ -8,18 +8,18 @@ import {
 	queryValueToString,
 	queryTupleToString,
 } from "./compareTuple"
-import { sortedValues } from "../test/fixtures"
+import { sortedQueryValues } from "../test/fixtures"
 
 describe("compareQueryValue", () => {
 	it("sorting is correct", () => {
-		for (let i = 0; i < sortedValues.length; i++) {
-			for (let j = 0; j < sortedValues.length; j++) {
+		for (let i = 0; i < sortedQueryValues.length; i++) {
+			for (let j = 0; j < sortedQueryValues.length; j++) {
 				assert.equal(
-					compareQueryValue(sortedValues[i], sortedValues[j]),
+					compareQueryValue(sortedQueryValues[i], sortedQueryValues[j]),
 					compareQueryValue(i, j),
 					`compare(${[
-						queryValueToString(sortedValues[i]),
-						queryValueToString(sortedValues[j]),
+						queryValueToString(sortedQueryValues[i]),
+						queryValueToString(sortedQueryValues[j]),
 					].join(",")})`
 				)
 			}
@@ -38,9 +38,9 @@ describe("compareTuple", () => {
 		}
 
 		// Ensure it works for all pairwise tuples.
-		for (let i = 0; i < sortedValues.length - 1; i++) {
-			const a = sortedValues[i]
-			const b = sortedValues[i + 1]
+		for (let i = 0; i < sortedQueryValues.length - 1; i++) {
+			const a = sortedQueryValues[i]
+			const b = sortedQueryValues[i + 1]
 			test([a, a], [a, b], -1)
 			test([a, b], [b, a], -1)
 			test([b, a], [b, b], -1)
@@ -49,14 +49,14 @@ describe("compareTuple", () => {
 
 	it("3-length tuple sorting is correct (sampled)", () => {
 		const sample = () => {
-			const x = sortedValues.length
+			const x = sortedQueryValues.length
 			const i = _.random(x - 1)
 			const j = _.random(x - 1)
 			const k = _.random(x - 1)
 			const tuple: QueryTuple = [
-				sortedValues[i],
-				sortedValues[j],
-				sortedValues[k],
+				sortedQueryValues[i],
+				sortedQueryValues[j],
+				sortedQueryValues[k],
 			]
 			const rank = i * x * x + j * x + k
 			return { tuple, rank }

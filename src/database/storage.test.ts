@@ -13,6 +13,7 @@ import { Index, Storage } from "./types"
 import * as _ from "lodash"
 import { rootPath } from "../helpers/rootPath"
 import { randomId } from "../helpers/randomId"
+import { sortedValues } from "../test/fixtures"
 
 function storageTestSuite(name: string, createStorage: () => Storage) {
 	describe(name, () => {
@@ -422,6 +423,20 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			} catch (error) {
 				assert.ok(error)
 			}
+		})
+
+		it("stores all types of values", () => {
+			const store = createStorage()
+
+			const index: Index = { name: "values", sort: [1] }
+			const items = sortedValues.map((item) => [item])
+			const transaction = store.transact()
+			for (const item of _.shuffle(items)) {
+				transaction.set(index, item)
+			}
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data, items)
 		})
 	})
 }
