@@ -1,16 +1,46 @@
+import * as _ from "lodash"
+import * as assert from "assert"
+import * as fs from "fs"
 import { rootPath } from "../helpers/rootPath"
 import { SQLiteStorage } from "./SQLiteStorage"
 import { Index } from "./types"
 
-const db = new SQLiteStorage(rootPath("chet.db"))
+const dbPath = rootPath("chet.db")
+fs.unlinkSync(dbPath)
 
-const people: Index = {
-	name: "people",
-	sort: [1, 1, 1],
+const store = new SQLiteStorage(dbPath)
+
+const index: Index = { name: "abc", sort: [1, 1, 1] }
+const items = [
+	["a", "a", "a"],
+	["a", "a", "b"],
+	["a", "a", "c"],
+	["a", "b", "a"],
+	["a", "b", "b"],
+	["a", "b", "c"],
+	["a", "c", "a"],
+	["a", "c", "b"],
+	["a", "c", "c"],
+]
+const transaction = store.transact()
+for (const item of _.shuffle(items)) {
+	transaction.set(index, item)
 }
-db.transact()
-	.set(people, ["Corcos", "Chet", 1])
-	.set(people, ["Last", "Simon", 2])
-	.commit()
+transaction.commit()
+const data = store.scan(index)
 
-console.log(db.scan(people))
+assert.deepEqual(data, items)
+
+const result = store.scan(index, {
+	startAfter: ["a", "a"],
+})
+
+console.log("RES", result)
+assert.deepEqual(result, [
+	["a", "b", "a"],
+	["a", "b", "b"],
+	["a", "b", "c"],
+	["a", "c", "a"],
+	["a", "c", "b"],
+	["a", "c", "c"],
+])

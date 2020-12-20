@@ -14,6 +14,7 @@ import * as _ from "lodash"
 import { rootPath } from "../helpers/rootPath"
 import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
+import { SQLiteStorage } from "./SQLiteStorage"
 
 function storageTestSuite(name: string, createStorage: () => Storage) {
 	describe(name, () => {
@@ -446,4 +447,9 @@ storageTestSuite("InMemoryStorage", () => new InMemoryStorage())
 storageTestSuite(
 	"FileStorage",
 	() => new FileStorage(rootPath("build", randomId()))
+)
+
+storageTestSuite(
+	"SQLiteStorage",
+	() => new SQLiteStorage(rootPath("build", randomId() + ".db"))
 )

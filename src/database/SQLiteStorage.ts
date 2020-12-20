@@ -1,6 +1,10 @@
-import { ScanArgs, Index, Writes, Storage, Transaction, Tuple } from "./types"
+import { ScanArgs, Index, Writes, Storage, Tuple } from "./types"
 import sqlite from "better-sqlite3"
 import { InMemoryTransaction } from "./InMemoryStorage"
+import { decodeQueryValue, encodeQueryValue } from "./codec"
+import { compare } from "../helpers/compare"
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript"
+import { QueryValue } from "./compareTuple"
 
 export class SQLiteStorage implements Storage {
 	private db: sqlite.Database
@@ -13,45 +17,93 @@ export class SQLiteStorage implements Storage {
 		// TODO: sanitize SQL index name.
 		const select = `select * from ${index.name}`
 
-		// TODO: serialize these args.
-		const values: Array<any> = []
+		// Construct the arguments.
+		const sqlArgs = {}
+		if (args.end) {
+			for (let i = 0; i < args.end.length; i++) {
+				sqlArgs[`end${i}`] = encodeQueryValue(args.end[i])
+			}
+		}
+		if (args.endBefore) {
+			for (let i = 0; i < args.endBefore.length; i++) {
+				sqlArgs[`endBefore${i}`] = encodeQueryValue(args.endBefore[i])
+			}
+		}
+		if (args.start) {
+			for (let i = 0; i < args.start.length; i++) {
+				sqlArgs[`start${i}`] = encodeQueryValue(args.start[i])
+			}
+		}
+		if (args.startAfter) {
+			for (let i = 0; i < args.startAfter.length; i++) {
+				sqlArgs[`startAfter${i}`] = encodeQueryValue(args.startAfter[i])
+			}
+		}
+
+		const prefix = getScanPrefix(args)
+		for (let i = 0; i < prefix.length; i++) {
+			sqlArgs[`prefix${i}`] = encodeQueryValue(prefix[i])
+		}
 
 		const where = [
-			...index.sort.map((dir, i) => {
-				if (args.end) {
-					const value = args.end[i]
-					values.push(value)
-					const cmp = dir === 1 ? `<=` : `>=`
-					return `col${i} ${cmp} $${values.length - 1}`
-				} else if (args.endBefore) {
-					const value = args.endBefore[i]
-					values.push(value)
-					const cmp = dir === 1 ? `<` : `>`
-					return `col${i} ${cmp} $${values.length - 1}`
-				}
+			...prefix.map((value, i) => {
+				return `col${i} = $prefix${i}`
 			}),
-			...index.sort.map((dir, i) => {
-				if (args.start) {
-					const value = args.start[i]
-					values.push(value)
-					const cmp = dir === 1 ? `>=` : `<=`
-					return `col${i} ${cmp} $${values.length - 1}`
-				} else if (args.startAfter) {
-					const value = args.startAfter[i]
-					values.push(value)
-					const cmp = dir === 1 ? `>` : `<`
-					return `col${i} ${cmp} $${values.length - 1}`
+			...(args.end || []).map((value, i) => {
+				if (i < prefix.length) {
+					return
 				}
+				const dir = index.sort[i]
+				const cmp = dir === 1 ? `<=` : `>=`
+				return `col${i} ${cmp} $end${i}`
+			}),
+			...(args.endBefore || []).map((value, i) => {
+				if (i < prefix.length) {
+					return
+				}
+				const dir = index.sort[i]
+				const cmp = dir === 1 ? `<` : `>`
+				return `col${i} ${cmp} $endBefore${i}`
+			}),
+			...(args.start || []).map((value, i) => {
+				if (i < prefix.length) {
+					return
+				}
+				const dir = index.sort[i]
+				const cmp = dir === 1 ? `>=` : `<=`
+				return `col${i} ${cmp} $start${i}`
+			}),
+			...(args.startAfter || []).map((value, i) => {
+				if (i < prefix.length) {
+					return
+				}
+				const dir = index.sort[i]
+				const cmp = dir === 1 ? `>` : `<`
+				return `col${i} ${cmp} $startAfter${i}`
 			}),
 		]
+			.filter(Boolean)
+			.join(" and ")
 
-		const limit = args.limit ? `limit ${args.limit}` : undefined
+		let query = select
+		if (where) {
+			query += `\nwhere\n${where}`
+		}
+		if (args.limit) {
+			query += `\nlimit ${args.limit}`
+		}
 
-		const query = [select, ...where, limit].filter(Boolean).join("\n")
-
-		const results = this.db.prepare(query).all(...values)
-
-		return results
+		try {
+			console.log("QUERY", query, sqlArgs)
+			const results = this.db.prepare(query).all(sqlArgs)
+			return results.map(decodeObj)
+		} catch (e) {
+			if (e.message.includes("no such table:")) {
+				return []
+			} else {
+				throw e
+			}
+		}
 	}
 
 	transact() {
@@ -65,7 +117,7 @@ export class SQLiteStorage implements Storage {
 		// Make sure the tables exist.
 		for (const [name, { sets, removes, sort }] of Object.entries(writes)) {
 			const tableCols = sort
-				.map((dir, i) => `col${i} numeric ${dir === 1 ? "asc" : "desc"}`)
+				.map((dir, i) => `col${i} text ${dir === 1 ? "asc" : "desc"}`)
 				.join(",\n\t")
 			const createTable = `
 				create table if not exists ${name} (
@@ -97,17 +149,11 @@ export class SQLiteStorage implements Storage {
 					deletes: Array<Tuple>
 				}) => {
 					for (const tuple of inserts) {
-						const obj = {}
-						for (let i = 0; i < tuple.length; i++) {
-							obj[`col${i}`] = tuple[i]
-						}
+						const obj = encodeTuple(tuple)
 						insertQuery.run(obj)
 					}
 					for (const tuple of deletes) {
-						const obj = {}
-						for (let i = 0; i < tuple.length; i++) {
-							obj[`col${i}`] = tuple[i]
-						}
+						const obj = encodeTuple(tuple)
 						deleteQuery.run(obj)
 					}
 				}
@@ -116,4 +162,36 @@ export class SQLiteStorage implements Storage {
 			runTransaction({ inserts: sets, deletes: removes })
 		}
 	}
+}
+
+function encodeTuple(tuple: Tuple) {
+	const obj = {}
+	for (let i = 0; i < tuple.length; i++) {
+		obj[`col${i}`] = encodeQueryValue(tuple[i])
+	}
+	return obj
+}
+
+function decodeObj(obj: { [key: string]: string }) {
+	const tuple = Object.entries(obj)
+		.sort(([k1], [k2]) => compare(k1, k2))
+		.map(([k, value]) => decodeQueryValue(value))
+
+	return tuple as Tuple // TODO: wtf min/max?
+}
+
+function getScanPrefix(scanArgs: ScanArgs) {
+	// Compute the common prefix.
+	const prefix: Array<QueryValue> = []
+	const start = scanArgs.start || scanArgs.startAfter || []
+	const end = scanArgs.end || scanArgs.endBefore || []
+	const len = Math.min(start.length, end.length)
+	for (let i = 0; i < len; i++) {
+		if (start[i] === end[i]) {
+			prefix.push(start[i])
+		} else {
+			break
+		}
+	}
+	return prefix
 }
