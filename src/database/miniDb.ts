@@ -1,12 +1,7 @@
-// - delete all the triplestore stuff and index updater stuff.
-// - just storage and subscriptions for arbirary tuples.
-// - proper encoding with relation and json options
-// - sqlite storage, file storage, in-memory, and localstorage
-// - move forward with building notebook app.
-
 import { InMemoryStorage } from "./InMemoryStorage"
 import { Index, ScanArgs } from "./storage"
 import { randomId } from "../helpers/randomId"
+import * as json from "../helpers/json"
 
 const storage = new InMemoryStorage()
 
@@ -32,4 +27,11 @@ const blocks: Index = {
 // TODO: allow tuples and json here.
 storage
 	.transact()
-	.set(blocks, [docId, JSON.stringify({ id: docId, type: "doc", content: [] })])
+	.set(blocks, [docId, json.stringify({ id: docId, type: "doc", content: [] })])
+	.commit()
+
+// subscribe(storage, {gt: ...})
+
+// TODO:
+// start from scratch again
+// use prefix explicitly for queries.

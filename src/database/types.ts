@@ -1,13 +1,10 @@
-export type Value = string | number | boolean | null
-
-export function isValue(x: any): x is Value {
-	return (
-		typeof x === "string" ||
-		typeof x === "number" ||
-		typeof x === "boolean" ||
-		x === null
-	)
-}
+export type Value =
+	| string
+	| number
+	| boolean
+	| null
+	| Array<Value>
+	| { [key: string]: Value }
 
 export type Tuple = Array<Value>
 
@@ -32,13 +29,11 @@ export interface ReadOnlyStorage {
 	scan(index: Index, args: ScanArgs): Array<Tuple>
 }
 
-// TODO: rename to IndexStorage
 export interface Storage {
 	scan(index: Index, args?: ScanArgs): Array<Tuple>
 	transact(): Transaction
 }
 
-// TODO: rename to IndexWrites
 export type Writes = {
 	[index: string]: { sort: Sort; sets: Array<Tuple>; removes: Array<Tuple> }
 }

@@ -1,6 +1,5 @@
-import { Tuple, Sort } from "./storage"
+import { Tuple, Sort, ScanArgs } from "./types"
 import { binarySearch } from "../helpers/binarySearch"
-import { ScanArgs } from "./storage"
 import { MAX, MIN, compareTuple, QueryTuple } from "./compareTuple"
 
 export function set(sort: Sort, data: Array<Tuple>, tuple: Tuple) {

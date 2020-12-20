@@ -2,8 +2,7 @@ import p from "parsimmon"
 import * as _ from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"
-import { Value, Tuple, Index } from "./storage"
-import { Storage, ScanArgs } from "./storage"
+import { Value, Tuple, Index, Storage, ScanArgs } from "./types"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { scan, remove, set } from "./indexHelpers"
 
@@ -11,7 +10,7 @@ function exact<T extends string>(str: T) {
 	return p.string(str) as p.Parser<T>
 }
 
-const StringParser = p<string>(function(input, start) {
+const StringParser = p<string>(function (input, start) {
 	const boundaryChar = '"'
 	const escapeChar = "\\"
 	if (input.charAt(start) !== boundaryChar) {
@@ -33,7 +32,7 @@ const StringParser = p<string>(function(input, start) {
 	return p.makeFailure(end, `Could not find matching ${boundaryChar}`)
 })
 
-const NumberParser = p.regex(/[0-9\.\_\-\+e]+/).chain(str => {
+const NumberParser = p.regex(/[0-9\.\_\-\+e]+/).chain((str) => {
 	const n = parseFloat(str.replace(/_/g, ""))
 	if (isNaN(n)) {
 		return p.fail(`Could not parse number ${str}`)
@@ -92,7 +91,7 @@ export class FileStorage implements Storage {
 	transact() {
 		return new InMemoryTransaction({
 			scan: (index, args) => this.scan(index, args),
-			commit: writes => {
+			commit: (writes) => {
 				Object.entries(writes).map(([name, { sets, removes, sort }]) => {
 					const data = this.cache.get(name)
 					// TODO: more efficent merge.
