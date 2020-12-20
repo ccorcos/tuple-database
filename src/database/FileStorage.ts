@@ -1,4 +1,4 @@
-import * as p from "parsimmon"
+import p from "parsimmon"
 import * as _ from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"

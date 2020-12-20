@@ -1,6 +1,6 @@
 import * as _ from "lodash"
-import * as uuidv4 from "uuid/v4"
-import * as md5 from "md5"
+import uuidv4 from "uuid/v4"
+import md5 from "md5"
 
 export function randomId(str?: string): string {
 	if (str) {
