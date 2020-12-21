@@ -1,19 +1,39 @@
 const { FileStorage } = require("../build/database/FileStorage")
 const { ReactiveStorage } = require("../build/database/ReactiveStorage")
+const { MIN, MAX } = require("../build/database/types")
+const _ = require("lodash")
 
-const dbPath = __dirname + "/example.txt"
+const dbPath = __dirname + "/example.db"
 const db = new ReactiveStorage(new FileStorage(dbPath))
 
 // =========================================================================
 
 const ReactDOM = require("react-dom")
 const React = require("react")
-const { useEffect } = require("react")
+const { useEffect, useMemo, useCallback } = require("react")
 
 const h = React.createElement
 
+function useDeepEqual(obj) {
+	const prev = React.useRef()
+	React.useEffect(() => {
+		prev.current = obj
+	}, [obj])
+
+	const same = _.isEqual(prev.current, obj)
+	const id = React.useRef(Math.random())
+	if (same) {
+		return id.current
+	} else {
+		id.current = Math.random()
+		return id.current
+	}
+}
+
 function useSubscribe(index, args) {
 	const [state, setState] = React.useState([])
+
+	const argsDep = useDeepEqual(args)
 
 	useEffect(() => {
 		const [result, unsubscribe] = db.subscribe(index, args, (updates) => {
@@ -23,9 +43,34 @@ function useSubscribe(index, args) {
 		})
 		setState(result)
 		return unsubscribe
-	}, [index]) // TODO: use arg here too, but we need
+	}, [index, argsDep])
 
 	return state
+}
+
+// Write to both indexes.
+function writeTodo(todo) {
+	db.transact()
+		.set("todos", [-todo.time, todo])
+		.set("todos-complete", [todo.completed, -todo.time, todo])
+		.commit()
+}
+
+// TODO: compose together write and remove logic.
+function updateTodo(oldTodo, todo) {
+	db.transact()
+		.remove("todos", [-oldTodo.time, oldTodo])
+		.remove("todos-complete", [oldTodo.completed, -oldTodo.time, oldTodo])
+		.set("todos", [-todo.time, todo])
+		.set("todos-complete", [todo.completed, -todo.time, todo])
+		.commit()
+}
+
+function deleteTodo(oldTodo) {
+	db.transact()
+		.remove("todos", [-oldTodo.time, oldTodo])
+		.remove("todos-complete", [oldTodo.completed, -oldTodo.time, oldTodo])
+		.commit()
 }
 
 function App() {
@@ -36,10 +81,26 @@ function App() {
 			title: "",
 			completed: false,
 		}
-		db.transact().set("todos", [-todo.time, todo]).commit()
+		writeTodo(todo)
 	}, [])
 
-	const todos = useSubscribe("todos", {}).map(([time, todo]) => todo)
+	const [state, setState] = React.useState("all") // "all" | "completed" | "not-completed"
+
+	const onChangeFilter = useCallback((e) => {
+		setState(e.target.value)
+	}, [])
+
+	const index = state === "all" ? "todos" : "todos-complete"
+	const args =
+		state === "all"
+			? {}
+			: state === "completed"
+			? { gte: [true, MIN], lte: [true, MAX] }
+			: { gte: [false, MIN], lte: [false, MAX] }
+
+	const todos = useSubscribe(index, args).map(
+		(tuple) => tuple[tuple.length - 1]
+	)
 
 	return h(
 		"div",
@@ -49,23 +110,55 @@ function App() {
 			{ onClick: handleClick, style: { margin: "1em 1.5em" } },
 			"New To-do"
 		),
+
+		// Filters
+		h(
+			"div",
+			{},
+			h("input", {
+				type: "radio",
+				value: "all",
+				checked: state === "all",
+				onChange: onChangeFilter,
+			}),
+			"All"
+		),
+
+		h(
+			"div",
+			{},
+			h("input", {
+				type: "radio",
+				value: "completed",
+				checked: state === "completed",
+				onChange: onChangeFilter,
+			}),
+			"Completed"
+		),
+
+		h(
+			"div",
+			{ style: { marginBottom: "1em" } },
+			h("input", {
+				type: "radio",
+				value: "not-completed",
+				checked: state === "not-completed",
+				onChange: onChangeFilter,
+			}),
+			"Not Completed"
+		),
+
 		...todos.map((todo) => {
 			const onChange = (e) => {
-				db.transact()
-					.remove("todos", [-todo.time, todo])
-					.set("todos", [-todo.time, { ...todo, title: e.target.value }])
-					.commit()
+				updateTodo(todo, { ...todo, title: e.target.value })
 			}
 
 			const onToggle = (e) => {
-				db.transact()
-					.remove("todos", [-todo.time, todo])
-					.set("todos", [-todo.time, { ...todo, completed: !todo.completed }])
-					.commit()
+				updateTodo(todo, { ...todo, completed: !todo.completed })
 			}
 
 			const onDelete = (e) => {
-				db.transact().remove("todos", [-todo.time, todo]).commit()
+				deleteTodo(todo)
 			}
 
 			return h(
