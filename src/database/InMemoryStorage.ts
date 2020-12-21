@@ -80,29 +80,3 @@ export class InMemoryTransaction implements Transaction {
 		return this.storage.commit(this.writes)
 	}
 }
-
-// import { getScanPrefix } from "./subscriptionHelpers"
-// import { randomId } from "../helpers/randomId"
-
-// export class ReactiveInMemoryStorage extends InMemoryStorage {
-// 	listeners = new InMemoryStorage()
-// 	callbacks: Record<string, (result: Array<Tuple>) => void> = {}
-
-// 	subscribe(
-// 		index: BtreeIndex,
-// 		args: ScanArgs,
-// 		callback: (result: Array<Tuple>) => void
-// 	) {
-// 		const id = randomId()
-// 		const prefix = getScanPrefix(args)
-
-// 		this.listeners.transact().set(listen, [prefix, id])
-
-// 		const result = this.scan(index, args)
-// 		callback(result)
-// 	}
-
-// 	protected commit = (writes: BtreeWrites) => {
-// 		super.commit(writes)
-// 	}
-// }

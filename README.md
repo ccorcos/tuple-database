@@ -18,4 +18,7 @@ Next:
 
 - sqlite storage, file storage, in-memory, and localstorage
 
+# Explainer
 
+- This database is just a glorified binary tree with component-wise tuple comparison.
+- We encode all tuples into strings so we can throw everything in a single column in SQLite or use LevelDb, DynamoDb, etc.
