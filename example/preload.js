@@ -24,8 +24,9 @@ function useSubscribe(index, args) {
 
 	useEffect(() => {
 		const [result, unsubscribe] = db.subscribe(index, args, (updates) => {
-			// TODO: use the updates argument to compute update rather than run the
-			// scan all over again.
+			// TODO: for simplicity, we can just do a db.scan to re-query the database,
+			// but with a little more effort, we can use the updates argument to this
+			// callback function to perform a minimal update on the results.
 			setState(db.scan(index, args))
 		})
 		setState(result)
