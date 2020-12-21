@@ -21,7 +21,6 @@ export class InMemoryStorage implements Storage {
 			if (!this.map[name]) {
 				this.map[name] = []
 			}
-			// TODO: more efficent merge.
 			for (const tuple of removes) {
 				remove(this.map[name], tuple)
 			}
@@ -64,7 +63,6 @@ export class InMemoryTransaction implements Transaction {
 		const result = this.storage.scan(index, args)
 		if (this.writes[index]) {
 			const sets = scan(this.writes[index].sets, args)
-			// TODO: more efficent merge.
 			for (const tuple of sets) {
 				set(result, tuple)
 			}

@@ -35,7 +35,6 @@ export class FileStorage implements Storage {
 	commit(writes: Writes) {
 		Object.entries(writes).map(([name, { sets, removes }]) => {
 			const data = this.cache.get(name)
-			// TODO: more efficent merge.
 			for (const tuple of removes) {
 				remove(data, tuple)
 			}

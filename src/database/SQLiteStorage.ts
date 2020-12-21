@@ -38,7 +38,6 @@ export class SQLiteStorage implements Storage {
 			.filter(Boolean)
 			.join(" and ")
 
-		// TODO: sanitize SQL index name.
 		let sqlQuery = `select * from ${sanitizeIndexName(index)}`
 		if (where) {
 			sqlQuery += " where "

@@ -1,5 +1,4 @@
 // This codec is should create a component-wise lexicographically sortable array.
-// TODO: for another time, handle variable sort directions for the tuple encoding.
 
 import * as _ from "lodash"
 import * as elen from "elen"
@@ -73,7 +72,7 @@ export function decodeValue(str: string): Value {
 		return elen.decode(rest)
 	}
 	if (encoding === "array") {
-		return decodeTuple(rest) as Tuple // TODO: this is weird.
+		return decodeTuple(rest)
 	}
 	if (encoding === "object") {
 		return decodeObjectValue(rest)
