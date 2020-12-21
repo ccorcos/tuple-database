@@ -1,13 +1,12 @@
-import { Tuple, ScanArgs, Index, Writes, Storage, Transaction } from "./types"
+import { Tuple, ScanArgs, Writes, Storage, Transaction } from "./types"
 import { scan, remove, set } from "./indexHelpers"
 
 export class InMemoryStorage implements Storage {
 	map: { [index: string]: Array<Tuple> } = {}
 
-	scan = (index: Index, args: ScanArgs = {}) => {
-		const { name, sort } = index
-		const data = this.map[name] || []
-		return scan(sort, data, args)
+	scan = (index: string, args: ScanArgs = {}) => {
+		const data = this.map[index] || []
+		return scan(data, args)
 	}
 
 	transact() {
@@ -18,23 +17,23 @@ export class InMemoryStorage implements Storage {
 	}
 
 	protected commit = (writes: Writes) => {
-		for (const [name, { sets, removes, sort }] of Object.entries(writes)) {
+		for (const [name, { sets, removes }] of Object.entries(writes)) {
 			if (!this.map[name]) {
 				this.map[name] = []
 			}
 			// TODO: more efficent merge.
 			for (const tuple of removes) {
-				remove(sort, this.map[name], tuple)
+				remove(this.map[name], tuple)
 			}
 			for (const tuple of sets) {
-				set(sort, this.map[name], tuple)
+				set(this.map[name], tuple)
 			}
 		}
 	}
 }
 
 interface TransactionArgs {
-	scan(index: Index, args: ScanArgs): Array<Tuple>
+	scan(index: string, args: ScanArgs): Array<Tuple>
 	commit(writes: Writes): void
 }
 
@@ -43,38 +42,35 @@ export class InMemoryTransaction implements Transaction {
 
 	writes: Writes = {}
 
-	set(index: Index, value: Tuple) {
-		const { name, sort } = index
-		if (!this.writes[name]) {
-			this.writes[name] = { sets: [], removes: [], sort }
+	set(index: string, value: Tuple) {
+		if (!this.writes[index]) {
+			this.writes[index] = { sets: [], removes: [] }
 		}
-		remove(sort, this.writes[name].removes, value)
-		set(sort, this.writes[name].sets, value)
+		remove(this.writes[index].removes, value)
+		set(this.writes[index].sets, value)
 		return this
 	}
 
-	remove(index: Index, value: Tuple) {
-		const { name, sort } = index
-		if (!this.writes[name]) {
-			this.writes[name] = { sets: [], removes: [], sort }
+	remove(index: string, value: Tuple) {
+		if (!this.writes[index]) {
+			this.writes[index] = { sets: [], removes: [] }
 		}
-		remove(sort, this.writes[name].sets, value)
-		set(sort, this.writes[name].removes, value)
+		remove(this.writes[index].sets, value)
+		set(this.writes[index].removes, value)
 		return this
 	}
 
-	scan(index: Index, args: ScanArgs = {}) {
-		const { name, sort } = index
+	scan(index: string, args: ScanArgs = {}) {
 		const result = this.storage.scan(index, args)
-		if (this.writes[name]) {
-			const sets = scan(sort, this.writes[name].sets, args)
+		if (this.writes[index]) {
+			const sets = scan(this.writes[index].sets, args)
 			// TODO: more efficent merge.
 			for (const tuple of sets) {
-				set(sort, result, tuple)
+				set(result, tuple)
 			}
-			const removes = scan(sort, this.writes[name].removes, args)
+			const removes = scan(this.writes[index].removes, args)
 			for (const tuple of removes) {
-				remove(sort, result, tuple)
+				remove(result, tuple)
 			}
 		}
 		return result

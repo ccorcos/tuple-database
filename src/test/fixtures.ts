@@ -1,21 +1,20 @@
 import * as _ from "lodash"
-import { QueryTuple, MIN, MAX } from "../database/compareTuple"
-import { Tuple } from "../database/types"
+import { Tuple, QueryTuple, MIN, MAX } from "../database/types"
 
 export const sortedValues: Tuple = [
 	null,
-	// {},
-	// { a: 1 },
-	// { a: 2 },
-	// { a: 2, b: 1 },
-	// { a: 2, c: 2 },
-	// { b: 1 },
-	// [],
-	// [1],
-	// [1, [2]],
-	// [1, 2],
-	// [1, 3],
-	// [2],
+	{},
+	{ a: 1 },
+	{ a: 2 },
+	{ a: 2, b: 1 },
+	{ a: 2, c: 2 },
+	{ b: 1 },
+	[],
+	[1],
+	[1, [2]],
+	[1, 2],
+	[1, 3],
+	[2],
 	-Number.MAX_VALUE,
 	Number.MIN_SAFE_INTEGER,
 	-999999,

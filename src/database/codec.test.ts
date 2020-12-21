@@ -9,12 +9,8 @@ import {
 	encodeQueryTuple,
 } from "./codec"
 import { compare } from "../helpers/compare"
-import {
-	queryValueToString,
-	QueryTuple,
-	queryTupleToString,
-} from "./compareTuple"
-import { Sort } from "./types"
+import { queryValueToString, queryTupleToString } from "./compareTuple"
+import { QueryTuple } from "./types"
 
 describe("codec", () => {
 	describe("encodeQueryValue", () => {
@@ -59,9 +55,9 @@ describe("codec", () => {
 
 	describe("encodeQueryTuple", () => {
 		it("Encodes and decodes properly", () => {
-			const test = (tuple: QueryTuple, sort: Sort = []) => {
-				const encoded = encodeQueryTuple(tuple, sort)
-				const decoded = decodeQueryTuple(encoded, sort)
+			const test = (tuple: QueryTuple) => {
+				const encoded = encodeQueryTuple(tuple)
+				const decoded = decodeQueryTuple(encoded)
 				assert.deepStrictEqual(
 					decoded,
 					tuple,
@@ -76,11 +72,9 @@ describe("codec", () => {
 			for (let i = 0; i < sortedValues.length; i++) {
 				const a = sortedValues[i]
 				test([a])
-				test([a], [-1])
 				for (let j = 0; j < sortedValues.length; j++) {
 					const b = sortedValues[j]
 					test([a, b])
-					test([a, b], [1, -1])
 				}
 			}
 
@@ -90,7 +84,6 @@ describe("codec", () => {
 					for (const b of opts) {
 						for (const c of opts) {
 							test([a, b, c])
-							test([a, b, c], [-1, 1, -1])
 						}
 					}
 				}
@@ -98,21 +91,15 @@ describe("codec", () => {
 		})
 
 		it("Encodes in lexicographical order", () => {
-			const test = (
-				aTuple: QueryTuple,
-				bTuple: QueryTuple,
-				sort: Sort,
-				result: number
-			) => {
-				const a = encodeQueryTuple(aTuple, sort)
-				const b = encodeQueryTuple(bTuple, sort)
+			const test = (aTuple: QueryTuple, bTuple: QueryTuple, result: number) => {
+				const a = encodeQueryTuple(aTuple)
+				const b = encodeQueryTuple(bTuple)
 				assert.deepStrictEqual(
 					compare(a, b),
 					result,
 					`compareQueryTuple(${[
 						queryTupleToString(aTuple),
 						queryTupleToString(bTuple),
-						JSON.stringify(sort),
 					].join(", ")}) === compare(${[
 						JSON.stringify(a),
 						JSON.stringify(b),
@@ -124,24 +111,18 @@ describe("codec", () => {
 				for (let j = 0; j < sortedValues.length; j++) {
 					const a = sortedValues[i]
 					const b = sortedValues[j]
-					test([a, a], [a, b], [1, 1], compare(i, j))
-					test([a, a], [a, b], [1, -1], not(compare(i, j)))
-					test([a, a], [a, b], [-1, 1], compare(i, j))
-
-					test([a, b], [b, a], [1, 1], compare(i, j))
-					test([a, b], [b, a], [1, -1], compare(i, j))
-					test([a, b], [b, a], [-1, 1], not(compare(i, j)))
-
-					test([b, a], [b, b], [1, 1], compare(i, j))
+					test([a, a], [a, b], compare(i, j))
+					test([a, b], [b, a], compare(i, j))
+					test([b, a], [b, b], compare(i, j))
 					if (i !== j) {
-						test([a], [a, a], [1, 1], -1)
-						test([a], [a, b], [1, 1], -1)
-						test([a], [b, a], [1, 1], compare(i, j))
-						test([a], [b, b], [1, 1], compare(i, j))
-						test([b], [a, a], [1, 1], compare(j, i))
-						test([b], [a, b], [1, 1], compare(j, i))
-						test([b], [b, a], [1, 1], -1)
-						test([b], [b, b], [1, 1], -1)
+						test([a], [a, a], -1)
+						test([a], [a, b], -1)
+						test([a], [b, a], compare(i, j))
+						test([a], [b, b], compare(i, j))
+						test([b], [a, a], compare(j, i))
+						test([b], [a, b], compare(j, i))
+						test([b], [b, a], -1)
+						test([b], [b, b], -1)
 					}
 				}
 			}
@@ -164,7 +145,7 @@ describe("codec", () => {
 			for (let iter = 0; iter < 100_000; iter++) {
 				const a = sample()
 				const b = sample()
-				test(a.tuple, b.tuple, [1, 1, 1], compare(a.rank, b.rank))
+				test(a.tuple, b.tuple, compare(a.rank, b.rank))
 			}
 		})
 	})

@@ -1,68 +1,44 @@
-import { Tuple, Sort, ScanArgs } from "./types"
+import { Tuple, ScanArgs, MAX, MIN, QueryTuple } from "./types"
 import { binarySearch } from "../helpers/binarySearch"
-import { MAX, MIN, compareTuple, QueryTuple } from "./compareTuple"
+import { compareTuple } from "./compareTuple"
 
-export function set(sort: Sort, data: Array<Tuple>, tuple: Tuple) {
-	const result = binarySearch(data, tuple, compareTuple(sort))
+export function set(data: Array<Tuple>, tuple: Tuple) {
+	const result = binarySearch(data, tuple, compareTuple)
 	if (result.closest !== undefined) {
 		// Insert at missing index.
 		data.splice(result.closest, 0, tuple)
 	}
 }
 
-export function remove(sort: Sort, data: Array<Tuple>, tuple: Tuple) {
-	let { found } = binarySearch(data, tuple, compareTuple(sort))
+export function remove(data: Array<Tuple>, tuple: Tuple) {
+	let { found } = binarySearch(data, tuple, compareTuple)
 	if (found !== undefined) {
 		// Remove from index.
 		data.splice(found, 1)
 	}
 }
 
-function getTupleBoundary(
-	sort: Sort,
-	type: "start" | "startAfter" | "end" | "endBefore",
-	tuple: Tuple
-) {
-	const bound: QueryTuple = [...tuple]
-	for (let i = bound.length; i < sort.length; i++) {
-		if (type === "startAfter") {
-			bound[i] = sort[i] === 1 ? MAX : MIN
-		} else if (type === "start") {
-			bound[i] = sort[i] === 1 ? MIN : MAX
-		} else if (type === "endBefore") {
-			bound[i] = sort[i] === 1 ? MIN : MAX
-		} else if (type === "end") {
-			bound[i] = sort[i] === 1 ? MAX : MIN
-		}
-	}
-	return bound
-}
+export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
+	const start: QueryTuple | undefined = args.gte || args.gt
+	// if (args.gt) {
+	// 	start?.push(MAX)
+	// }
+	const end: QueryTuple | undefined = args.lte || args.lt
+	// if (args.lt) {
+	// 	end?.push(MIN)
+	// }
 
-export function getScanBounds(sort: Sort, args: ScanArgs) {
-	const start: QueryTuple = args.startAfter
-		? getTupleBoundary(sort, "startAfter", args.startAfter)
-		: getTupleBoundary(sort, "start", args.start || [])
-	const end: QueryTuple = args.endBefore
-		? getTupleBoundary(sort, "endBefore", args.endBefore)
-		: getTupleBoundary(sort, "end", args.end || [])
-	return { start, end }
-}
-
-export function scan(sort: Sort, data: Array<Tuple>, args: ScanArgs = {}) {
-	const { start, end } = getScanBounds(sort, args)
-	const cmp = compareTuple(sort)
-
-	if (cmp(start, end) > 0) {
+	if (start && end && compareTuple(start, end) > 0) {
 		throw new Error("Invalid bounds.")
 	}
 
 	// Start at lower bound.
-	const result = binarySearch(data, start, cmp)
+	const result = binarySearch(data, start || [], compareTuple)
 	let i =
 		result.found !== undefined
-			? args.start
-				? result.found
-				: result.found + 1
+			? args.gt
+				? result.found + 1
+				: result.found
 			: result.closest
 
 	const results: Array<Tuple> = []
@@ -77,12 +53,18 @@ export function scan(sort: Sort, data: Array<Tuple>, args: ScanArgs = {}) {
 		}
 		// Upper bound condition.
 		const tuple = data[i]
-		const dir = cmp(tuple, end)
-		if (args.endBefore && dir >= 0) {
-			break
+
+		if (args.lt) {
+			const dir = compareTuple(tuple, args.lt)
+			if (dir >= 0) {
+				break
+			}
 		}
-		if (args.end && dir > 0) {
-			break
+		if (args.lte) {
+			const dir = compareTuple(tuple, args.lte)
+			if (dir > 0) {
+				break
+			}
 		}
 		results.push(tuple)
 		i += 1

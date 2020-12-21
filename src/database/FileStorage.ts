@@ -1,7 +1,7 @@
 import * as _ from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"
-import { Value, Tuple, Index, Storage, ScanArgs } from "./types"
+import { Value, Tuple, Storage, ScanArgs } from "./types"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { scan, remove, set } from "./indexHelpers"
 import * as json from "../helpers/json"
@@ -20,23 +20,23 @@ export class FileStorage implements Storage {
 		this.cache = new FileCache(dbPath)
 	}
 
-	scan(index: Index, args: ScanArgs = {}): Array<Tuple> {
-		const data = this.cache.get(index.name)
-		return scan(index.sort, data, args)
+	scan(index: string, args: ScanArgs = {}): Array<Tuple> {
+		const data = this.cache.get(index)
+		return scan(data, args)
 	}
 
 	transact() {
 		return new InMemoryTransaction({
 			scan: (index, args) => this.scan(index, args),
 			commit: (writes) => {
-				Object.entries(writes).map(([name, { sets, removes, sort }]) => {
+				Object.entries(writes).map(([name, { sets, removes }]) => {
 					const data = this.cache.get(name)
 					// TODO: more efficent merge.
 					for (const tuple of removes) {
-						remove(sort, data, tuple)
+						remove(data, tuple)
 					}
 					for (const tuple of sets) {
-						set(sort, data, tuple)
+						set(data, tuple)
 					}
 					this.cache.set(name, data)
 				})

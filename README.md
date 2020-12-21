@@ -26,3 +26,4 @@ Goals:
 
 - proper encoding with relation and json options
 - sqlite storage, file storage, in-memory, and localstorage
+

@@ -4,11 +4,11 @@ import assert from "assert"
 import {
 	compareQueryValue,
 	compareTuple,
-	QueryTuple,
 	queryValueToString,
 	queryTupleToString,
 } from "./compareTuple"
 import { sortedQueryValues } from "../test/fixtures"
+import { QueryTuple } from "./types"
 
 describe("compareQueryValue", () => {
 	it("sorting is correct", () => {
@@ -31,7 +31,7 @@ describe("compareTuple", () => {
 	it("Sorting works for pairs in-order.", () => {
 		const test = (a: QueryTuple, b: QueryTuple, value: number) => {
 			assert.equal(
-				compareTuple([1, 1])(a, b),
+				compareTuple(a, b),
 				value,
 				`compare(${[queryTupleToString(a), queryTupleToString(b)].join(", ")})`
 			)
@@ -67,7 +67,7 @@ describe("compareTuple", () => {
 			const a = sample()
 			const b = sample()
 			assert.equal(
-				compareTuple([1, 1, 1])(a.tuple, b.tuple),
+				compareTuple(a.tuple, b.tuple),
 				compareQueryValue(a.rank, b.rank),
 				`compare(${[
 					queryTupleToString(a.tuple),

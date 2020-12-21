@@ -1,12 +1,5 @@
-import { Value, Sort } from "./types"
+import { MAX, MIN, QueryTuple, QueryValue, Value } from "./types"
 import { compare } from "../helpers/compare"
-
-export const MIN = Symbol("min")
-export const MAX = Symbol("max")
-
-export type QueryValue = Value | typeof MIN | typeof MAX
-
-export type QueryTuple = Array<QueryValue>
 
 // MIN < null < object < array < number < string < boolean < MAX
 const typeRank = [
@@ -73,9 +66,9 @@ export function compareQueryValue(a: QueryValue, b: QueryValue): number {
 	const bt = typeOf(b)
 	if (at === bt) {
 		if (at === "array") {
-			return compareArbitraryTuples(a as any, b as any)
+			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
-			return compareArbitraryObjects(a as any, b as any)
+			return compareObject(a as any, b as any)
 		} else {
 			return compare(a, b)
 		}
@@ -84,27 +77,7 @@ export function compareQueryValue(a: QueryValue, b: QueryValue): number {
 	return compare(typeRank.indexOf(at), typeRank.indexOf(bt))
 }
 
-function compareArbitraryTuples(a: QueryTuple, b: QueryTuple) {
-	const len = Math.min(a.length, b.length)
-
-	for (let i = 0; i < len; i++) {
-		const dir = compareQueryValue(a[i], b[i])
-		if (dir === 0) {
-			continue
-		}
-		return dir
-	}
-
-	if (a.length > b.length) {
-		return 1
-	} else if (a.length < b.length) {
-		return -1
-	} else {
-		return 0
-	}
-}
-
-function compareArbitraryObjects(
+function compareObject(
 	a: { [key: string]: QueryValue },
 	b: { [key: string]: QueryValue }
 ) {
@@ -136,24 +109,22 @@ function compareArbitraryObjects(
 	}
 }
 
-export function compareTuple(sort: Sort) {
-	if (sort.length === 0) {
-		throw new Error("Sort length 0.")
+export function compareTuple(a: QueryTuple, b: QueryTuple) {
+	const len = Math.min(a.length, b.length)
+
+	for (let i = 0; i < len; i++) {
+		const dir = compareQueryValue(a[i], b[i])
+		if (dir === 0) {
+			continue
+		}
+		return dir
 	}
-	return (a: QueryTuple, b: QueryTuple) => {
-		if (a.length !== sort.length) {
-			throw new Error(`Sort length mismatch. ${JSON.stringify({ a, sort })}`)
-		}
-		if (b.length !== sort.length) {
-			throw new Error(`Sort length mismatch. ${JSON.stringify({ b, sort })}`)
-		}
-		for (let i = 0; i < sort.length; i++) {
-			const dir = compareQueryValue(a[i], b[i])
-			if (dir === 0) {
-				continue
-			}
-			return dir * sort[i]
-		}
+
+	if (a.length > b.length) {
+		return 1
+	} else if (a.length < b.length) {
+		return -1
+	} else {
 		return 0
 	}
 }

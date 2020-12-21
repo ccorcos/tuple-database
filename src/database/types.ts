@@ -8,40 +8,37 @@ export type Value =
 
 export type Tuple = Array<Value>
 
-export type Direction = 1 | -1
+export const MIN = Symbol("min")
+export const MAX = Symbol("max")
 
-export type Sort = Array<Direction>
-
-export type Index = {
-	name: string
-	sort: Sort
-}
+export type QueryValue = Value | typeof MIN | typeof MAX
+export type QueryTuple = Array<QueryValue>
 
 export type ScanArgs = {
-	startAfter?: Tuple
-	start?: Tuple
-	endBefore?: Tuple
-	end?: Tuple
+	gt?: QueryTuple
+	gte?: QueryTuple
+	lt?: QueryTuple
+	lte?: QueryTuple
 	limit?: number
 }
 
 export interface ReadOnlyStorage {
-	scan(index: Index, args: ScanArgs): Array<Tuple>
+	scan(index: string, args: ScanArgs): Array<Tuple>
 }
 
 export interface Storage {
-	scan(index: Index, args?: ScanArgs): Array<Tuple>
+	scan(index: string, args?: ScanArgs): Array<Tuple>
 	transact(): Transaction
 }
 
 export type Writes = {
-	[index: string]: { sort: Sort; sets: Array<Tuple>; removes: Array<Tuple> }
+	[index: string]: { sets: Array<Tuple>; removes: Array<Tuple> }
 }
 
 export interface Transaction {
 	writes: Writes
-	scan(index: Index, args?: ScanArgs): Array<Tuple>
-	set(index: Index, value: Tuple): void
-	remove(index: Index, value: Tuple): void
+	scan(index: string, args?: ScanArgs): Array<Tuple>
+	set(index: string, value: Tuple): void
+	remove(index: string, value: Tuple): void
 	commit(): void
 }
