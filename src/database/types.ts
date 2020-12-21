@@ -25,13 +25,14 @@ export interface ReadOnlyStorage {
 	scan(index: string, args: ScanArgs): Array<Tuple>
 }
 
+export type Writes = {
+	[index: string]: { sets: Array<Tuple>; removes: Array<Tuple> }
+}
+
 export interface Storage {
 	scan(index: string, args?: ScanArgs): Array<Tuple>
 	transact(): Transaction
-}
-
-export type Writes = {
-	[index: string]: { sets: Array<Tuple>; removes: Array<Tuple> }
+	commit(writes: Writes): void
 }
 
 export interface Transaction {

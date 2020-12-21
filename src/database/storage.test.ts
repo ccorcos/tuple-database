@@ -19,28 +19,26 @@ import { SQLiteStorage } from "./SQLiteStorage"
 function storageTestSuite(name: string, createStorage: () => Storage) {
 	describe(name, () => {
 		it("inserts in correct order", () => {
-			for (let i = 0; i < 10; i++) {
-				const store = createStorage()
-				const index = "abc"
-				const items = [
-					["a", "a", "a"],
-					["a", "a", "b"],
-					["a", "a", "c"],
-					["a", "b", "a"],
-					["a", "b", "b"],
-					["a", "b", "c"],
-					["a", "c", "a"],
-					["a", "c", "b"],
-					["a", "c", "c"],
-				]
-				const transaction = store.transact()
-				for (const item of _.shuffle(items)) {
-					transaction.set(index, item)
-				}
-				transaction.commit()
-				const data = store.scan(index)
-				assert.deepEqual(data, items)
+			const store = createStorage()
+			const index = "abc"
+			const items = [
+				["a", "a", "a"],
+				["a", "a", "b"],
+				["a", "a", "c"],
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			]
+			const transaction = store.transact()
+			for (const item of _.shuffle(items)) {
+				transaction.set(index, item)
 			}
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data, items)
 		})
 
 		it("removes items correctly", () => {

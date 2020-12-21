@@ -4,19 +4,19 @@ import { scan, remove, set } from "./indexHelpers"
 export class InMemoryStorage implements Storage {
 	map: { [index: string]: Array<Tuple> } = {}
 
-	scan = (index: string, args: ScanArgs = {}) => {
+	scan(index: string, args: ScanArgs = {}) {
 		const data = this.map[index] || []
 		return scan(data, args)
 	}
 
 	transact() {
 		return new InMemoryTransaction({
-			scan: this.scan,
-			commit: this.commit,
+			scan: (...args) => this.scan(...args),
+			commit: (...args) => this.commit(...args),
 		})
 	}
 
-	protected commit = (writes: Writes) => {
+	commit(writes: Writes) {
 		for (const [name, { sets, removes }] of Object.entries(writes)) {
 			if (!this.map[name]) {
 				this.map[name] = []

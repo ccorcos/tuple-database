@@ -67,7 +67,7 @@ export class SQLiteStorage implements Storage {
 		})
 	}
 
-	protected commit = (writes: Writes) => {
+	commit = (writes: Writes) => {
 		// Make sure the tables exist.
 		for (const [index] of Object.entries(writes)) {
 			const createTableQuery = `create table if not exists ${sanitizeIndexName(
