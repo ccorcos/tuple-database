@@ -72,22 +72,34 @@ describe("ReactiveStorage", () => {
 		const data = store.scan(index)
 		assert.deepEqual(data, items)
 
-		let hoist: Writes | undefined
+		// Note that these queries are *basically* the same.
+		// { gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
+		// { gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
+		// But the second one has better reactivity performance due to the shared prefix.
+
+		let hoist1: Writes | undefined
+		store.subscribe(
+			index,
+			{ gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
+			(writes) => {
+				hoist1 = writes
+			}
+		)
+
+		let hoist2: Writes | undefined
 		store.subscribe(
 			index,
 			{ gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
 			(writes) => {
-				hoist = writes
+				hoist2 = writes
 			}
 		)
 
 		store.transact().set(index, ["a", "c", 1]).commit()
 
-		// TODO: we should use a proper prefix query here. Then we wouldn't
-		// have to try to determine it from the gt/lt business.
-		// {
-		// 	abc: { sets: [["a", "c", 1]], removes: [] },
-		// }
-		assert.deepStrictEqual(hoist, undefined)
+		assert.deepStrictEqual(hoist1, undefined)
+		assert.deepStrictEqual(hoist2, {
+			abc: { sets: [["a", "c", 1]], removes: [] },
+		})
 	})
 })
