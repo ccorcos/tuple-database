@@ -82,3 +82,4 @@ Last but not least, this database is designed to be embedded in [local-first](ht
 Next:
 - build a todo mvc
 - benchmark?
+- better reactivity performance? how to model hierarchical prefix queries better with a btree?
