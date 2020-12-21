@@ -67,21 +67,18 @@ reactiveStorage
 // Update doesn't log because it falls outside the query.
 ```
 
+## Why?
 
+Databases are complicated. And as with most complicated things, you might find yourself battling the tool more than battling the problem you're trying to solve.
+
+The goal of this project is to create a dead-simple database. It's just a binary tree that where you can store tuples that are component-wise sorted.
+
+This database pushes all of the data modeling and indexing details down to you, the developer, so you get fine-grained control over read/write performance trade-offs.
+
+Last but not least, this database is designed to be embedded in [local-first](https://www.inkandswitch.com/local-first.html) applications.
 
 ## TODO
-
-Goals:
-- reactive embedded database
-- scan arbitrary indexes
 
 Next:
 - build a todo mvc
 - benchmark?
-
-- sqlite storage, file storage, in-memory, and localstorage
-
-# Explainer
-
-- This database is just a glorified binary tree with component-wise tuple comparison.
-- We encode all tuples into strings so we can throw everything in a single column in SQLite or use LevelDb, DynamoDb, etc.
