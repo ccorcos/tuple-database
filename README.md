@@ -91,7 +91,11 @@ npm start
 
 ## TODO
 
-Next:
-- build a todo mvc
-- benchmark?
-- better reactivity performance? how to model hierarchical prefix queries better with a btree?
+- Proper React bindings.
+- Make SQLite work on Electron.
+- Better reactivity performance.
+
+	There might be a way to do this with a btree, but I think it might be necessary to build
+	a proper hierarchical structure to make reactivity a more performant.
+
+- Some kind of benchmark?
