@@ -77,6 +77,18 @@ This database pushes all of the data modeling and indexing details down to you, 
 
 Last but not least, this database is designed to be embedded in [local-first](https://www.inkandswitch.com/local-first.html) applications.
 
+## Example
+
+To run the example app, clone this repo, then:
+
+```sh
+npm install
+npm run build
+cd example
+npm install
+npm start
+```
+
 ## TODO
 
 Next:
