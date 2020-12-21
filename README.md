@@ -9,21 +9,13 @@ Goals:
 - reactive embedded database
 - scan arbitrary indexes
 
-
-```ts
-
-```
-
-
-- Cleanup things.
-
-- delete triplestore.
-	- just storage and subscriptions for arbirary tuples.
-
-- value-storage for key-value.
+Next:
+- reactivity!
+- client/server
+- build a todo mvc
+- benchmark?
 
 
-
-- proper encoding with relation and json options
 - sqlite storage, file storage, in-memory, and localstorage
+
 
