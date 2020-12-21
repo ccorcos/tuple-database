@@ -9,7 +9,7 @@ import { describe, it } from "mocha"
 import assert from "assert"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { FileStorage } from "./FileStorage"
-import { MAX, MIN, Storage } from "./types"
+import { MAX, MIN, Storage, Tuple } from "./types"
 import * as _ from "lodash"
 import { rootPath } from "../helpers/rootPath"
 import { randomId } from "../helpers/randomId"
@@ -398,7 +398,7 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 		it("stores all types of values", () => {
 			const store = createStorage()
 			const index = "values"
-			const items = sortedValues.map((item) => [item])
+			const items: Array<Tuple> = sortedValues.map((item) => [item])
 			const transaction = store.transact()
 			for (const item of _.shuffle(items)) {
 				transaction.set(index, item)

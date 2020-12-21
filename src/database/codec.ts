@@ -3,7 +3,7 @@
 
 import * as _ from "lodash"
 import * as elen from "elen"
-import { MIN, MAX, QueryValue, QueryTuple, Tuple } from "./types"
+import { MIN, MAX, Value, Tuple } from "./types"
 import { compare } from "../helpers/compare"
 
 // MIN < null < object < array < number < string < boolean < MAX
@@ -18,7 +18,7 @@ const encodeType = {
 	MIN: "a",
 } as const
 
-export function encodeQueryValue(value: QueryValue) {
+export function encodeValue(value: Value) {
 	if (value === MAX) {
 		return encodeType.MAX
 	}
@@ -38,7 +38,7 @@ export function encodeQueryValue(value: QueryValue) {
 		return encodeType.number + elen.encode(value)
 	}
 	if (Array.isArray(value)) {
-		return encodeType.array + encodeQueryTuple(value)
+		return encodeType.array + encodeTuple(value)
 	}
 	if (typeof value === "object") {
 		return encodeType.object + encodeObjectValue(value)
@@ -50,7 +50,7 @@ const decodeType = _.invert(encodeType) as {
 	[key: string]: keyof typeof encodeType
 }
 
-export function decodeQueryValue(str: string): QueryValue {
+export function decodeValue(str: string): Value {
 	const encoding = decodeType[str[0]]
 	const rest = str.slice(1)
 
@@ -73,7 +73,7 @@ export function decodeQueryValue(str: string): QueryValue {
 		return elen.decode(rest)
 	}
 	if (encoding === "array") {
-		return decodeQueryTuple(rest) as Tuple // TODO: this is weird.
+		return decodeTuple(rest) as Tuple // TODO: this is weird.
 	}
 	if (encoding === "object") {
 		return decodeObjectValue(rest)
@@ -81,10 +81,10 @@ export function decodeQueryValue(str: string): QueryValue {
 	throw new Error("Invalid encoding: " + encoding)
 }
 
-export function encodeQueryTuple(tuple: QueryTuple) {
+export function encodeTuple(tuple: Tuple) {
 	return tuple
 		.map((value, i) => {
-			const encoded = encodeQueryValue(value)
+			const encoded = encodeValue(value)
 			return (
 				encoded
 					// B -> BB
@@ -96,14 +96,14 @@ export function encodeQueryTuple(tuple: QueryTuple) {
 		.join("")
 }
 
-export function decodeQueryTuple(str: string) {
+export function decodeTuple(str: string) {
 	if (str === "") {
 		return []
 	}
 	// Capture all of the escaped BB and BA pairs and wait
 	// til we find an exposed A.
 	const re = /(\x01(\x01|\x00)|\x00)/g
-	const tuple: QueryTuple = []
+	const tuple: Tuple = []
 	let start = 0
 	while (true) {
 		const match = re.exec(str)
@@ -121,20 +121,20 @@ export function decodeQueryTuple(str: string) {
 			.replace(/\x01\x01/g, "\x01")
 			// BA -> A
 			.replace(/\x01\x00/g, "\x00")
-		const decoded = decodeQueryValue(unescaped)
+		const decoded = decodeValue(unescaped)
 		tuple.push(decoded)
 		// Skip over the \x00.
 		start = end + 1
 	}
 }
 
-function encodeObjectValue(obj: { [key: string]: QueryValue }) {
+function encodeObjectValue(obj: { [key: string]: Value }) {
 	const entires = Object.entries(obj).sort(([k1], [k2]) => compare(k1, k2))
-	return encodeQueryTuple(entires as QueryTuple)
+	return encodeTuple(entires as Tuple)
 }
 
 function decodeObjectValue(str: string) {
-	const entries = decodeQueryTuple(str) as Array<[string, QueryValue]>
+	const entries = decodeTuple(str) as Array<[string, Value]>
 	const obj = {}
 	for (const [key, value] of entries) {
 		obj[key] = value

@@ -2,31 +2,26 @@ import * as _ from "lodash"
 import { describe, it } from "mocha"
 import * as assert from "assert"
 import { sortedValues } from "../test/fixtures"
-import {
-	encodeQueryValue,
-	decodeQueryValue,
-	decodeQueryTuple,
-	encodeQueryTuple,
-} from "./codec"
+import { encodeValue, decodeValue, decodeTuple, encodeTuple } from "./codec"
 import { compare } from "../helpers/compare"
-import { queryValueToString, queryTupleToString } from "./compareTuple"
-import { QueryTuple } from "./types"
+import { ValueToString, TupleToString } from "./compareTuple"
+import { Tuple } from "./types"
 
 describe("codec", () => {
-	describe("encodeQueryValue", () => {
+	describe("encodeValue", () => {
 		it("Encodes and decodes properly", () => {
 			for (let i = 0; i < sortedValues.length; i++) {
 				const value = sortedValues[i]
-				const encoded = encodeQueryValue(value)
-				const decoded = decodeQueryValue(encoded)
+				const encoded = encodeValue(value)
+				const decoded = decodeValue(encoded)
 
 				assert.deepStrictEqual(
 					decoded,
 					value,
 					[
-						queryValueToString(value),
-						queryValueToString(encoded),
-						queryValueToString(decoded),
+						ValueToString(value),
+						ValueToString(encoded),
+						ValueToString(decoded),
 					].join(" -> ")
 				)
 			}
@@ -35,14 +30,14 @@ describe("codec", () => {
 		it("Encodes in lexicographical order", () => {
 			for (let i = 0; i < sortedValues.length; i++) {
 				for (let j = 0; j < sortedValues.length; j++) {
-					const a = encodeQueryValue(sortedValues[i])
-					const b = encodeQueryValue(sortedValues[j])
+					const a = encodeValue(sortedValues[i])
+					const b = encodeValue(sortedValues[j])
 					assert.deepStrictEqual(
 						compare(a, b),
 						compare(i, j),
-						`compareQueryValue(${[
-							queryValueToString(sortedValues[i]),
-							queryValueToString(sortedValues[j]),
+						`compareValue(${[
+							ValueToString(sortedValues[i]),
+							ValueToString(sortedValues[j]),
 						].join(", ")}) === compare(${[
 							JSON.stringify(a),
 							JSON.stringify(b),
@@ -53,18 +48,18 @@ describe("codec", () => {
 		})
 	})
 
-	describe("encodeQueryTuple", () => {
+	describe("encodeTuple", () => {
 		it("Encodes and decodes properly", () => {
-			const test = (tuple: QueryTuple) => {
-				const encoded = encodeQueryTuple(tuple)
-				const decoded = decodeQueryTuple(encoded)
+			const test = (tuple: Tuple) => {
+				const encoded = encodeTuple(tuple)
+				const decoded = decodeTuple(encoded)
 				assert.deepStrictEqual(
 					decoded,
 					tuple,
 					[
-						queryTupleToString(tuple),
-						queryValueToString(encoded),
-						queryTupleToString(decoded),
+						TupleToString(tuple),
+						ValueToString(encoded),
+						TupleToString(decoded),
 					].join(" -> ")
 				)
 			}
@@ -91,19 +86,15 @@ describe("codec", () => {
 		})
 
 		it("Encodes in lexicographical order", () => {
-			const test = (aTuple: QueryTuple, bTuple: QueryTuple, result: number) => {
-				const a = encodeQueryTuple(aTuple)
-				const b = encodeQueryTuple(bTuple)
+			const test = (aTuple: Tuple, bTuple: Tuple, result: number) => {
+				const a = encodeTuple(aTuple)
+				const b = encodeTuple(bTuple)
 				assert.deepStrictEqual(
 					compare(a, b),
 					result,
-					`compareQueryTuple(${[
-						queryTupleToString(aTuple),
-						queryTupleToString(bTuple),
-					].join(", ")}) === compare(${[
-						JSON.stringify(a),
-						JSON.stringify(b),
-					].join(", ")})`
+					`compareTuple(${[TupleToString(aTuple), TupleToString(bTuple)].join(
+						", "
+					)}) === compare(${[JSON.stringify(a), JSON.stringify(b)].join(", ")})`
 				)
 			}
 
@@ -132,11 +123,7 @@ describe("codec", () => {
 				const i = _.random(x - 1)
 				const j = _.random(x - 1)
 				const k = _.random(x - 1)
-				const tuple: QueryTuple = [
-					sortedValues[i],
-					sortedValues[j],
-					sortedValues[k],
-				]
+				const tuple: Tuple = [sortedValues[i], sortedValues[j], sortedValues[k]]
 				const rank = i * x * x + j * x + k
 				return { tuple, rank }
 			}

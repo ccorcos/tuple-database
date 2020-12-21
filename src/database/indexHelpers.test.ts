@@ -344,8 +344,7 @@ describe("indexHelpers", () => {
 	})
 
 	it("stores all types of values", () => {
-		const index = "values"
-		const items = sortedValues.map((item) => [item])
+		const items: Array<Tuple> = sortedValues.map((item) => [item])
 		const data: Array<Tuple> = []
 		for (const item of _.shuffle(items)) {
 			set(data, item)

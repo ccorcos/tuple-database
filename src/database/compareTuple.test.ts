@@ -2,24 +2,24 @@ import * as _ from "lodash"
 import { describe, it } from "mocha"
 import assert from "assert"
 import {
-	compareQueryValue,
+	compareValue,
 	compareTuple,
-	queryValueToString,
-	queryTupleToString,
+	ValueToString,
+	TupleToString,
 } from "./compareTuple"
-import { sortedQueryValues } from "../test/fixtures"
-import { QueryTuple } from "./types"
+import { sortedValues } from "../test/fixtures"
+import { Tuple } from "./types"
 
-describe("compareQueryValue", () => {
+describe("compareValue", () => {
 	it("sorting is correct", () => {
-		for (let i = 0; i < sortedQueryValues.length; i++) {
-			for (let j = 0; j < sortedQueryValues.length; j++) {
+		for (let i = 0; i < sortedValues.length; i++) {
+			for (let j = 0; j < sortedValues.length; j++) {
 				assert.equal(
-					compareQueryValue(sortedQueryValues[i], sortedQueryValues[j]),
-					compareQueryValue(i, j),
+					compareValue(sortedValues[i], sortedValues[j]),
+					compareValue(i, j),
 					`compare(${[
-						queryValueToString(sortedQueryValues[i]),
-						queryValueToString(sortedQueryValues[j]),
+						ValueToString(sortedValues[i]),
+						ValueToString(sortedValues[j]),
 					].join(",")})`
 				)
 			}
@@ -29,18 +29,18 @@ describe("compareQueryValue", () => {
 
 describe("compareTuple", () => {
 	it("Sorting works for pairs in-order.", () => {
-		const test = (a: QueryTuple, b: QueryTuple, value: number) => {
+		const test = (a: Tuple, b: Tuple, value: number) => {
 			assert.equal(
 				compareTuple(a, b),
 				value,
-				`compare(${[queryTupleToString(a), queryTupleToString(b)].join(", ")})`
+				`compare(${[TupleToString(a), TupleToString(b)].join(", ")})`
 			)
 		}
 
 		// Ensure it works for all pairwise tuples.
-		for (let i = 0; i < sortedQueryValues.length - 1; i++) {
-			const a = sortedQueryValues[i]
-			const b = sortedQueryValues[i + 1]
+		for (let i = 0; i < sortedValues.length - 1; i++) {
+			const a = sortedValues[i]
+			const b = sortedValues[i + 1]
 			test([a, a], [a, b], -1)
 			test([a, b], [b, a], -1)
 			test([b, a], [b, b], -1)
@@ -49,15 +49,11 @@ describe("compareTuple", () => {
 
 	it("3-length tuple sorting is correct (sampled)", () => {
 		const sample = () => {
-			const x = sortedQueryValues.length
+			const x = sortedValues.length
 			const i = _.random(x - 1)
 			const j = _.random(x - 1)
 			const k = _.random(x - 1)
-			const tuple: QueryTuple = [
-				sortedQueryValues[i],
-				sortedQueryValues[j],
-				sortedQueryValues[k],
-			]
+			const tuple: Tuple = [sortedValues[i], sortedValues[j], sortedValues[k]]
 			const rank = i * x * x + j * x + k
 			return { tuple, rank }
 		}
@@ -68,11 +64,10 @@ describe("compareTuple", () => {
 			const b = sample()
 			assert.equal(
 				compareTuple(a.tuple, b.tuple),
-				compareQueryValue(a.rank, b.rank),
-				`compare(${[
-					queryTupleToString(a.tuple),
-					queryTupleToString(b.tuple),
-				].join(", ")})`
+				compareValue(a.rank, b.rank),
+				`compare(${[TupleToString(a.tuple), TupleToString(b.tuple)].join(
+					", "
+				)})`
 			)
 		}
 	})

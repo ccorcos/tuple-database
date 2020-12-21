@@ -1,7 +1,7 @@
-import { ScanArgs, Writes, Storage, Tuple, QueryValue } from "./types"
+import { ScanArgs, Writes, Storage, Tuple, Value } from "./types"
 import sqlite from "better-sqlite3"
 import { InMemoryTransaction } from "./InMemoryStorage"
-import { decodeQueryTuple, encodeQueryTuple } from "./codec"
+import { decodeTuple, encodeTuple } from "./codec"
 
 export class SQLiteStorage implements Storage {
 	private db: sqlite.Database
@@ -12,15 +12,13 @@ export class SQLiteStorage implements Storage {
 
 	scan = (index: string, args: ScanArgs = {}) => {
 		// Bounds.
-		let start = args.gte ? encodeQueryTuple(args.gte) : undefined
+		let start = args.gte ? encodeTuple(args.gte) : undefined
 		let startAfter: string | undefined = args.gt
-			? encodeQueryTuple(args.gt)
+			? encodeTuple(args.gt)
 			: undefined
-		let end: string | undefined = args.lte
-			? encodeQueryTuple(args.lte)
-			: undefined
+		let end: string | undefined = args.lte ? encodeTuple(args.lte) : undefined
 		let endBefore: string | undefined = args.lt
-			? encodeQueryTuple(args.lt)
+			? encodeTuple(args.lt)
 			: undefined
 
 		const sqlArgs = {
@@ -52,7 +50,7 @@ export class SQLiteStorage implements Storage {
 
 		try {
 			const results = this.db.prepare(sqlQuery).all(sqlArgs)
-			return results.map(({ value }) => decodeQueryTuple(value) as Tuple)
+			return results.map(({ value }) => decodeTuple(value) as Tuple)
 		} catch (e) {
 			if (e.message.includes("no such table:")) {
 				return []
@@ -96,10 +94,10 @@ export class SQLiteStorage implements Storage {
 					deletes: Array<Tuple>
 				}) => {
 					for (const tuple of inserts) {
-						insertQuery.run({ value: encodeQueryTuple(tuple) })
+						insertQuery.run({ value: encodeTuple(tuple) })
 					}
 					for (const tuple of deletes) {
-						deleteQuery.run({ value: encodeQueryTuple(tuple) })
+						deleteQuery.run({ value: encodeTuple(tuple) })
 					}
 				}
 			)

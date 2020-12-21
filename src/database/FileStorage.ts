@@ -1,17 +1,17 @@
 import * as _ from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"
-import { Value, Tuple, Storage, ScanArgs } from "./types"
+import { Tuple, Storage, ScanArgs } from "./types"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { scan, remove, set } from "./indexHelpers"
-import * as json from "../helpers/json"
+import { decodeTuple, encodeTuple } from "./codec"
 
 function parseFile(str: string): Array<Tuple> {
-	return str.split("\n").map((line) => json.parse(line))
+	return str.split("\n").map((line) => decodeTuple(line))
 }
 
 function serializeFile(data: Array<Tuple>) {
-	return data.map((tuple) => json.stringify(tuple)).join("\n")
+	return data.map((tuple) => encodeTuple(tuple)).join("\n")
 }
 
 export class FileStorage implements Storage {

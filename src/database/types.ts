@@ -5,20 +5,19 @@ export type Value =
 	| null
 	| Array<Value>
 	| { [key: string]: Value }
+	| typeof MIN
+	| typeof MAX
 
 export type Tuple = Array<Value>
 
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
-export type QueryValue = Value | typeof MIN | typeof MAX
-export type QueryTuple = Array<QueryValue>
-
 export type ScanArgs = {
-	gt?: QueryTuple
-	gte?: QueryTuple
-	lt?: QueryTuple
-	lte?: QueryTuple
+	gt?: Tuple
+	gte?: Tuple
+	lt?: Tuple
+	lte?: Tuple
 	limit?: number
 }
 

@@ -1,4 +1,4 @@
-import { Tuple, ScanArgs, MAX, MIN, QueryTuple } from "./types"
+import { Tuple, ScanArgs } from "./types"
 import { binarySearch } from "../helpers/binarySearch"
 import { compareTuple } from "./compareTuple"
 
@@ -19,11 +19,11 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 }
 
 export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
-	const start: QueryTuple | undefined = args.gte || args.gt
+	const start: Tuple | undefined = args.gte || args.gt
 	// if (args.gt) {
 	// 	start?.push(MAX)
 	// }
-	const end: QueryTuple | undefined = args.lte || args.lt
+	const end: Tuple | undefined = args.lte || args.lt
 	// if (args.lt) {
 	// 	end?.push(MIN)
 	// }

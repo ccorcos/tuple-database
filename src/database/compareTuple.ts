@@ -1,4 +1,4 @@
-import { MAX, MIN, QueryTuple, QueryValue, Value } from "./types"
+import { MAX, MIN, Tuple, Value } from "./types"
 import { compare } from "../helpers/compare"
 
 // MIN < null < object < array < number < string < boolean < MAX
@@ -13,7 +13,7 @@ const typeRank = [
 	"max",
 ]
 
-function typeOf(value: QueryValue) {
+function typeOf(value: Value) {
 	if (value === MAX) {
 		return "max"
 	}
@@ -29,7 +29,7 @@ function typeOf(value: QueryValue) {
 	return typeof value
 }
 
-export function compareQueryValue(a: QueryValue, b: QueryValue): number {
+export function compareValue(a: Value, b: Value): number {
 	// Check the bounds.
 	if (a === MIN) {
 		if (b === MIN) {
@@ -78,8 +78,8 @@ export function compareQueryValue(a: QueryValue, b: QueryValue): number {
 }
 
 function compareObject(
-	a: { [key: string]: QueryValue },
-	b: { [key: string]: QueryValue }
+	a: { [key: string]: Value },
+	b: { [key: string]: Value }
 ) {
 	const ae = Object.entries(a).sort(([k1], [k2]) => compare(k1, k2))
 	const be = Object.entries(b).sort(([k1], [k2]) => compare(k1, k2))
@@ -89,9 +89,9 @@ function compareObject(
 	for (let i = 0; i < len; i++) {
 		const [ak, av] = ae[i]
 		const [bk, bv] = be[i]
-		const dir = compareQueryValue(ak, bk)
+		const dir = compareValue(ak, bk)
 		if (dir === 0) {
-			const dir2 = compareQueryValue(av, bv)
+			const dir2 = compareValue(av, bv)
 			if (dir2 === 0) {
 				continue
 			}
@@ -109,11 +109,11 @@ function compareObject(
 	}
 }
 
-export function compareTuple(a: QueryTuple, b: QueryTuple) {
+export function compareTuple(a: Tuple, b: Tuple) {
 	const len = Math.min(a.length, b.length)
 
 	for (let i = 0; i < len; i++) {
-		const dir = compareQueryValue(a[i], b[i])
+		const dir = compareValue(a[i], b[i])
 		if (dir === 0) {
 			continue
 		}
@@ -129,7 +129,7 @@ export function compareTuple(a: QueryTuple, b: QueryTuple) {
 	}
 }
 
-export function queryValueToString(value: QueryValue) {
+export function ValueToString(value: Value) {
 	if (value === MIN) {
 		return "MIN"
 	} else if (value === MAX) {
@@ -141,6 +141,6 @@ export function queryValueToString(value: QueryValue) {
 	}
 }
 
-export function queryTupleToString(tuple: QueryTuple) {
-	return `[${tuple.map(queryValueToString).join(",")}]`
+export function TupleToString(tuple: Tuple) {
+	return `[${tuple.map(ValueToString).join(",")}]`
 }

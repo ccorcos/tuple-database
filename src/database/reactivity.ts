@@ -1,6 +1,6 @@
 import { randomId } from "../helpers/randomId"
 import { InMemoryStorage } from "./InMemoryStorage"
-import { QueryValue, ScanArgs, Storage, Tuple, Value } from "./types"
+import { Value, ScanArgs, Storage, Tuple, Value } from "./types"
 
 type Callback = (tuples: Array<Tuple>) => void
 
@@ -22,7 +22,7 @@ export class ReactiveStorage {
 
 function getScanPrefix(args: ScanArgs) {
 	// Compute the common prefix.
-	const prefix: Array<QueryValue> = []
+	const prefix: Array<Value> = []
 	const start = args.gt || args.gte || []
 	const end = args.lt || args.lte || []
 	const len = Math.min(start.length, end.length)
