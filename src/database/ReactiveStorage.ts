@@ -19,8 +19,13 @@ export class ReactiveStorage implements Storage {
 		const prefix = getScanPrefix(args)
 		this.listeners.transact().set(index, [prefix, id]).commit()
 
+		const unsubscribe = () => {
+			delete this.callbacks[id]
+			this.listeners.transact().remove(index, [prefix, id]).commit()
+		}
+
 		// Run the query.
-		return this.storage.scan(index, args)
+		return [this.storage.scan(index, args), unsubscribe]
 	}
 
 	scan(index: string, args: ScanArgs = {}) {
