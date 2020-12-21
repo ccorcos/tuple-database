@@ -5,8 +5,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "mocha -r ts-node/register './src/**/*.test.ts' --verbose",
-    "test:update": "npm run test -- --update",
+    "test": "npm test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
+    "test:clean": "rm -rf build/test",
     "test:watch": "npm test -- --watch --watch-extensions ts"
   },
   "devDependencies": {

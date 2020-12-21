@@ -412,10 +412,10 @@ storageTestSuite("InMemoryStorage", () => new InMemoryStorage())
 
 storageTestSuite(
 	"FileStorage",
-	() => new FileStorage(rootPath("build", randomId()))
+	() => new FileStorage(rootPath("build/test", randomId()))
 )
 
 storageTestSuite(
 	"SQLiteStorage",
-	() => new SQLiteStorage(rootPath("build", randomId() + ".db"))
+	() => new SQLiteStorage(rootPath("build/test", randomId() + ".db"))
 )

@@ -75,7 +75,7 @@ export class ReactiveStorage implements Storage {
 	private fanout(index: string, tuples: Array<Tuple>) {
 		const updates: { [callbackId: string]: Array<Tuple> } = {}
 		for (const tuple of tuples) {
-			for (let i = 1; i < tuple.length; i++) {
+			for (let i = 0; i < tuple.length; i++) {
 				const prefix = tuple.slice(0, i)
 				const results = this.listeners.scan(index, {
 					gte: [prefix],

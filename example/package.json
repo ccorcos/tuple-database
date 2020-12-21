@@ -1,0 +1,19 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "Chet Corcos <ccorcos@gmail.com> (http://www.chetcorcos.com/)",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^11.1.0"
+  },
+  "dependencies": {
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
+  }
+}
