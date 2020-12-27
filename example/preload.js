@@ -38,19 +38,13 @@ function useSubscribe(index, args) {
 
 // Write to both indexes.
 function writeTodo(tx, todo) {
-	tx.set("todos", [-todo.time, todo]).set("todos-complete", [
-		todo.completed,
-		-todo.time,
-		todo,
-	])
+	tx.set("todos", [-todo.time, todo])
+	tx.set("todos-complete", [todo.completed, -todo.time, todo])
 }
 
 function deleteTodo(tx, oldTodo) {
-	tx.remove("todos", [-oldTodo.time, oldTodo]).remove("todos-complete", [
-		oldTodo.completed,
-		-oldTodo.time,
-		oldTodo,
-	])
+	tx.remove("todos", [-oldTodo.time, oldTodo])
+	tx.remove("todos-complete", [oldTodo.completed, -oldTodo.time, oldTodo])
 }
 
 function updateTodo(tx, oldTodo, todo) {
@@ -80,13 +74,15 @@ function App() {
 	}, [])
 
 	// Determine which index to use and which scan args to use.
-	const index = filter === "all" ? "todos" : "todos-complete"
-	const args =
-		filter === "all"
-			? {}
-			: filter === "completed"
-			? { gte: [true, MIN], lte: [true, MAX] }
-			: { gte: [false, MIN], lte: [false, MAX] }
+	let index = "todos"
+	let args = {}
+	if (filter === "completed") {
+		index = "todos-complete"
+		args = { gte: [true, MIN], lte: [true, MAX] }
+	} else if (filter === "not-completed") {
+		index = "todos-complete"
+		args = { gte: [false, MIN], lte: [false, MAX] }
+	}
 
 	// Register the subscription and get the todo object from the last element of the tuple.
 	const todos = useSubscribe(index, args).map(

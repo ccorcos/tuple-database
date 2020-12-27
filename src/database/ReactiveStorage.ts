@@ -72,6 +72,10 @@ export class ReactiveStorage implements Storage {
 		}
 	}
 
+	// "abc", ["a", "b", "c"]
+	// "abc-listeners", ["a"] -> ["a", MIN] (I don't care about ["a", "c"])
+	// "abc-listeners", ["a", "b"] -> ["a", "b", MIN]
+	// "abc-listeners", ["a", "b", "c"] -> ["a", "b", "c", MIN]
 	private fanout(index: string, tuples: Array<Tuple>) {
 		const updates: { [callbackId: string]: Array<Tuple> } = {}
 		for (const tuple of tuples) {

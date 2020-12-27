@@ -137,8 +137,11 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			assert.deepEqual(data, items)
 
 			const result = store.scan(index, {
-				gt: ["a", "a", MAX],
+				// prefix: ["a", "b"],
+				gt: ["a", "a", MAX], // ["a"]
 				lt: ["a", "c", MIN],
+				// gt: ["a", "b", MIN], // ["a", "b"]
+				// lt: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result, [
