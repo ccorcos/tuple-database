@@ -1,4 +1,5 @@
 import { randomId } from "../helpers/randomId"
+import { getBounds, Bounds, isWithinBounds } from "./indexHelpers"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
 import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
 
@@ -16,16 +17,17 @@ export class ReactiveStorage implements Storage {
 		this.callbacks[id] = callack
 
 		// Track this callback on this prefix.
-		const prefix = getScanPrefix(args)
-		this.listeners.transact().set(index, [prefix, id]).commit()
+		const bounds = getBounds(args)
+		const prefix = getScanPrefix(bounds)
+		this.listeners.transact().set(index, [prefix, { id, bounds }]).commit()
 
 		const unsubscribe = () => {
 			delete this.callbacks[id]
-			this.listeners.transact().remove(index, [prefix, id]).commit()
+			this.listeners.transact().remove(index, [prefix, { id, bounds }]).commit()
 		}
 
 		// Run the query.
-		return [this.storage.scan(index, args), unsubscribe]
+		return [this.storage.scan(index, args), unsubscribe] as const
 	}
 
 	scan(index: string, args: ScanArgs = {}) {
@@ -72,10 +74,6 @@ export class ReactiveStorage implements Storage {
 		}
 	}
 
-	// "abc", ["a", "b", "c"]
-	// "abc-listeners", ["a"] -> ["a", MIN] (I don't care about ["a", "c"])
-	// "abc-listeners", ["a", "b"] -> ["a", "b", MIN]
-	// "abc-listeners", ["a", "b", "c"] -> ["a", "b", "c", MIN]
 	private fanout(index: string, tuples: Array<Tuple>) {
 		const updates: { [callbackId: string]: Array<Tuple> } = {}
 		for (const tuple of tuples) {
@@ -86,11 +84,18 @@ export class ReactiveStorage implements Storage {
 					lt: [[...prefix, MIN]],
 				})
 				for (const result of results) {
-					const callbackId = result[1] as string
-					if (!updates[callbackId]) {
-						updates[callbackId] = [tuple]
+					const { id, bounds } = result[result.length - 1] as {
+						id: string
+						bounds: Bounds
+					}
+					if (isWithinBounds(tuple, bounds)) {
+						if (!updates[id]) {
+							updates[id] = [tuple]
+						} else {
+							updates[id].push(tuple)
+						}
 					} else {
-						updates[callbackId].push(tuple)
+						// TODO: track how in-efficient listeners are here.
 					}
 				}
 			}
@@ -99,11 +104,11 @@ export class ReactiveStorage implements Storage {
 	}
 }
 
-function getScanPrefix(args: ScanArgs) {
+function getScanPrefix(bounds: Bounds) {
 	// Compute the common prefix.
 	const prefix: Array<Value> = []
-	const start = args.gt || args.gte || []
-	const end = args.lt || args.lte || []
+	const start = bounds.gt || bounds.gte || []
+	const end = bounds.lt || bounds.lte || []
 	const len = Math.min(start.length, end.length)
 	for (let i = 0; i < len; i++) {
 		if (start[i] === end[i]) {

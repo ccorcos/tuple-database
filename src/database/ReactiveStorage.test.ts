@@ -95,10 +95,23 @@ describe("ReactiveStorage", () => {
 			}
 		)
 
+		let hoist3: Writes | undefined
+		store.subscribe(
+			index,
+			{ gt: ["a", "a", MAX], lt: ["a", "c", MAX] },
+			(writes) => {
+				hoist3 = writes
+			}
+		)
+
 		store.transact().set(index, ["a", "c", 1]).commit()
 
 		assert.deepStrictEqual(hoist1, undefined)
-		assert.deepStrictEqual(hoist2, {
+
+		// Even though the prefix matches, isWithinBounds should filter this out.
+		assert.deepStrictEqual(hoist2, undefined)
+
+		assert.deepStrictEqual(hoist3, {
 			abc: { sets: [["a", "c", 1]], removes: [] },
 		})
 	})

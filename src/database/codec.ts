@@ -127,9 +127,13 @@ export function decodeTuple(str: string) {
 	}
 }
 
-function encodeObjectValue(obj: { [key: string]: Value }) {
-	const entires = Object.entries(obj).sort(([k1], [k2]) => compare(k1, k2))
-	return encodeTuple(entires as Tuple)
+function encodeObjectValue(obj: { [key: string]: Value | undefined }) {
+	const entries = Object.entries(obj)
+		.sort(([k1], [k2]) => compare(k1, k2))
+		// We allow undefined values in objects, but we want to strip them out before
+		// serializing.
+		.filter(([key, value]) => value !== undefined)
+	return encodeTuple(entries as Tuple)
 }
 
 function decodeObjectValue(str: string) {

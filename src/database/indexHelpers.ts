@@ -1,7 +1,6 @@
 import { Tuple, ScanArgs, MIN, MAX } from "./types"
 import { binarySearch } from "../helpers/binarySearch"
 import { compareTuple } from "./compareTuple"
-import { setFlagsFromString } from "v8"
 
 export function set(data: Array<Tuple>, tuple: Tuple) {
 	const result = binarySearch(data, tuple, compareTuple)
@@ -22,7 +21,7 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function getBounds(args: ScanArgs) {
+export function getBounds(args: ScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -59,7 +58,41 @@ export function getBounds(args: ScanArgs) {
 	} else if (args.prefix) {
 		lte = [...args.prefix, MAX]
 	}
+
 	return { gte, gt, lte, lt }
+}
+
+export type Bounds = {
+	/** This prevents developers from accidentally using ScanArgs instead of TupleBounds */
+	prefix?: never
+	gte?: Tuple
+	gt?: Tuple
+	lte?: Tuple
+	lt?: Tuple
+}
+
+export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
+	if (bounds.gt) {
+		if (compareTuple(tuple, bounds.gt) !== 1) {
+			return false
+		}
+	}
+	if (bounds.gte) {
+		if (compareTuple(tuple, bounds.gte) === -1) {
+			return false
+		}
+	}
+	if (bounds.lt) {
+		if (compareTuple(tuple, bounds.lt) !== -1) {
+			return false
+		}
+	}
+	if (bounds.lte) {
+		if (compareTuple(tuple, bounds.lte) === 1) {
+			return false
+		}
+	}
+	return true
 }
 
 export function scan(data: Array<Tuple>, args: ScanArgs = {}) {

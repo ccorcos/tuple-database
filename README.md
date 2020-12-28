@@ -93,9 +93,10 @@ npm start
 
 - Better React hooks.
 - Reactivity tests.
+	- should double-check the bounds.
+- efficiently make updates from reactive subscribe.
 - rename to tuple-database
 	- Public package to npm.
-- efficiently make updates from reactive subscribe.
 
 
 - Better reactivity performance?
