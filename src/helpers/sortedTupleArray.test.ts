@@ -1,11 +1,11 @@
 import * as _ from "lodash"
 import { describe, it } from "mocha"
 import * as assert from "assert"
-import { scan, remove, set } from "./indexHelpers"
-import { MAX, MIN, Tuple } from "./types"
+import { scan, remove, set } from "./sortedTupleArray"
+import { MAX, MIN, Tuple } from "../types"
 import { sortedValues } from "../test/fixtures"
 
-describe("indexHelpers", () => {
+describe("sortedTupleArray", () => {
 	it("inserts in correct order", () => {
 		for (let i = 0; i < 10; i++) {
 			const items = [

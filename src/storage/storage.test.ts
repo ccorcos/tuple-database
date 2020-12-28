@@ -9,9 +9,8 @@ import { describe, it } from "mocha"
 import assert from "assert"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { FileStorage } from "./FileStorage"
-import { MAX, MIN, Storage, Tuple } from "./types"
+import { MAX, MIN, Storage, Tuple } from "../types"
 import * as _ from "lodash"
-import { rootPath } from "../helpers/rootPath"
 import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { SQLiteStorage } from "./SQLiteStorage"
@@ -490,12 +489,11 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 
 storageTestSuite("InMemoryStorage", () => new InMemoryStorage())
 
-storageTestSuite(
-	"FileStorage",
-	() => new FileStorage(rootPath("build/test", randomId()))
-)
+const tmpDir = __dirname + "/../../tmp/"
+
+storageTestSuite("FileStorage", () => new FileStorage(tmpDir + randomId()))
 
 storageTestSuite(
 	"SQLiteStorage",
-	() => new SQLiteStorage(rootPath("build/test", randomId() + ".db"))
+	() => new SQLiteStorage(tmpDir + randomId() + ".db")
 )

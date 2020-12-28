@@ -1,5 +1,5 @@
-import { Tuple, ScanArgs, MIN, MAX } from "./types"
-import { binarySearch } from "../helpers/binarySearch"
+import { Tuple, ScanArgs, MIN, MAX } from "../types"
+import { binarySearch } from "./binarySearch"
 import { compareTuple } from "./compareTuple"
 
 export function set(data: Array<Tuple>, tuple: Tuple) {

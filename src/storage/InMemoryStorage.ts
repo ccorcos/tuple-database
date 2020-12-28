@@ -1,5 +1,5 @@
-import { Tuple, ScanArgs, Writes, Storage, Transaction } from "./types"
-import { scan, remove, set } from "./indexHelpers"
+import { Tuple, ScanArgs, Writes, Storage, Transaction } from "../types"
+import { scan, remove, set } from "../helpers/sortedTupleArray"
 
 export class InMemoryStorage implements Storage {
 	map: { [index: string]: Array<Tuple> } = {}

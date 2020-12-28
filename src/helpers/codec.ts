@@ -2,8 +2,8 @@
 
 import * as _ from "lodash"
 import * as elen from "elen"
-import { MIN, MAX, Value, Tuple } from "./types"
-import { compare } from "../helpers/compare"
+import { MIN, MAX, Value, Tuple } from "../types"
+import { compare } from "./compare"
 
 // MIN < null < object < array < number < string < boolean < MAX
 const encodeType = {

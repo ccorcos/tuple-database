@@ -2,13 +2,13 @@
   "name": "tuple-database",
   "version": "1.0.0",
   "description": "",
+  "repository": "github:ccorcos/tuple-database",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
     "test": "npm run test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
-    "test:clean": "rm -rf build/test",
-    "test:watch": "npm test -- --watch --watch-extensions ts",
-    "publish:prepare": "npm run build && mv build out && cp package.json out && cp .npmignore out"
+    "test:clean": "rm -rf tmp",
+    "test:watch": "npm test -- --watch --watch-extensions ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^5.4.1",
@@ -32,4 +32,5 @@
     "ts-node": "^9.1.1",
     "uuid": "^8.3.2"
   }
+
 }

@@ -6,3 +6,4 @@ build
 out
 *.db
 *.key
+tmp

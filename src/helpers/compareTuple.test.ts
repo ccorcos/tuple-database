@@ -8,7 +8,7 @@ import {
 	TupleToString,
 } from "./compareTuple"
 import { sortedValues } from "../test/fixtures"
-import { Tuple } from "./types"
+import { Tuple } from "../types"
 
 describe("compareValue", () => {
 	it("sorting is correct", () => {

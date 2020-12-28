@@ -1,5 +1,5 @@
-import { MAX, MIN, Tuple, Value } from "./types"
-import { compare } from "../helpers/compare"
+import { MAX, MIN, Tuple, Value } from "../types"
+import { compare } from "./compare"
 
 // MIN < null < object < array < number < string < boolean < MAX
 const typeRank = [

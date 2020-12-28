@@ -3,9 +3,9 @@ import { describe, it } from "mocha"
 import * as assert from "assert"
 import { sortedValues } from "../test/fixtures"
 import { encodeValue, decodeValue, decodeTuple, encodeTuple } from "./codec"
-import { compare } from "../helpers/compare"
+import { compare } from "./compare"
 import { ValueToString, TupleToString } from "./compareTuple"
-import { Tuple } from "./types"
+import { Tuple } from "../types"
 
 describe("codec", () => {
 	describe("encodeValue", () => {

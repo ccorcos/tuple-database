@@ -1,8 +1,8 @@
 import { isEqual } from "lodash"
 import { useEffect, useState, useRef } from "react"
-import { remove, set } from "../database/indexHelpers"
-import { ReactiveStorage } from "../database/ReactiveStorage"
-import { ScanArgs } from "../database/types"
+import { remove, set } from "../helpers/sortedTupleArray"
+import { ReactiveStorage } from "../storage/ReactiveStorage"
+import { ScanArgs } from "../types"
 
 export function useSubscribe(
 	db: ReactiveStorage,

@@ -3,6 +3,8 @@
 This database stores tuples in component-wise lexicographical sorted order.
 
 ```ts
+import { SQLiteStorage } from "tuple-database/storage/SQLiteStorage"
+
 const people = [
 	{ id: 1, first: "Chet", last: "Corcos", age: 29 },
 	{ id: 2, first: "Simon", last: "Last", age: 26 },
@@ -28,6 +30,8 @@ console.log(sqliteStorage.scan("person", { lt: [30] }))
 Queries are also reactive based on the index and any prefix for the `gt/lt` arguments.
 
 ```ts
+import { ReactiveStorage } from "tuple-database/storage/ReactiveStorage"
+
 const reactiveStorage = new ReactiveStorage(sqliteStorage)
 
 const [results, unsubscribe] = reactiveStorage.subscribe(
