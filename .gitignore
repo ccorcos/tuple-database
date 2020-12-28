@@ -3,5 +3,6 @@ dist
 .DS_Store
 db
 build
+out
 *.db
 *.key

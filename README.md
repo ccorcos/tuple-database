@@ -91,11 +91,17 @@ npm start
 
 ## TODO
 
-- Proper React bindings.
-- Make SQLite work on Electron.
+- Better React hooks.
+- Explicit `prefix` argument.
+- InvertString helper.
+- Reactivity tests.
+- rename to tuple-database
+	- Public package to npm.
+- efficiently make updates from reactive subscribe.
+
+
 - Better reactivity performance?
 	There might be a way to do this with a btree, but I think it might be necessary to build
 	a proper hierarchical structure to make reactivity a more performant.
-- Explicit `prefix` scan.
 
 - Some kind of benchmark?
