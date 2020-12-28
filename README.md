@@ -1,6 +1,6 @@
-# Binary Tree Database
+# Tuple Database
 
-Just a reactive binary tree index.
+This database stores tuples in component-wise lexicographical sorted order.
 
 ```ts
 const people = [
@@ -71,7 +71,7 @@ reactiveStorage
 
 Databases are complicated. And as with most complicated things, you might find yourself battling the tool more than battling the problem you're trying to solve.
 
-The goal of this project is to create a dead-simple database. It's just a binary tree that where you can store tuples that are component-wise sorted.
+The goal of this project is to create a dead-simple database. It's just a binary tree index where you can store tuples that are component-wise sorted.
 
 This database pushes all of the data modeling and indexing details down to you, the developer, so you get fine-grained control over read/write performance trade-offs.
 
@@ -91,14 +91,10 @@ npm start
 
 ## TODO
 
-- Better React hooks.
-- Efficiently make updates from reactive subscribe.
 - rename to tuple-database
 	- Public package to npm.
-
-
+- Write an article explaining this project in more detail.
 - Better reactivity performance?
 	There might be a way to do this with a btree, but I think it might be necessary to build
 	a proper hierarchical structure to make reactivity a more performant.
-
 - Some kind of benchmark?
