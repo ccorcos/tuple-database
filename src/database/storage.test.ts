@@ -137,17 +137,94 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			assert.deepEqual(data, items)
 
 			const result = store.scan(index, {
-				// prefix: ["a", "b"],
-				gt: ["a", "a", MAX], // ["a"]
+				gt: ["a", "a", MAX],
 				lt: ["a", "c", MIN],
-				// gt: ["a", "b", MIN], // ["a", "b"]
-				// lt: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result, [
 				["a", "b", "a"],
 				["a", "b", "b"],
 				["a", "b", "c"],
+			])
+
+			const result2 = store.scan(index, {
+				gt: ["a", "b", MIN],
+				lt: ["a", "b", MAX],
+			})
+
+			assert.deepEqual(result2, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+			])
+		})
+
+		it("scan prefix", () => {
+			const store = createStorage()
+			const index = "abc"
+			const items = [
+				["a", "a", "a"],
+				["a", "a", "b"],
+				["a", "a", "c"],
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			]
+			const transaction = store.transact()
+			for (const item of _.shuffle(items)) {
+				transaction.set(index, item)
+			}
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data, items)
+
+			const result = store.scan(index, {
+				prefix: ["a", "b"],
+			})
+
+			assert.deepEqual(result, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+			])
+		})
+
+		it("scan prefix gte/lte", () => {
+			const store = createStorage()
+			const index = "abc"
+			const items = [
+				["a", "a", "a"],
+				["a", "a", "b"],
+				["a", "a", "c"],
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "b", "d"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			]
+			const transaction = store.transact()
+			for (const item of _.shuffle(items)) {
+				transaction.set(index, item)
+			}
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data, items)
+
+			const result = store.scan(index, {
+				prefix: ["a", "b"],
+				gte: ["b"],
+				lte: ["d"],
+			})
+
+			assert.deepEqual(result, [
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "b", "d"],
 			])
 		})
 

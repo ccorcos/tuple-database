@@ -91,8 +91,8 @@ npm start
 
 ## TODO
 
-- Better React hooks.
 - Explicit `prefix` argument.
+- Better React hooks.
 - InvertString helper.
 - Reactivity tests.
 - rename to tuple-database

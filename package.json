@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "npm test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
+    "test": "npm run test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
     "test:clean": "rm -rf build/test",
     "test:watch": "npm test -- --watch --watch-extensions ts",
     "publish:prepare": "npm run build && mv build out && cp package.json out && cp .npmignore out"
@@ -16,6 +16,7 @@
     "@types/lodash": "^4.14.165",
     "@types/mocha": "whitecolor/mocha-types",
     "@types/node": "^14.14.14",
+    "better-sqlite3": "^7.1.2",
     "mocha": "^8.2.1",
     "prettier": "^2.2.1",
     "react": "^17.0.1",
@@ -29,8 +30,5 @@
     "md5": "^2.3.0",
     "ts-node": "^9.1.1",
     "uuid": "^8.3.2"
-  },
-  "peerDependencies": {
-    "better-sqlite3": "^7.1.2"
   }
 }

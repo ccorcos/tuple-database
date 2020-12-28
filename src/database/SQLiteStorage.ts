@@ -2,6 +2,7 @@ import { ScanArgs, Writes, Storage, Tuple, Value } from "./types"
 import sqlite from "better-sqlite3"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { decodeTuple, encodeTuple } from "./codec"
+import { getBounds } from "./indexHelpers"
 
 export class SQLiteStorage implements Storage {
 	private db: sqlite.Database
@@ -11,14 +12,18 @@ export class SQLiteStorage implements Storage {
 	}
 
 	scan = (index: string, args: ScanArgs = {}) => {
+		const bounds = getBounds(args)
+
 		// Bounds.
-		let start = args.gte ? encodeTuple(args.gte) : undefined
-		let startAfter: string | undefined = args.gt
-			? encodeTuple(args.gt)
+		let start = bounds.gte ? encodeTuple(bounds.gte) : undefined
+		let startAfter: string | undefined = bounds.gt
+			? encodeTuple(bounds.gt)
 			: undefined
-		let end: string | undefined = args.lte ? encodeTuple(args.lte) : undefined
-		let endBefore: string | undefined = args.lt
-			? encodeTuple(args.lt)
+		let end: string | undefined = bounds.lte
+			? encodeTuple(bounds.lte)
+			: undefined
+		let endBefore: string | undefined = bounds.lt
+			? encodeTuple(bounds.lt)
 			: undefined
 
 		const sqlArgs = {

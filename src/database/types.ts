@@ -14,6 +14,7 @@ export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
 export type ScanArgs = {
+	prefix?: Tuple
 	gt?: Tuple
 	gte?: Tuple
 	lt?: Tuple
