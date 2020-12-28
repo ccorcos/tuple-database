@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "repository": "github:ccorcos/tuple-database",
+  "main": "./main.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",

@@ -2,7 +2,7 @@ import * as _ from "lodash"
 import { describe, it } from "mocha"
 import * as assert from "assert"
 import { scan, remove, set } from "./sortedTupleArray"
-import { MAX, MIN, Tuple } from "../types"
+import { MAX, MIN, Tuple } from "../storage/types"
 import { sortedValues } from "../test/fixtures"
 
 describe("sortedTupleArray", () => {

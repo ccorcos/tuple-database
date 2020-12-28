@@ -3,7 +3,7 @@ import { describe, it } from "mocha"
 import assert from "assert"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { ReactiveStorage } from "./ReactiveStorage"
-import { MAX, MIN, Writes } from "../types"
+import { MAX, MIN, Writes } from "./types"
 
 function createStorage() {
 	return new ReactiveStorage(new InMemoryStorage())

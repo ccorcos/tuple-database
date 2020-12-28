@@ -2,7 +2,7 @@
 
 import * as _ from "lodash"
 import * as elen from "elen"
-import { MIN, MAX, Value, Tuple } from "../types"
+import { MIN, MAX, Value, Tuple } from "../storage/types"
 import { compare } from "./compare"
 
 // MIN < null < object < array < number < string < boolean < MAX

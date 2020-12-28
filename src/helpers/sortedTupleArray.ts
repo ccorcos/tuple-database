@@ -1,4 +1,4 @@
-import { Tuple, ScanArgs, MIN, MAX } from "../types"
+import { Tuple, ScanArgs, MIN, MAX } from "../storage/types"
 import { binarySearch } from "./binarySearch"
 import { compareTuple } from "./compareTuple"
 
@@ -40,7 +40,7 @@ export function getBounds(args: ScanArgs): Bounds {
 			gt = [...args.gt]
 		}
 	} else if (args.prefix) {
-		gte = [...args.prefix, MIN]
+		gte = [...args.prefix]
 	}
 
 	if (args.lte) {

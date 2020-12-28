@@ -30,13 +30,13 @@ console.log(sqliteStorage.scan("person", { lt: [30] }))
 Queries are also reactive based on the index and any prefix for the `gt/lt` arguments.
 
 ```ts
-import { ReactiveStorage } from "tuple-database/storage/ReactiveStorage"
+import { ReactiveStorage, MIN, MAX } from "tuple-database"
 
 const reactiveStorage = new ReactiveStorage(sqliteStorage)
 
 const [results, unsubscribe] = reactiveStorage.subscribe(
 	"person",
-	{ gte: [30, MIN], lte: [30, MAX] },
+	{ gte: [30, MIN], lte: [30, MAX] }, // Alternatively, we could use { prefix: [30] }
 	(updates) => {
 		console.log("UPDATES", updates)
 	}

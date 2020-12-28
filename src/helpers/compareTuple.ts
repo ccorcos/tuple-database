@@ -1,4 +1,4 @@
-import { MAX, MIN, Tuple, Value } from "../types"
+import { MAX, MIN, Tuple, Value } from "../storage/types"
 import { compare } from "./compare"
 
 // MIN < null < object < array < number < string < boolean < MAX

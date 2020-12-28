@@ -1,7 +1,7 @@
 import { randomId } from "../helpers/randomId"
 import { getBounds, Bounds, isWithinBounds } from "../helpers/sortedTupleArray"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
-import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "../types"
+import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
 
 type Callback = (write: Writes) => void
 

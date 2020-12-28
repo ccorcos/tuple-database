@@ -1,4 +1,4 @@
-import { ScanArgs, Writes, Storage, Tuple, Value } from "../types"
+import { ScanArgs, Writes, Storage, Tuple, Value } from "./types"
 import sqlite from "better-sqlite3"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { decodeTuple, encodeTuple } from "../helpers/codec"

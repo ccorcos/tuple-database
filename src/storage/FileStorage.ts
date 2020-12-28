@@ -1,7 +1,7 @@
 import * as _ from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"
-import { Tuple, Storage, ScanArgs, Writes } from "../types"
+import { Tuple, Storage, ScanArgs, Writes } from "./types"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { scan, remove, set } from "../helpers/sortedTupleArray"
 import { decodeTuple, encodeTuple } from "../helpers/codec"

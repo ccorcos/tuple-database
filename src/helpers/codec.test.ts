@@ -5,7 +5,7 @@ import { sortedValues } from "../test/fixtures"
 import { encodeValue, decodeValue, decodeTuple, encodeTuple } from "./codec"
 import { compare } from "./compare"
 import { ValueToString, TupleToString } from "./compareTuple"
-import { Tuple } from "../types"
+import { Tuple } from "../storage/types"
 
 describe("codec", () => {
 	describe("encodeValue", () => {

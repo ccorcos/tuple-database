@@ -2,7 +2,7 @@ import { isEqual } from "lodash"
 import { useEffect, useState, useRef } from "react"
 import { remove, set } from "../helpers/sortedTupleArray"
 import { ReactiveStorage } from "../storage/ReactiveStorage"
-import { ScanArgs } from "../types"
+import { ScanArgs } from "../storage/types"
 
 export function useSubscribe(
 	db: ReactiveStorage,
