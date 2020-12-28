@@ -1,6 +1,7 @@
 // Please see the README.md for instructions on how to run this example.
 const { FileStorage } = require("../build/database/FileStorage")
 const { ReactiveStorage } = require("../build/database/ReactiveStorage")
+const { useSubscribe } = require("../build/react/useSubscribe")
 const { MIN, MAX } = require("../build/database/types")
 const _ = require("lodash")
 
@@ -12,29 +13,10 @@ const db = new ReactiveStorage(new FileStorage(dbPath))
 // to be doing everything here in the preload script so that `require` is available.
 const ReactDOM = require("react-dom")
 const React = require("react")
-const { useEffect, useMemo, useCallback } = require("react")
+const { useCallback, useState } = require("react")
 
 // I don't want to setup and JSX preprocessing, so I'll be doing it the old-school way.
 const h = React.createElement
-
-// React hook for a reactive db query.
-function useSubscribe(index, args) {
-	const [state, setState] = React.useState([])
-	const argsDep = useDeepEqual(args)
-
-	useEffect(() => {
-		const [result, unsubscribe] = db.subscribe(index, args, (updates) => {
-			// TODO: for simplicity, we can just do a db.scan to re-query the database,
-			// but with a little more effort, we can use the updates argument to this
-			// callback function to perform a minimal update on the results.
-			setState(db.scan(index, args))
-		})
-		setState(result)
-		return unsubscribe
-	}, [index, argsDep])
-
-	return state
-}
 
 // Write to both indexes.
 function writeTodo(tx, todo) {
@@ -54,7 +36,7 @@ function updateTodo(tx, oldTodo, todo) {
 
 function App() {
 	// Create a new todo item.
-	const handleClick = React.useCallback(() => {
+	const handleClick = useCallback(() => {
 		const todo = {
 			id: Math.random(),
 			time: Date.now(),
@@ -67,7 +49,7 @@ function App() {
 	}, [])
 
 	// The todos filter.
-	const [filter, setFilter] = React.useState("all") // "all" | "completed" | "not-completed"
+	const [filter, setFilter] = useState("all") // "all" | "completed" | "not-completed"
 
 	const onChangeFilter = useCallback((e) => {
 		setFilter(e.target.value)
@@ -85,7 +67,7 @@ function App() {
 	}
 
 	// Register the subscription and get the todo object from the last element of the tuple.
-	const todos = useSubscribe(index, args).map(
+	const todos = useSubscribe(db, index, args).map(
 		(tuple) => tuple[tuple.length - 1]
 	)
 
@@ -181,20 +163,3 @@ window.addEventListener("DOMContentLoaded", () => {
 	const div = document.getElementById("root")
 	ReactDOM.render(h(App), div)
 })
-
-// Nitty-gritty details for React-hooks.
-function useDeepEqual(obj) {
-	const prev = React.useRef()
-	React.useEffect(() => {
-		prev.current = obj
-	}, [obj])
-
-	const same = _.isEqual(prev.current, obj)
-	const id = React.useRef(Math.random())
-	if (same) {
-		return id.current
-	} else {
-		id.current = Math.random()
-		return id.current
-	}
-}
