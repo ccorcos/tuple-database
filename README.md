@@ -91,9 +91,7 @@ npm start
 
 ## TODO
 
-- Explicit `prefix` argument.
 - Better React hooks.
-- InvertString helper.
 - Reactivity tests.
 - rename to tuple-database
 	- Public package to npm.
