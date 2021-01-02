@@ -1,8 +1,8 @@
 // Please see the README.md for instructions on how to run this example.
-const { FileStorage } = require("../build/database/FileStorage")
-const { ReactiveStorage } = require("../build/database/ReactiveStorage")
+const { FileStorage } = require("../build/storage/FileStorage")
+const { ReactiveStorage } = require("../build/storage/ReactiveStorage")
 const { useSubscribe } = require("../build/react/useSubscribe")
-const { MIN, MAX } = require("../build/database/types")
+const { MIN, MAX } = require("../build/storage/types")
 const _ = require("lodash")
 
 // Initialize a database.

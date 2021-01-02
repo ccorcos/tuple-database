@@ -1,38 +1,47 @@
 import { isEqual } from "lodash"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { remove, set } from "../helpers/sortedTupleArray"
 import { ReactiveStorage } from "../storage/ReactiveStorage"
-import { ScanArgs } from "../storage/types"
+import { ScanArgs, Tuple } from "../storage/types"
 
 export function useSubscribe(
 	db: ReactiveStorage,
 	index: string,
 	args: ScanArgs
 ) {
-	const [state, setState] = useState([])
 	const argsDep = useDeepEqual(args)
+	const rerender = useRerender()
+	const data = useRef<Array<Tuple>>([])
 
-	useEffect(() => {
+	// Even though this is an "effect", we call useMemo so it runs synchronously so
+	// that we don't lose a tick and have to call setState immediately after rendering.
+	const unsubscribe = useMemo(() => {
 		const [result, unsubscribe] = db.subscribe(index, args, (updates) => {
-			setState((oldState) => {
-				// Apply the updates to the state.
-				const newState = [...oldState]
-				for (const tuple of updates[index].removes) {
-					remove(newState, tuple)
-				}
-				for (const tuple of updates[index].sets) {
-					set(newState, tuple)
-				}
-				return newState
-			})
+			const oldState = data.current
+			// Apply the updates to the state.
+			const newState = [...oldState]
+			for (const tuple of updates[index].removes) {
+				remove(newState, tuple)
+			}
+			for (const tuple of updates[index].sets) {
+				set(newState, tuple)
+			}
+			data.current = newState
+			rerender()
 		})
-
-		// Set the initial results.
-		setState(result)
+		data.current = result
 		return unsubscribe
 	}, [db, index, argsDep])
 
-	return state
+	useEffect(() => unsubscribe, [unsubscribe])
+
+	return data.current
+}
+
+function useRerender() {
+	const [state, setState] = useState(0)
+	const rerender = useCallback(() => setState((state) => state + 1))
+	return rerender
 }
 
 /**
