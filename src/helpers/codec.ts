@@ -4,6 +4,7 @@ import * as _ from "lodash"
 import * as elen from "elen"
 import { MIN, MAX, Value, Tuple } from "../storage/types"
 import { compare } from "./compare"
+import { isPlainObject } from "lodash"
 
 // MIN < null < object < array < number < string < boolean < MAX
 const encodeType = {
@@ -16,6 +17,120 @@ const encodeType = {
 	null: "b",
 	MIN: "a",
 } as const
+
+type Encoding<T> = {
+	prefix: string
+	is(value: unknown): boolean
+	encode(value: T): string
+	decode(value: string): T
+}
+
+const maxEnc: Encoding<typeof MAX> = {
+	prefix: encodeType.MAX,
+	is: (value) => value === MAX,
+	encode(value) {
+		return ""
+	},
+	decode(value) {
+		return MAX
+	},
+}
+
+const minEnc: Encoding<typeof MIN> = {
+	prefix: encodeType.MIN,
+	is: (value) => value === MIN,
+	encode(value) {
+		return ""
+	},
+	decode(value) {
+		return MIN
+	},
+}
+
+const nullEnc: Encoding<null> = {
+	prefix: encodeType.null,
+	is: (value) => value === null,
+	encode(value) {
+		return ""
+	},
+	decode(value) {
+		return null
+	},
+}
+
+const stringEnv: Encoding<string> = {
+	prefix: encodeType.string,
+	is: (value) => typeof value === "string",
+	encode(value) {
+		return value
+	},
+	decode(value) {
+		return value
+	},
+}
+
+const numberEnv: Encoding<number> = {
+	prefix: encodeType.number,
+	is: (value) => typeof value === "number",
+	encode(value) {
+		return elen.encode(value)
+	},
+	decode(value) {
+		return elen.decode(value)
+	},
+}
+
+const booleanEnv: Encoding<boolean> = {
+	prefix: encodeType.boolean,
+	is: (value) => value === true || value === false,
+	encode(value) {
+		return value.toString()
+	},
+	decode(value) {
+		if (value === "true") {
+			return true
+		}
+		if (value === "false") {
+			return false
+		}
+		throw new Error(`Failed parse boolean: ${value}`)
+	},
+}
+
+const arrayEnv: Encoding<Array<any>> = {
+	prefix: encodeType.array,
+	is: (value) => Array.isArray(value),
+	encode(value) {
+		return encodeTuple(value)
+	},
+	decode(value) {
+		return decodeTuple(value)
+	},
+}
+
+const objectEnv: Encoding<{ [key: string]: any }> = {
+	prefix: encodeType.object,
+	is: (value) => isPlainObject(value),
+	encode(value) {
+		return encodeObjectValue(value)
+	},
+	decode(value) {
+		return decodeObjectValue(value)
+	},
+}
+
+class Encoder {
+	add() {}
+	encode() {}
+	decode() {}
+}
+
+// array
+// object
+
+// Generalize this so its extensible.
+// - Date -> date type.
+// - Id -> uuid type.
 
 export function encodeValue(value: Value) {
 	if (value === MAX) {
@@ -86,9 +201,9 @@ export function encodeTuple(tuple: Tuple) {
 			const encoded = encodeValue(value)
 			return (
 				encoded
-					// B -> BB
+					// B -> BB or \ -> \\
 					.replace(/\x01/g, "\x01\x01")
-					// A -> BA
+					// A -> BA or x -> \x
 					.replace(/\x00/g, "\x01\x00") + "\x00"
 			)
 		})
