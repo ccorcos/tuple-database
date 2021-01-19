@@ -1,8 +1,6 @@
 import { describe, it } from "mocha"
 import assert from "assert"
 import { invertString } from "./invertString"
-import { compare } from "./compare"
-import { invert } from "lodash"
 
 describe("invertString", () => {
 	const data = [

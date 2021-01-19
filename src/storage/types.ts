@@ -1,4 +1,7 @@
+import { Id } from "../helpers/randomId"
+
 export type Value =
+	| Id
 	| string
 	| number
 	| boolean

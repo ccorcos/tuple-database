@@ -1,4 +1,5 @@
 import * as _ from "lodash"
+import { Id } from "../helpers/randomId"
 import { Tuple, MIN, MAX } from "../storage/types"
 
 export const sortedValues: Tuple = [
@@ -53,5 +54,9 @@ export const sortedValues: Tuple = [
 	"B",
 	false,
 	true,
+	new Id("a"),
+	new Id("b"),
+	new Id("c"),
+	new Id("d"),
 	MAX,
 ]

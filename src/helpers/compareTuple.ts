@@ -1,88 +1,49 @@
 import { MAX, MIN, Tuple, Value } from "../storage/types"
+import { encodingRank, encodingTypeOf } from "./codec"
 import { compare } from "./compare"
-
-// MIN < null < object < array < number < string < boolean < MAX
-const typeRank = [
-	"min",
-	"null",
-	"object",
-	"array",
-	"number",
-	"string",
-	"boolean",
-	"max",
-]
-
-function typeOf(value: Value) {
-	if (value === MAX) {
-		return "max"
-	}
-	if (value === MIN) {
-		return "min"
-	}
-	if (value === null) {
-		return "null"
-	}
-	if (Array.isArray(value)) {
-		return "array"
-	}
-	return typeof value
-}
+import { Id } from "./randomId"
+import { UnreachableError } from "./Unreachable"
 
 export function compareValue(a: Value, b: Value): number {
-	// Check the bounds.
-	if (a === MIN) {
-		if (b === MIN) {
-			return 0
-		} else {
-			return -1
-		}
-	} else if (b === MIN) {
-		return 1
-	} else if (a === MAX) {
-		if (b === MAX) {
-			return 0
-		} else {
-			return 1
-		}
-	} else if (b === MAX) {
-		return -1
-	}
-
-	// Null is last.
-	if (a === null) {
-		if (b === null) {
-			return 0
-		} else {
-			return -1
-		}
-	} else {
-		if (b === null) {
-			return 1
-		}
-	}
-
-	const at = typeOf(a)
-	const bt = typeOf(b)
+	const at = encodingTypeOf(a)
+	const bt = encodingTypeOf(b)
 	if (at === bt) {
 		if (at === "array") {
 			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
 			return compareObject(a as any, b as any)
+		} else if (at === "MAX") {
+			return 0
+		} else if (at === "MIN") {
+			return 0
+		} else if (at === "boolean") {
+			return compare(a as boolean, b as boolean)
+		} else if (at === "null") {
+			return 0
+		} else if (at === "number") {
+			return compare(a as number, b as number)
+		} else if (at === "string") {
+			return compare(a as string, b as string)
+		} else if (at === "uuid") {
+			return compare((a as Id).uuid, (b as Id).uuid)
 		} else {
-			return compare(a, b)
+			throw new UnreachableError(at)
 		}
 	}
 
-	return compare(typeRank.indexOf(at), typeRank.indexOf(bt))
+	return compare(encodingRank.indexOf(at), encodingRank.indexOf(bt))
 }
 
 function compareObject(
 	a: { [key: string]: Value },
 	b: { [key: string]: Value }
 ) {
-	const ae = Object.entries(a).sort(([k1], [k2]) => compare(k1, k2))
-	const be = Object.entries(b).sort(([k1], [k2]) => compare(k1, k2))
+	const ae = Object.entries(a)
+		.filter(([k, v]) => v !== undefined)
+		.sort(([k1], [k2]) => compare(k1, k2))
+	const be = Object.entries(b)
+		.filter(([k, v]) => v !== undefined)
+		.sort(([k1], [k2]) => compare(k1, k2))
 
 	const len = Math.min(ae.length, be.length)
 

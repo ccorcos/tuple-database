@@ -1,46 +1,16 @@
 // This codec is should create a component-wise lexicographically sortable array.
 
-import { invert, isPlainObject } from "lodash"
+import { invert, sortBy } from "lodash"
 import * as elen from "elen"
 import { MIN, MAX, Value, Tuple } from "../storage/types"
 import { compare } from "./compare"
+import { Id } from "./randomId"
+import { UnreachableError } from "./Unreachable"
 
-export type Encoding<T> = {
-	byte: string
-	is(value: unknown): boolean
-	encode(value: T): string
-	decode(value: string): T
-}
-
-export class Encoder<T> {
-	private encodingList: Array<Encoding<T>> = []
-	private encodingMap: Record<string, Encoding<T>> = {}
-	add<E extends T>(encoding: Encoding<E>) {
-		this.encodingList.push(encoding)
-		this.encodingMap[encoding.byte] = encoding
-	}
-	encode(obj: T): string {
-		for (const encoding of this.encodingList) {
-			if (encoding.is(obj)) {
-				return encoding.byte + encoding.encode(obj)
-			}
-		}
-		throw new Error("Could not encode: " + obj)
-	}
-	decode(str: string): T {
-		const byte = str[0]
-		const rest = str.slice(1)
-		const encoding = this.encodingMap[byte]
-		if (!encoding) {
-			throw new Error("Could find encoding for byte: " + byte)
-		}
-		return encoding.decode(rest)
-	}
-}
-
-// MIN < null < object < array < number < string < boolean < MAX
-const encodeType = {
+// MIN < null < object < array < number < string < boolean < uuid < MAX
+export const encodingByte = {
 	MAX: "z",
+	uuid: "i",
 	boolean: "g",
 	string: "f",
 	number: "e",
@@ -50,145 +20,81 @@ const encodeType = {
 	MIN: "a",
 } as const
 
-const maxEnc: Encoding<typeof MAX> = {
-	byte: encodeType.MAX,
-	is: (value) => value === MAX,
-	encode(value) {
-		return ""
-	},
-	decode(value) {
-		return MAX
-	},
-}
+export type EncodingType = keyof typeof encodingByte
 
-const minEnc: Encoding<typeof MIN> = {
-	byte: encodeType.MIN,
-	is: (value) => value === MIN,
-	encode(value) {
-		return ""
-	},
-	decode(value) {
-		return MIN
-	},
-}
-
-const nullEnc: Encoding<null> = {
-	byte: encodeType.null,
-	is: (value) => value === null,
-	encode(value) {
-		return ""
-	},
-	decode(value) {
-		return null
-	},
-}
-
-const stringEnv: Encoding<string> = {
-	byte: encodeType.string,
-	is: (value) => typeof value === "string",
-	encode(value) {
-		return value
-	},
-	decode(value) {
-		return value
-	},
-}
-
-const numberEnv: Encoding<number> = {
-	byte: encodeType.number,
-	is: (value) => typeof value === "number",
-	encode(value) {
-		return elen.encode(value)
-	},
-	decode(value) {
-		return elen.decode(value)
-	},
-}
-
-const booleanEnv: Encoding<boolean> = {
-	byte: encodeType.boolean,
-	is: (value) => value === true || value === false,
-	encode(value) {
-		return value.toString()
-	},
-	decode(value) {
-		if (value === "true") {
-			return true
-		}
-		if (value === "false") {
-			return false
-		}
-		throw new Error(`Failed parse boolean: ${value}`)
-	},
-}
-
-const arrayEnv: Encoding<Array<any>> = {
-	byte: encodeType.array,
-	is: (value) => Array.isArray(value),
-	encode(value) {
-		return encodeTuple(value)
-	},
-	decode(value) {
-		return decodeTuple(value)
-	},
-}
-
-const objectEnv: Encoding<{ [key: string]: any }> = {
-	byte: encodeType.object,
-	is: (value) => isPlainObject(value),
-	encode(value) {
-		return encodeObjectValue(value)
-	},
-	decode(value) {
-		return decodeObjectValue(value)
-	},
-}
-
-// array
-// object
-
-// Generalize this so its extensible.
-// - Date -> date type.
-// - Id -> uuid type.
-
-// Generalize this so its extensible.
-// - Date -> date type.
-// - Id -> uuid type.
+export const encodingRank = sortBy(
+	Object.entries(encodingByte),
+	([key, value]) => value
+).map(([key]) => key as EncodingType)
 
 export function encodeValue(value: Value) {
 	if (value === MAX) {
-		return encodeType.MAX
+		return encodingByte.MAX
 	}
 	if (value === MIN) {
-		return encodeType.MIN
+		return encodingByte.MIN
 	}
 	if (value === null) {
-		return encodeType.null
+		return encodingByte.null
 	}
 	if (value === true || value === false) {
-		return encodeType.boolean + value
+		return encodingByte.boolean + value
 	}
 	if (typeof value === "string") {
-		return encodeType.string + value
+		return encodingByte.string + value
 	}
 	if (typeof value === "number") {
-		return encodeType.number + elen.encode(value)
+		return encodingByte.number + elen.encode(value)
 	}
 	if (Array.isArray(value)) {
-		return encodeType.array + encodeTuple(value)
+		return encodingByte.array + encodeTuple(value)
+	}
+	if (value instanceof Id) {
+		return encodingByte.uuid + value.uuid
 	}
 	if (typeof value === "object") {
-		return encodeType.object + encodeObjectValue(value)
+		return encodingByte.object + encodeObjectValue(value)
 	}
-	throw new Error("Unknow value type: " + typeof value)
+	throw new UnreachableError(value, "Unknown value type")
 }
 
-const decodeType = invert(encodeType) as {
-	[key: string]: keyof typeof encodeType
+export function encodingTypeOf(value: Value): EncodingType {
+	if (value === MAX) {
+		return "MAX"
+	}
+	if (value === MIN) {
+		return "MIN"
+	}
+	if (value === null) {
+		return "null"
+	}
+	if (value === true || value === false) {
+		return "boolean"
+	}
+	if (typeof value === "string") {
+		return "string"
+	}
+	if (typeof value === "number") {
+		return "number"
+	}
+	if (Array.isArray(value)) {
+		return "array"
+	}
+	if (value instanceof Id) {
+		return "uuid"
+	}
+	if (typeof value === "object") {
+		return "object"
+	}
+	throw new UnreachableError(value, "Unknown value type")
+}
+
+const decodeType = invert(encodingByte) as {
+	[key: string]: keyof typeof encodingByte
 }
 
 export function decodeValue(str: string): Value {
-	const encoding = decodeType[str[0]]
+	const encoding: EncodingType = decodeType[str[0]]
 	const rest = str.slice(1)
 
 	if (encoding === "MAX") {
@@ -212,10 +118,13 @@ export function decodeValue(str: string): Value {
 	if (encoding === "array") {
 		return decodeTuple(rest)
 	}
+	if (encoding === "uuid") {
+		return new Id(rest)
+	}
 	if (encoding === "object") {
 		return decodeObjectValue(rest)
 	}
-	throw new Error("Invalid encoding: " + encoding)
+	throw new UnreachableError(encoding, "Invalid encoding byte")
 }
 
 export function encodeTuple(tuple: Tuple) {

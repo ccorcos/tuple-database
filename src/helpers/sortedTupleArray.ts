@@ -1,4 +1,4 @@
-import { Tuple, ScanArgs, MIN, MAX } from "../storage/types"
+import { Tuple, ScanArgs, MAX } from "../storage/types"
 import { binarySearch } from "./binarySearch"
 import { compareTuple } from "./compareTuple"
 
