@@ -25,4 +25,8 @@ export class Id {
 	toString() {
 		return `[Id ${this.uuid}]`
 	}
+
+	static from(uuid: string) {
+		return new Id(uuid)
+	}
 }
