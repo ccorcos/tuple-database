@@ -29,4 +29,7 @@ export class Id {
 	static from(uuid: string) {
 		return new Id(uuid)
 	}
+	static isEqual(a: Id, b: Id) {
+		return a.uuid === b.uuid
+	}
 }
