@@ -30,6 +30,10 @@ export class Id {
 		return new Id(uuid)
 	}
 	static isEqual(a: Id, b: Id) {
-		return a.uuid === b.uuid
+		if (a instanceof Id && b instanceof Id) {
+			return a.uuid === b.uuid
+		} else {
+			return false
+		}
 	}
 }
