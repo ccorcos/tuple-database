@@ -1,4 +1,4 @@
-import * as _ from "lodash"
+import { once } from "lodash"
 import * as fs from "fs-extra"
 import * as path from "path"
 import { Tuple, Storage, ScanArgs, Writes } from "./types"
@@ -49,7 +49,7 @@ export class FileStorage implements Storage {
 class FileCache {
 	constructor(private dbPath: string) {}
 
-	private initialize = _.once(() => {
+	private initialize = once(() => {
 		fs.mkdirpSync(this.dbPath)
 	})
 
