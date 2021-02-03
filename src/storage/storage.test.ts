@@ -11,7 +11,7 @@ import { InMemoryStorage } from "./InMemoryStorage"
 import { FileStorage } from "./FileStorage"
 import { MAX, MIN, Storage, Tuple } from "./types"
 import * as _ from "lodash"
-import { randomId } from "../helpers/randomId"
+import { Id, randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { SQLiteStorage } from "./SQLiteStorage"
 
@@ -38,6 +38,28 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			transaction.commit()
 			const data = store.scan(index)
 			assert.deepEqual(data, items)
+		})
+
+		it("inserts the same thing gets deduplicated", () => {
+			const store = createStorage()
+			const index = "abc"
+			const transaction = store.transact()
+			transaction.set(index, ["a", "a"])
+			transaction.set(index, ["a", "a"])
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data, [["a", "a"]])
+		})
+
+		it("inserts the same thing gets deduplicated with ids", () => {
+			const store = createStorage()
+			const index = "abc"
+			const transaction = store.transact()
+			transaction.set(index, ["a", new Id("a")])
+			transaction.set(index, ["a", new Id("a")])
+			transaction.commit()
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 1)
 		})
 
 		it("removes items correctly", () => {
