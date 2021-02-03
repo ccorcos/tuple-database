@@ -7,7 +7,9 @@ export function set(data: Array<Tuple>, tuple: Tuple) {
 	if (result.closest !== undefined) {
 		// Insert at missing index.
 		data.splice(result.closest, 0, tuple)
+		return true
 	}
+	return false
 }
 
 export function remove(data: Array<Tuple>, tuple: Tuple) {
@@ -15,7 +17,9 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 	if (found !== undefined) {
 		// Remove from index.
 		data.splice(found, 1)
+		return true
 	}
+	return false
 }
 
 /**

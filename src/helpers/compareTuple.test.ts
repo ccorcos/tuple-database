@@ -9,6 +9,7 @@ import {
 } from "./compareTuple"
 import { sortedValues } from "../test/fixtures"
 import { Tuple } from "../storage/types"
+import { Id } from "./randomId"
 
 describe("compareValue", () => {
 	it("sorting is correct", () => {
@@ -44,7 +45,22 @@ describe("compareTuple", () => {
 			test([a, a], [a, b], -1)
 			test([a, b], [b, a], -1)
 			test([b, a], [b, b], -1)
+			test([a, a], [a, a], 0)
+			test([b, b], [b, b], 0)
 		}
+	})
+
+	it("Sorting does a true deep-compare", () => {
+		const test = (a: Tuple, b: Tuple, value: number) => {
+			assert.equal(
+				compareTuple(a, b),
+				value,
+				`compare(${[TupleToString(a), TupleToString(b)].join(", ")})`
+			)
+		}
+
+		test(["a", new Id("a")], ["a", new Id("a")], 0)
+		test(["a", { a: { b: "c" } }], ["a", { a: { b: "c" } }], 0)
 	})
 
 	it("3-length tuple sorting is correct (sampled)", () => {

@@ -9,15 +9,15 @@ import { UnreachableError } from "./Unreachable"
 
 // MIN < null < object < array < number < string < boolean < uuid < MAX
 export const encodingByte = {
-	MAX: "z",
-	uuid: "i",
-	boolean: "g",
-	string: "f",
-	number: "e",
-	array: "d",
-	object: "c",
-	null: "b",
 	MIN: "a",
+	null: "b",
+	object: "c",
+	array: "d",
+	number: "e",
+	string: "f",
+	boolean: "g",
+	uuid: "i",
+	MAX: "z",
 } as const
 
 export type EncodingType = keyof typeof encodingByte
