@@ -1,5 +1,7 @@
 set -e
 
+# npm version patch
+
 rm -rf build
 npm run build
 cp package.json build
