@@ -79,6 +79,70 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			assert.deepEqual(data.length, 1)
 		})
 
+		it("inserts get deduplicated set/remove in same transaction", () => {
+			const store = createStorage()
+			const index = "abc"
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.remove(index, ["a", new Id("a")])
+				.commit()
+
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 0, `data: ${JSON.stringify(data)}`)
+		})
+
+		it("inserts get deduplicated remove/set in same transaction", () => {
+			const store = createStorage()
+			const index = "abc"
+			store
+				.transact()
+				.remove(index, ["a", new Id("a")])
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 1)
+		})
+
+		it("inserts get deduplicated set/remove in same transaction with initial tuple", () => {
+			const store = createStorage()
+			const index = "abc"
+
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.remove(index, ["a", new Id("a")])
+				.commit()
+
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 0)
+		})
+
+		it("inserts get deduplicated remove/set in same transaction with initial tuple", () => {
+			const store = createStorage()
+			const index = "abc"
+
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			store
+				.transact()
+				.remove(index, ["a", new Id("a")])
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 1)
+		})
+
 		it("removes items correctly", () => {
 			const store = createStorage()
 			const index = "abc"

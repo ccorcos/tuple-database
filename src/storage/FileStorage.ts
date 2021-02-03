@@ -7,6 +7,9 @@ import { scan, remove, set } from "../helpers/sortedTupleArray"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 
 function parseFile(str: string): Array<Tuple> {
+	if (str === "") {
+		return []
+	}
 	return str.split("\n").map((line) => decodeTuple(line))
 }
 
