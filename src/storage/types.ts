@@ -42,7 +42,7 @@ export interface Storage {
 export interface Transaction {
 	writes: Writes
 	scan(index: string, args?: ScanArgs): Array<Tuple>
-	set(index: string, value: Tuple): void
-	remove(index: string, value: Tuple): void
+	set(index: string, value: Tuple): Transaction
+	remove(index: string, value: Tuple): Transaction
 	commit(): void
 }

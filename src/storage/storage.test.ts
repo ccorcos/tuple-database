@@ -62,6 +62,23 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			assert.deepEqual(data.length, 1)
 		})
 
+		it("inserts get deduplicated in separate transactions", () => {
+			const store = createStorage()
+			const index = "abc"
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			store
+				.transact()
+				.set(index, ["a", new Id("a")])
+				.commit()
+
+			const data = store.scan(index)
+			assert.deepEqual(data.length, 1)
+		})
+
 		it("removes items correctly", () => {
 			const store = createStorage()
 			const index = "abc"

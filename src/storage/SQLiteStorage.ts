@@ -76,13 +76,13 @@ export class SQLiteStorage implements Storage {
 		for (const [index] of Object.entries(writes)) {
 			const createTableQuery = `create table if not exists ${sanitizeIndexName(
 				index
-			)} ( value text )`
+			)} ( value text primary key)`
 			this.db.prepare(createTableQuery).run()
 		}
 
 		for (const [index, { sets, removes }] of Object.entries(writes)) {
 			const insertQuery = this.db.prepare(
-				`insert into ${sanitizeIndexName(index)} values ($value)`
+				`insert or ignore into ${sanitizeIndexName(index)} values ($value)`
 			)
 
 			const deleteQuery = this.db.prepare(
