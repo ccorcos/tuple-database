@@ -1,15 +1,15 @@
-import { ScanArgs, Writes, Storage, Tuple, Value } from "./types"
-import sqlite from "better-sqlite3"
+import { ScanArgs, Writes, Storage, Tuple } from "./types"
+import { Database } from "better-sqlite3"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 import { getBounds } from "../helpers/sortedTupleArray"
 
 export class SQLiteStorage implements Storage {
-	private db: sqlite.Database
-
-	constructor(private dbPath: string) {
-		this.db = sqlite(dbPath)
-	}
+	/**
+	 * import sqlite from "better-sqlite3"
+	 * new SQLiteStorage(sqlite("path/to.db"))
+	 */
+	constructor(private db: Database) {}
 
 	scan = (index: string, args: ScanArgs = {}) => {
 		const bounds = getBounds(args)

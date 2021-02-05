@@ -3,6 +3,7 @@
 This database stores tuples in component-wise lexicographical sorted order.
 
 ```ts
+import sqlite from "better-sqlite3"
 import { SQLiteStorage } from "tuple-database/storage/SQLiteStorage"
 
 const people = [
@@ -12,7 +13,7 @@ const people = [
 	{ id: 4, first: "Luke", last: "Hansen", age: 29 },
 ]
 
-const sqliteStorage = new SQLiteStorage("./app.db")
+const sqliteStorage = new SQLiteStorage(sqlite("./app.db"))
 const transaction = sqliteStorage.transact()
 for (const person of people) {
 	transaction.set("person", [person.age, person.last, person])
