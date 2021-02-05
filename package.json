@@ -18,6 +18,7 @@
     "@types/lodash": "^4.14.165",
     "@types/mocha": "whitecolor/mocha-types",
     "@types/node": "^14.14.14",
+    "@types/react": "^17.0.1",
     "better-sqlite3": "^7.1.2",
     "mocha": "^8.2.1",
     "prettier": "^2.2.1",

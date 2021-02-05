@@ -14,6 +14,7 @@ import * as _ from "lodash"
 import { Id, randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { SQLiteStorage } from "./SQLiteStorage"
+import { ReactiveStorage } from "./ReactiveStorage"
 
 function storageTestSuite(name: string, createStorage: () => Storage) {
 	describe(name, () => {
@@ -600,4 +601,9 @@ storageTestSuite("FileStorage", () => new FileStorage(tmpDir + randomId()))
 storageTestSuite(
 	"SQLiteStorage",
 	() => new SQLiteStorage(tmpDir + randomId() + ".db")
+)
+
+storageTestSuite(
+	"ReactiveStorage(SQLiteStorage)",
+	() => new ReactiveStorage(new SQLiteStorage(tmpDir + randomId() + ".db"))
 )

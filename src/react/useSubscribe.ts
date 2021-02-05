@@ -40,7 +40,7 @@ export function useSubscribe(
 
 function useRerender() {
 	const [state, setState] = useState(0)
-	const rerender = useCallback(() => setState((state) => state + 1))
+	const rerender = useCallback(() => setState((state) => state + 1), [])
 	return rerender
 }
 
@@ -61,7 +61,7 @@ function useDeepEqual(obj: any) {
 }
 
 function usePrevious<T>(value: T) {
-	const prev = useRef()
+	const prev = useRef<T | undefined>()
 	useEffect(() => {
 		prev.current = value
 	}, [value])
