@@ -12,18 +12,11 @@ export function randomId(seed?: string): string {
 	}
 }
 
-// Trying to use this symbol so we don't have issues with instanceof across
-// the main/renderer electron bridge.
-export const idSymbol = Symbol("isId")
-
 export function isId(value: any): value is Id {
-	// return value instanceof Id
-	return Boolean(value[idSymbol])
+	return value instanceof Id
 }
 
 export class Id {
-	[idSymbol] = true
-
 	public uuid: string
 	constructor(uuid?: string) {
 		if (uuid === undefined) {
