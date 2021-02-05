@@ -83,7 +83,14 @@ export class ReactiveStorage implements Storage {
 		this.storage.commit(writes)
 
 		for (const [callbackId, write] of Object.entries(updates)) {
-			this.callbacks[callbackId](write)
+			const callback = this.callbacks[callbackId]
+			if (callback) {
+				// In theory, all of these callbackIds exist at the beginning of this loop,
+				// but it's possible that some of these callbacks causes other subscriptions
+				// to unsubscribe that would otherwise get an update in a future iteration
+				// of this loop. Thus we have to nullcheck.
+				callback(write)
+			}
 		}
 	}
 
