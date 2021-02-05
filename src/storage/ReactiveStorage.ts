@@ -6,12 +6,15 @@ import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
 type Callback = (write: Writes) => void
 
 export class ReactiveStorage implements Storage {
+	debug = false
+
 	constructor(private storage: Storage) {}
 
 	private callbacks: { [id: string]: Callback } = {}
 	private listeners = new InMemoryStorage()
 
 	subscribe(index: string, args: ScanArgs, callack: Callback) {
+		console.log("db/subscribe", index, args)
 		// Save the callback function for later.
 		const id = randomId()
 		this.callbacks[id] = callack
@@ -22,6 +25,7 @@ export class ReactiveStorage implements Storage {
 		this.listeners.transact().set(index, [prefix, { id, bounds }]).commit()
 
 		const unsubscribe = () => {
+			console.log("db/unsubscribe", index, args)
 			delete this.callbacks[id]
 			this.listeners.transact().remove(index, [prefix, { id, bounds }]).commit()
 		}
@@ -31,6 +35,7 @@ export class ReactiveStorage implements Storage {
 	}
 
 	scan(index: string, args: ScanArgs = {}) {
+		console.log("db/scan", index, args)
 		return this.storage.scan(index, args)
 	}
 
@@ -42,6 +47,7 @@ export class ReactiveStorage implements Storage {
 	}
 
 	commit(writes: Writes) {
+		console.log("db/commit", writes)
 		const updates: { [callbackId: string]: Writes } = {}
 
 		for (const [index, indexWrite] of Object.entries(writes)) {
