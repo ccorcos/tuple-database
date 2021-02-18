@@ -4,7 +4,6 @@ import * as assert from "assert"
 import { scan, remove, set } from "./sortedTupleArray"
 import { MAX, MIN, Tuple } from "../storage/types"
 import { sortedValues } from "../test/fixtures"
-import { Id } from "./randomId"
 
 describe("sortedTupleArray", () => {
 	it("inserts in correct order", () => {
@@ -63,8 +62,8 @@ describe("sortedTupleArray", () => {
 	it("works with deep-compare", () => {
 		const items = [
 			["a", { b: "c" }],
-			["a", new Id("a")],
-			["a", new Id("v")],
+			["a", { uuid: "a" }],
+			["a", { uuid: "v" }],
 		]
 		const data: Array<Tuple> = []
 		for (const item of _.shuffle(items)) {
@@ -72,7 +71,7 @@ describe("sortedTupleArray", () => {
 		}
 		assert.deepEqual(data, items)
 
-		remove(data, ["a", new Id("a")])
+		remove(data, ["a", { uuid: "a" }])
 		remove(data, ["a", { b: "c" }])
 
 		assert.deepEqual(data.length, 1)

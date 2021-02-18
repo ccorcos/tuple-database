@@ -11,33 +11,3 @@ export function randomId(seed?: string): string {
 		return uuid.v4()
 	}
 }
-
-export function isId(value: any): value is Id {
-	return value instanceof Id
-}
-
-export class Id {
-	public uuid: string
-	constructor(uuid?: string) {
-		if (uuid === undefined) {
-			this.uuid = randomId()
-		} else {
-			this.uuid = uuid
-		}
-	}
-
-	toString() {
-		return `[Id ${this.uuid}]`
-	}
-
-	static from(uuid: string) {
-		return new Id(uuid)
-	}
-	static isEqual(a: Id, b: Id) {
-		if (isId(a) && isId(b)) {
-			return a.uuid === b.uuid
-		} else {
-			return false
-		}
-	}
-}

@@ -4,7 +4,6 @@ import { invert, sortBy } from "lodash"
 import * as elen from "elen"
 import { MIN, MAX, Value, Tuple } from "../storage/types"
 import { compare } from "./compare"
-import { Id, isId } from "./randomId"
 import { UnreachableError } from "./Unreachable"
 
 // MIN < null < object < array < number < string < boolean < uuid < MAX
@@ -16,7 +15,6 @@ export const encodingByte = {
 	number: "e",
 	string: "f",
 	boolean: "g",
-	uuid: "i",
 	MAX: "z",
 } as const
 
@@ -49,9 +47,6 @@ export function encodeValue(value: Value) {
 	if (Array.isArray(value)) {
 		return encodingByte.array + encodeTuple(value)
 	}
-	if (isId(value)) {
-		return encodingByte.uuid + value.uuid
-	}
 	if (typeof value === "object") {
 		return encodingByte.object + encodeObjectValue(value)
 	}
@@ -79,9 +74,6 @@ export function encodingTypeOf(value: Value): EncodingType {
 	}
 	if (Array.isArray(value)) {
 		return "array"
-	}
-	if (isId(value)) {
-		return "uuid"
 	}
 	if (typeof value === "object") {
 		return "object"
@@ -117,9 +109,6 @@ export function decodeValue(str: string): Value {
 	}
 	if (encoding === "array") {
 		return decodeTuple(rest)
-	}
-	if (encoding === "uuid") {
-		return new Id(rest)
 	}
 	if (encoding === "object") {
 		return decodeObjectValue(rest)

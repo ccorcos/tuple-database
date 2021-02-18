@@ -1,7 +1,6 @@
 import { MAX, MIN, Tuple, Value } from "../storage/types"
 import { encodingRank, encodingTypeOf } from "./codec"
 import { compare } from "./compare"
-import { Id } from "./randomId"
 import { UnreachableError } from "./Unreachable"
 
 export function compareValue(a: Value, b: Value): number {
@@ -24,8 +23,6 @@ export function compareValue(a: Value, b: Value): number {
 			return compare(a as number, b as number)
 		} else if (at === "string") {
 			return compare(a as string, b as string)
-		} else if (at === "uuid") {
-			return compare((a as Id).uuid, (b as Id).uuid)
 		} else {
 			throw new UnreachableError(at)
 		}

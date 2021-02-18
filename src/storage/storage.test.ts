@@ -11,7 +11,7 @@ import { InMemoryStorage } from "./InMemoryStorage"
 import { FileStorage } from "./FileStorage"
 import { MAX, MIN, Storage, Tuple } from "./types"
 import * as _ from "lodash"
-import { Id, randomId } from "../helpers/randomId"
+import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { SQLiteStorage } from "./SQLiteStorage"
 import { ReactiveStorage } from "./ReactiveStorage"
@@ -58,8 +58,8 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			const index = "abc"
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
-				.set(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 			const data = store.scan(index)
 			assert.deepEqual(data.length, 1)
@@ -70,12 +70,12 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			const index = "abc"
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			const data = store.scan(index)
@@ -87,8 +87,8 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			const index = "abc"
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
-				.remove(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
+				.remove(index, ["a", { uuid: "a" }])
 				.commit()
 
 			const data = store.scan(index)
@@ -100,8 +100,8 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 			const index = "abc"
 			store
 				.transact()
-				.remove(index, ["a", new Id("a")])
-				.set(index, ["a", new Id("a")])
+				.remove(index, ["a", { uuid: "a" }])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			const data = store.scan(index)
@@ -114,13 +114,13 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
-				.remove(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
+				.remove(index, ["a", { uuid: "a" }])
 				.commit()
 
 			const data = store.scan(index)
@@ -133,13 +133,13 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 
 			store
 				.transact()
-				.set(index, ["a", new Id("a")])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			store
 				.transact()
-				.remove(index, ["a", new Id("a")])
-				.set(index, ["a", new Id("a")])
+				.remove(index, ["a", { uuid: "a" }])
+				.set(index, ["a", { uuid: "a" }])
 				.commit()
 
 			const data = store.scan(index)

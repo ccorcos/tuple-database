@@ -9,7 +9,6 @@ import {
 } from "./compareTuple"
 import { sortedValues } from "../test/fixtures"
 import { Tuple } from "../storage/types"
-import { Id } from "./randomId"
 
 describe("compareValue", () => {
 	it("sorting is correct", () => {
@@ -59,7 +58,6 @@ describe("compareTuple", () => {
 			)
 		}
 
-		test(["a", new Id("a")], ["a", new Id("a")], 0)
 		test(["a", { a: { b: "c" } }], ["a", { a: { b: "c" } }], 0)
 	})
 
