@@ -7,7 +7,7 @@ import { ScanArgs, Tuple } from "../storage/types"
 export function useSubscribe(
 	db: ReactiveStorage,
 	index: string,
-	args: ScanArgs
+	args: ScanArgs = {}
 ) {
 	const argsDep = useDeepEqual(args)
 	const rerender = useRerender()
