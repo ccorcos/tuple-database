@@ -19,7 +19,7 @@ export type Value =
 	| boolean
 	| null
 	| Array<Value>
-	| { [key: string]: Value | undefined } // Undefined keys are ignored.
+	| { [key: string]: Value | undefined } // Keys with an undefined value are ignored.
 	| typeof MIN
 	| typeof MAX
 
