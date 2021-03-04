@@ -34,7 +34,7 @@ export class ReactiveStorage implements Storage {
 		}
 	}
 
-	subscribe(index: string, args: ScanArgs, callack: Callback) {
+	subscribe = (index: string, args: ScanArgs, callack: Callback) => {
 		this.log("db/subscribe", index, args)
 
 		// Save the callback function for later.

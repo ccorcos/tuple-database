@@ -5,7 +5,7 @@ import { ReactiveStorage } from "../storage/ReactiveStorage"
 import { ScanArgs, Tuple } from "../storage/types"
 
 export function useSubscribe(
-	db: ReactiveStorage,
+	subscribe: ReactiveStorage["subscribe"],
 	index: string,
 	args: ScanArgs = {}
 ) {
@@ -16,7 +16,7 @@ export function useSubscribe(
 	// Even though this is an "effect", we call useMemo so it runs synchronously so
 	// that we don't lose a tick and have to call setState immediately after rendering.
 	const unsubscribe = useMemo(() => {
-		const [result, unsubscribe] = db.subscribe(index, args, (updates) => {
+		const [result, unsubscribe] = subscribe(index, args, (updates) => {
 			const oldState = data.current
 			// Apply the updates to the state.
 			const newState = [...oldState]
@@ -31,7 +31,7 @@ export function useSubscribe(
 		})
 		data.current = result
 		return unsubscribe
-	}, [db, index, argsDep])
+	}, [subscribe, index, argsDep])
 
 	useEffect(() => unsubscribe, [unsubscribe])
 
