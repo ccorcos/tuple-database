@@ -5,13 +5,61 @@ import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
 
 type Callback = (write: Writes) => void
 
+export class ListenerStorage<T extends Value> {
+	constructor(private storage: Storage) {}
+
+	addListener(index: string, args: ScanArgs, value: T) {
+		const bounds = getBounds(args)
+		const prefix = getScanPrefix(bounds)
+
+		this.storage
+			.transact()
+			.set("listeners", [index, prefix, { value, bounds }])
+			.commit()
+
+		const unsubscribe = () => {
+			this.storage
+				.transact()
+				.remove("listeners", [index, prefix, { value, bounds }])
+				.commit()
+		}
+
+		return unsubscribe
+	}
+
+	getListeners(index: string, tuple: Tuple) {
+		const values: Array<T> = []
+
+		for (let i = 0; i < tuple.length; i++) {
+			const prefix = tuple.slice(0, i)
+			const results = this.storage.scan("listeners", {
+				gte: [index, prefix],
+				lt: [index, [...prefix, MIN]],
+			})
+			for (const result of results) {
+				const { value, bounds } = result[result.length - 1] as {
+					value: T
+					bounds: Bounds
+				}
+				if (isWithinBounds(tuple, bounds)) {
+					values.push(value)
+				} else {
+					// TODO: track how in-efficient listeners are here.
+				}
+			}
+		}
+
+		return values
+	}
+}
+
 export class ReactiveStorage implements Storage {
 	debug = false
 
 	constructor(private storage: Storage) {}
 
 	private callbacks: { [id: string]: Callback } = {}
-	private listeners = new InMemoryStorage()
+	private listeners = new ListenerStorage<string>(new InMemoryStorage())
 
 	private log(...args: any[]) {
 		if (this.debug) {
@@ -26,15 +74,12 @@ export class ReactiveStorage implements Storage {
 		const id = randomId()
 		this.callbacks[id] = callack
 
-		// Track this callback on this prefix.
-		const bounds = getBounds(args)
-		const prefix = getScanPrefix(bounds)
-		this.listeners.transact().set(index, [prefix, { id, bounds }]).commit()
+		const removeListener = this.listeners.addListener(index, args, id)
 
 		const unsubscribe = () => {
 			this.log("db/unsubscribe", index, args)
 			delete this.callbacks[id]
-			this.listeners.transact().remove(index, [prefix, { id, bounds }]).commit()
+			removeListener()
 		}
 
 		// Run the query.
@@ -97,26 +142,12 @@ export class ReactiveStorage implements Storage {
 	private fanout(index: string, tuples: Array<Tuple>) {
 		const updates: { [callbackId: string]: Array<Tuple> } = {}
 		for (const tuple of tuples) {
-			for (let i = 0; i < tuple.length; i++) {
-				const prefix = tuple.slice(0, i)
-				const results = this.listeners.scan(index, {
-					gte: [prefix],
-					lt: [[...prefix, MIN]],
-				})
-				for (const result of results) {
-					const { id, bounds } = result[result.length - 1] as {
-						id: string
-						bounds: Bounds
-					}
-					if (isWithinBounds(tuple, bounds)) {
-						if (!updates[id]) {
-							updates[id] = [tuple]
-						} else {
-							updates[id].push(tuple)
-						}
-					} else {
-						// TODO: track how in-efficient listeners are here.
-					}
+			const ids = this.listeners.getListeners(index, tuple)
+			for (const id of ids) {
+				if (!updates[id]) {
+					updates[id] = [tuple]
+				} else {
+					updates[id].push(tuple)
 				}
 			}
 		}
