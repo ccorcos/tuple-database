@@ -1,43 +1,7 @@
 import { randomId } from "../helpers/randomId"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
 import { ListenerStorage } from "./ListenerStorage"
-import { ScanArgs, Storage, Tuple, Writes } from "./types"
-
-/*
-
-// Middleware idea...
-// - transactions build up writes and call `commit()` to flush to parent storage.
-// - indexers run immediately upon write (not commit).
-// - callbacks run
-
-const storage = new SQLiteStorage(sqlite("app.db"))
-
-// Flush every 2 seconds, or we can build up these changes and commit manually.
-const transaction = new Transaction(storage)
-setInterval(() => transaction.commit(), 2000)
-
-// Update eav indexes and query indexes.
-const tripleStorage = new TripleStorage(transaction)
-
-
-
-
-const indexedStorage = {
-	...storage,
-	// TODO: reactive transaction?
-	commit() {
-		for (const write of writes) {
-			if (write.index === "eav") {
-				writes.add("ave", [a,v,e])
-				writes.add("vea", [v,e,a])
-				writes.add("vae", [v,a,e])
-			}
-		}
-		storage.commit(writes)
-	}
-}
-
-*/
+import { ScanArgs, Storage, Transaction, Tuple, Writes } from "./types"
 
 type Callback = (write: Writes) => void
 
@@ -83,14 +47,15 @@ export class ReactiveStorage implements Storage {
 	}
 
 	transact() {
-		return new InMemoryTransaction({
-			scan: (...args) => this.scan(...args),
-			commit: (...args) => this.commit(...args),
-		})
+		const transaction = this.storage.transact()
+		return new ReactiveTransaction(
+			transaction,
+			this.getUpdates,
+			this.fireUpdates
+		)
 	}
 
-	commit(writes: Writes) {
-		this.log("db/commit", writes)
+	private getUpdates = (writes: Writes) => {
 		const updates: { [callbackId: string]: Writes } = {}
 
 		for (const [index, indexWrite] of Object.entries(writes)) {
@@ -116,8 +81,10 @@ export class ReactiveStorage implements Storage {
 			}
 		}
 
-		this.storage.commit(writes)
+		return updates
+	}
 
+	private fireUpdates = (updates: { [callbackId: string]: Writes }) => {
 		for (const [callbackId, write] of Object.entries(updates)) {
 			const callback = this.callbacks[callbackId]
 			if (callback) {
@@ -143,5 +110,38 @@ export class ReactiveStorage implements Storage {
 			}
 		}
 		return updates
+	}
+}
+
+export class ReactiveTransaction implements Transaction {
+	constructor(
+		private transaction: Transaction,
+		private getUpdates: (writes: Writes) => { [callbackId: string]: Writes },
+		private fireUpdates: (updates: { [callbackId: string]: Writes }) => void
+	) {}
+
+	get writes() {
+		return this.transaction.writes
+	}
+
+	scan(index: string, args: ScanArgs = {}) {
+		return this.transaction.scan(index, args)
+	}
+
+	commit() {
+		// Note: we don't first any callbacks until commit().
+		const updates = this.getUpdates(this.writes)
+		this.transaction.commit()
+		this.fireUpdates(updates)
+	}
+
+	set(index: string, tuple: Tuple) {
+		this.transaction.set(index, tuple)
+		return this
+	}
+
+	remove(index: string, tuple: Tuple) {
+		this.transaction.remove(index, tuple)
+		return this
 	}
 }

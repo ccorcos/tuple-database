@@ -45,16 +45,20 @@ export type Writes = {
 	[index: string]: { sets: Array<Tuple>; removes: Array<Tuple> }
 }
 
+export type Operation =
+	| { type: "set"; index: string; tuple: Tuple }
+	| { type: "remove"; index: string; tuple: Tuple }
+
 export interface Storage {
 	scan(index: string, args?: ScanArgs): Array<Tuple>
 	transact(): Transaction
-	commit(writes: Writes): void
+	// commit(writes: Writes): void
 }
 
 export interface Transaction {
-	writes: Writes
+	readonly writes: Writes
 	scan(index: string, args?: ScanArgs): Array<Tuple>
-	set(index: string, value: Tuple): Transaction
-	remove(index: string, value: Tuple): Transaction
+	set(index: string, tuple: Tuple): Transaction
+	remove(index: string, tuple: Tuple): Transaction
 	commit(): void
 }

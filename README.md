@@ -72,6 +72,23 @@ reactiveStorage
 // Update doesn't log because it falls outside the query.
 ```
 
+You can also use the `IndexerStorage` as a middleware layer.
+
+```ts
+
+const reactiveStorage = new ReactiveStorage(
+	new IndexerStorage(sqliteStorage, (tx, op) => {
+		if (op.index === "eav") {
+			const [e, a, v] = op.tuple
+			tx[op.type]("ave", [a, v, e])
+			tx[op.type]("vea", [v, e, a])
+			tx[op.type]("vae", [v, a, e])
+		}
+	})
+)
+
+```
+
 ## Why?
 
 Databases are complicated. And as with most complicated things, you might find yourself battling the tool more than battling the problem you're trying to solve.
@@ -97,22 +114,29 @@ npm start
 ## TODO
 
 
-TODO:
-- first we need to solve the ID / custom data types middleware problem
+Problem:
+Indexer and Reactivity have a bidirectional relationship.
+Reactivity needs to be on top to have access to `subscribe()`
+Indexer needs to be upstream from Reactivity.
+
+Solution:
+No classes. Everything is just plain objects... Indexer passes subscribe through?
+
+Solution:
+Indexer is really just a middleware thing... can we just incorporate thst into ReactiveStorage?
+
+- Can we make a Transaction feel more like a Storage middleware layer?
+	// Flush every 2 seconds, or we can build up these changes and commit manually.
+	const transaction = new Transaction(storage)
+	setInterval(() => transaction.commit(), 2000)
+
 - then we need to create runtime validators for type assertions.
-- last, if we want, we can think about orm ux.
-- {uuid: string} sounds good enough to me. {date: string} can work just as well.
 - can we get rid of MIN/Max too?
 
 
 - usability stuff
-	- middleware for schemas and validation kinds of things.
-	- custom data types for Date and others -- this shouldn't be in the database. just the basics. string and number even... boolean and json to be nice.
-	- runtime validators and transformers with nice types.
-
 	- useSubscribe should have the same api as scan so they can be swapped out.
 	- Might make sense for transaction to have the same apis as well? Prosemirror has state.tx which is interesting... Also tx.commit() might not make the most sense... though the fluent api is nice.
-
 
 - Write an article explaining this project in more detail.
 - Better reactivity performance?
