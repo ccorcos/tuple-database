@@ -12,7 +12,7 @@ import {
 
 type Callback = (write: Writes) => void
 
-type Indexer = (tx: Transaction, op: Operation) => void
+export type Indexer = (tx: Transaction, op: Operation) => void
 
 export class ReactiveStorage implements Storage {
 	debug = false
