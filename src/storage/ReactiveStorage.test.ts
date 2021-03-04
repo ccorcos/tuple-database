@@ -115,4 +115,56 @@ describe("ReactiveStorage", () => {
 			abc: { sets: [["a", "c", 1]], removes: [] },
 		})
 	})
+
+	it("indexers work", () => {
+		const store = new ReactiveStorage(new InMemoryStorage(), [
+			(tx, op) => {
+				if (op.index === "eav") {
+					const [e, a, v] = op.tuple
+					tx[op.type]("ave", [a, v, e])
+					tx[op.type]("vea", [v, e, a])
+					tx[op.type]("vae", [v, a, e])
+				}
+			},
+		])
+
+		const tx = store.transact()
+
+		tx.set("eav", ["0001", "type", "Person"])
+			.set("eav", ["0001", "firstName", "Chet"])
+			.set("eav", ["0001", "lastName", "Corcos"])
+			.set("eav", ["0002", "type", "Person"])
+			.set("eav", ["0002", "firstName", "Meghan"])
+			.set("eav", ["0002", "lastName", "Navarro"])
+
+		// Test that the indexer is running on every write within a transaction.
+		assert.deepStrictEqual(tx.scan("ave", { prefix: ["type", "Person"] }), [
+			["type", "Person", "0001"],
+			["type", "Person", "0002"],
+		])
+
+		tx.commit()
+
+		// Test that the result is written to storage.
+		assert.deepStrictEqual(store.scan("ave", { prefix: ["type", "Person"] }), [
+			["type", "Person", "0001"],
+			["type", "Person", "0002"],
+		])
+
+		let hoist: Writes | undefined
+		store.subscribe("ave", { prefix: ["type", "Person"] }, (writes) => {
+			hoist = writes
+		})
+
+		store
+			.transact()
+			.set("eav", ["0003", "type", "Person"])
+			.set("eav", ["0003", "firstName", "Sam"])
+			.set("eav", ["0003", "lastName", "Corcos"])
+			.commit()
+
+		assert.deepStrictEqual(hoist, {
+			ave: { sets: [["type", "Person", "0003"]], removes: [] },
+		})
+	})
 })

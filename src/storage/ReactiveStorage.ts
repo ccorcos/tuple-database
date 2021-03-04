@@ -1,14 +1,26 @@
 import { randomId } from "../helpers/randomId"
-import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
+import { InMemoryStorage } from "./InMemoryStorage"
 import { ListenerStorage } from "./ListenerStorage"
-import { ScanArgs, Storage, Transaction, Tuple, Writes } from "./types"
+import {
+	Operation,
+	ScanArgs,
+	Storage,
+	Transaction,
+	Tuple,
+	Writes,
+} from "./types"
 
 type Callback = (write: Writes) => void
+
+type Indexer = (tx: Transaction, op: Operation) => void
 
 export class ReactiveStorage implements Storage {
 	debug = false
 
-	constructor(private storage: Storage) {}
+	constructor(
+		private storage: Storage,
+		private indexers: Array<Indexer> = []
+	) {}
 
 	private callbacks: { [id: string]: Callback } = {}
 	private listeners = new ListenerStorage<string>(
@@ -50,6 +62,7 @@ export class ReactiveStorage implements Storage {
 		const transaction = this.storage.transact()
 		return new ReactiveTransaction(
 			transaction,
+			this.indexers,
 			this.getUpdates,
 			this.fireUpdates
 		)
@@ -116,6 +129,7 @@ export class ReactiveStorage implements Storage {
 export class ReactiveTransaction implements Transaction {
 	constructor(
 		private transaction: Transaction,
+		private indexers: Array<Indexer>,
 		private getUpdates: (writes: Writes) => { [callbackId: string]: Writes },
 		private fireUpdates: (updates: { [callbackId: string]: Writes }) => void
 	) {}
@@ -137,11 +151,19 @@ export class ReactiveTransaction implements Transaction {
 
 	set(index: string, tuple: Tuple) {
 		this.transaction.set(index, tuple)
+		const op: Operation = { type: "set", index, tuple }
+		for (const indexer of this.indexers) {
+			indexer(this.transaction, op)
+		}
 		return this
 	}
 
 	remove(index: string, tuple: Tuple) {
 		this.transaction.remove(index, tuple)
+		const op: Operation = { type: "remove", index, tuple }
+		for (const indexer of this.indexers) {
+			indexer(this.transaction, op)
+		}
 		return this
 	}
 }

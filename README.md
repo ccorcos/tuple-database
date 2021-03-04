@@ -72,21 +72,19 @@ reactiveStorage
 // Update doesn't log because it falls outside the query.
 ```
 
-You can also use the `IndexerStorage` as a middleware layer.
+You can also add indexers to your `ReactiveStorage` to build up abstractions like a triple store.
 
 ```ts
-
-const reactiveStorage = new ReactiveStorage(
-	new IndexerStorage(sqliteStorage, (tx, op) => {
+const reactiveStorage = new ReactiveStorage(sqliteStorage, [
+	(tx, op) => {
 		if (op.index === "eav") {
 			const [e, a, v] = op.tuple
 			tx[op.type]("ave", [a, v, e])
 			tx[op.type]("vea", [v, e, a])
 			tx[op.type]("vae", [v, a, e])
 		}
-	})
-)
-
+	}
+])
 ```
 
 ## Why?
@@ -113,17 +111,8 @@ npm start
 
 ## TODO
 
+- I wish the indexing layers we more separable from ReactiveStorage, but I guess its fine...
 
-Problem:
-Indexer and Reactivity have a bidirectional relationship.
-Reactivity needs to be on top to have access to `subscribe()`
-Indexer needs to be upstream from Reactivity.
-
-Solution:
-No classes. Everything is just plain objects... Indexer passes subscribe through?
-
-Solution:
-Indexer is really just a middleware thing... can we just incorporate thst into ReactiveStorage?
 
 - Can we make a Transaction feel more like a Storage middleware layer?
 	// Flush every 2 seconds, or we can build up these changes and commit manually.
