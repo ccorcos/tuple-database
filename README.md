@@ -120,3 +120,9 @@ TODO:
 	a proper hierarchical structure to make reactivity a more performant.
 - Some kind of benchmark?
 - better file format.
+
+## Later
+
+- custom storage
+	- no serialization
+	- custom sort directions
