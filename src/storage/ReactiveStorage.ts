@@ -1,57 +1,45 @@
 import { randomId } from "../helpers/randomId"
-import { getBounds, Bounds, isWithinBounds } from "../helpers/sortedTupleArray"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
-import { MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
+import { ListenerStorage } from "./ListenerStorage"
+import { ScanArgs, Storage, Tuple, Writes } from "./types"
 
-type Callback = (write: Writes) => void
+/*
 
-export class ListenerStorage<T extends Value> {
-	constructor(private storage: Storage) {}
+// Middleware idea...
+// - transactions build up writes and call `commit()` to flush to parent storage.
+// - indexers run immediately upon write (not commit).
+// - callbacks run
 
-	addListener(index: string, args: ScanArgs, value: T) {
-		const bounds = getBounds(args)
-		const prefix = getScanPrefix(bounds)
+const storage = new SQLiteStorage(sqlite("app.db"))
 
-		this.storage
-			.transact()
-			.set("listeners", [index, prefix, { value, bounds }])
-			.commit()
+// Flush every 2 seconds, or we can build up these changes and commit manually.
+const transaction = new Transaction(storage)
+setInterval(() => transaction.commit(), 2000)
 
-		const unsubscribe = () => {
-			this.storage
-				.transact()
-				.remove("listeners", [index, prefix, { value, bounds }])
-				.commit()
-		}
+// Update eav indexes and query indexes.
+const tripleStorage = new TripleStorage(transaction)
 
-		return unsubscribe
-	}
 
-	getListeners(index: string, tuple: Tuple) {
-		const values: Array<T> = []
 
-		for (let i = 0; i < tuple.length; i++) {
-			const prefix = tuple.slice(0, i)
-			const results = this.storage.scan("listeners", {
-				gte: [index, prefix],
-				lt: [index, [...prefix, MIN]],
-			})
-			for (const result of results) {
-				const { value, bounds } = result[result.length - 1] as {
-					value: T
-					bounds: Bounds
-				}
-				if (isWithinBounds(tuple, bounds)) {
-					values.push(value)
-				} else {
-					// TODO: track how in-efficient listeners are here.
-				}
+
+const indexedStorage = {
+	...storage,
+	// TODO: reactive transaction?
+	commit() {
+		for (const write of writes) {
+			if (write.index === "eav") {
+				writes.add("ave", [a,v,e])
+				writes.add("vea", [v,e,a])
+				writes.add("vae", [v,a,e])
 			}
 		}
-
-		return values
+		storage.commit(writes)
 	}
 }
+
+*/
+
+type Callback = (write: Writes) => void
 
 export class ReactiveStorage implements Storage {
 	debug = false
@@ -59,7 +47,10 @@ export class ReactiveStorage implements Storage {
 	constructor(private storage: Storage) {}
 
 	private callbacks: { [id: string]: Callback } = {}
-	private listeners = new ListenerStorage<string>(new InMemoryStorage())
+	private listeners = new ListenerStorage<string>(
+		new InMemoryStorage(),
+		"listeners"
+	)
 
 	private log(...args: any[]) {
 		if (this.debug) {
@@ -153,20 +144,4 @@ export class ReactiveStorage implements Storage {
 		}
 		return updates
 	}
-}
-
-function getScanPrefix(bounds: Bounds) {
-	// Compute the common prefix.
-	const prefix: Array<Value> = []
-	const start = bounds.gt || bounds.gte || []
-	const end = bounds.lt || bounds.lte || []
-	const len = Math.min(start.length, end.length)
-	for (let i = 0; i < len; i++) {
-		if (start[i] === end[i]) {
-			prefix.push(start[i])
-		} else {
-			break
-		}
-	}
-	return prefix
 }
