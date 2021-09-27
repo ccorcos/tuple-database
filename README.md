@@ -111,9 +111,6 @@ npm start
 
 ## TODO
 
-- in-memory storage should accept any kind of object.
-
-
 
 - I wish the indexing layers we more separable from ReactiveStorage, but I guess its fine...
 
