@@ -1,8 +1,8 @@
 // This codec is should create a component-wise lexicographically sortable array.
 
-import { invert, sortBy } from "lodash"
 import * as elen from "elen"
-import { MIN, MAX, Value, Tuple } from "../storage/types"
+import { invert, isPlainObject, sortBy } from "lodash"
+import { MAX, MIN, Tuple, Value } from "../storage/types"
 import { compare } from "./compare"
 import { UnreachableError } from "./Unreachable"
 
@@ -163,7 +163,10 @@ export function decodeTuple(str: string) {
 	}
 }
 
-function encodeObjectValue(obj: { [key: string]: Value | undefined }) {
+function encodeObjectValue(obj: object) {
+	if (!isPlainObject(obj)) {
+		throw new Error("Cannot serialize this object.")
+	}
 	const entries = Object.entries(obj)
 		.sort(([k1], [k2]) => compare(k1, k2))
 		// We allow undefined values in objects, but we want to strip them out before

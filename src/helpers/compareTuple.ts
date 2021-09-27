@@ -1,3 +1,4 @@
+import { isPlainObject } from "lodash"
 import { MAX, MIN, Tuple, Value } from "../storage/types"
 import { encodingRank, encodingTypeOf } from "./codec"
 import { compare } from "./compare"
@@ -10,7 +11,22 @@ export function compareValue(a: Value, b: Value): number {
 		if (at === "array") {
 			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
-			return compareObject(a as any, b as any)
+			if (isPlainObject(a)) {
+				if (isPlainObject(b)) {
+					// Plain objects are ordered.
+					// This is convenient for duck-typing things like `{date: "2021-12-01"}`
+					return compareObject(a as any, b as any)
+				} else {
+					// class < json
+					return 1
+				}
+			} else if (isPlainObject(b)) {
+				return -1
+			} else {
+				// But we also allow for aribtrary class objects.
+				// TODO: allow prototype.compare and prototype.serialize
+				return 0
+			}
 		} else if (at === "MAX") {
 			return 0
 		} else if (at === "MIN") {

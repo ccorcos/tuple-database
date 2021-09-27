@@ -1,5 +1,4 @@
-import * as _ from "lodash"
-import { Tuple, MIN, MAX } from "../storage/types"
+import { MAX, MIN, Tuple } from "../storage/types"
 
 export const sortedValues: Tuple = [
 	MIN,

@@ -5,19 +5,23 @@
 
 */
 
-import { describe, it } from "mocha"
 import assert from "assert"
-import { InMemoryStorage } from "./InMemoryStorage"
-import { FileStorage } from "./FileStorage"
-import { MAX, MIN, Storage, Tuple } from "./types"
+import sqlite from "better-sqlite3"
 import * as _ from "lodash"
+import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
-import { SQLiteStorage } from "./SQLiteStorage"
+import { FileStorage } from "./FileStorage"
+import { InMemoryStorage } from "./InMemoryStorage"
 import { ReactiveStorage } from "./ReactiveStorage"
-import sqlite from "better-sqlite3"
+import { SQLiteStorage } from "./SQLiteStorage"
+import { MAX, MIN, Storage, Tuple } from "./types"
 
-function storageTestSuite(name: string, createStorage: () => Storage) {
+function storageTestSuite(
+	name: string,
+	sortedValues: Tuple,
+	createStorage: () => Storage
+) {
 	describe(name, () => {
 		it("inserts in correct order", () => {
 			const store = createStorage()
@@ -593,19 +597,38 @@ function storageTestSuite(name: string, createStorage: () => Storage) {
 	})
 }
 
-storageTestSuite("InMemoryStorage", () => new InMemoryStorage())
+// Add this class
+class AnyObject {}
+const inMemorySortedValues = [...sortedValues]
+inMemorySortedValues.splice(
+	inMemorySortedValues.indexOf(null) + 1,
+	0,
+	new AnyObject()
+)
+
+storageTestSuite(
+	"InMemoryStorage",
+	inMemorySortedValues,
+	() => new InMemoryStorage()
+)
 
 const tmpDir = __dirname + "/../../tmp/"
 
-storageTestSuite("FileStorage", () => new FileStorage(tmpDir + randomId()))
+storageTestSuite(
+	"FileStorage",
+	sortedValues,
+	() => new FileStorage(tmpDir + randomId())
+)
 
 storageTestSuite(
 	"SQLiteStorage",
+	sortedValues,
 	() => new SQLiteStorage(sqlite(tmpDir + randomId() + ".db"))
 )
 
 storageTestSuite(
 	"ReactiveStorage(SQLiteStorage)",
+	sortedValues,
 	() =>
 		new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + randomId() + ".db")))
 )
