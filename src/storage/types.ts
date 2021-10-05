@@ -13,6 +13,7 @@ One exception is currently the MIN and MAX symbols... It would be nice to
 redesign the semantics of the api to get rid of those.
 
 */
+
 export type Value =
 	| string
 	| number
@@ -23,8 +24,14 @@ export type Value =
 	| typeof MIN
 	| typeof MAX
 
-export type Tuple = Array<Value>
+export type Tuple = Value[]
 
+export type TupleValuePair = [Tuple, any]
+
+// If keys were always encoded when they were stored, we could add a \x00 or \xFF byte to
+// the end of the encoded tuple key in order to do prefix queries. However, we don't want
+// to serialize data when it is stored and queried in memory, thus we need to have a MIN
+// and MAX abstraction such as this.
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
@@ -38,27 +45,25 @@ export type ScanArgs = {
 }
 
 export interface ReadOnlyStorage {
-	scan(index: string, args: ScanArgs): Array<Tuple>
+	scan(args: ScanArgs): TupleValuePair[]
 }
 
-export type Writes = {
-	[index: string]: { sets: Array<Tuple>; removes: Array<Tuple> }
-}
+export type Writes = { sets: TupleValuePair[]; removes: Tuple[] }
 
 export type Operation =
-	| { type: "set"; index: string; tuple: Tuple }
-	| { type: "remove"; index: string; tuple: Tuple }
+	| { op: "set"; pair: TupleValuePair }
+	| { op: "remove"; pair: TupleValuePair }
 
 export interface Storage {
-	scan(index: string, args?: ScanArgs): Array<Tuple>
+	scan(args?: ScanArgs): TupleValuePair[]
 	transact(): Transaction
 	// commit(writes: Writes): void
 }
 
 export interface Transaction {
 	readonly writes: Writes
-	scan(index: string, args?: ScanArgs): Array<Tuple>
-	set(index: string, tuple: Tuple): Transaction
-	remove(index: string, tuple: Tuple): Transaction
+	scan(args?: ScanArgs): TupleValuePair[]
+	set(tuple: Tuple, value: any): Transaction
+	remove(tuple: Tuple): Transaction
 	commit(): void
 }

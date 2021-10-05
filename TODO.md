@@ -7,6 +7,14 @@
 	- subspace.range() returns a start and stop.
 	- everything is stored as raw bytes making range queries a bit simpler.
 
+- Subspace uses has tuple prefix and raw prefix https://github.com/apple/foundationdb/blob/dc3cebe8d904a704f734524943fc074dbaa59efc/bindings/python/fdb/subspace_impl.py
+- Tuple range is just adds a null byte to the end. https://github.com/apple/foundationdb/blob/dc3cebe8d904a704f734524943fc074dbaa59efc/bindings/python/fdb/tuple.py#L442
+	- This inherently relies on serialization to be querable. That's annoying.
+
+TODO
+- No more "index" shard thing. If we ever were to shard, we'd manually choose which tuples to split out anyways.
+
+
 
 - https://apple.github.io/foundationdb/data-modeling.html
 

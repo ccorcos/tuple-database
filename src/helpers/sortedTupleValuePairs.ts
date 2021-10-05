@@ -1,19 +1,23 @@
-import { MAX, ScanArgs, Tuple } from "../storage/types"
-import { binarySearch } from "./binarySearch"
+import { MAX, ScanArgs, Tuple, TupleValuePair } from "../storage/types"
+import { binarySearchAssociativeList } from "./binarySearchAssociativeList"
 import { compareTuple } from "./compareTuple"
 
-export function set(data: Array<Tuple>, tuple: Tuple) {
-	const result = binarySearch(data, tuple, compareTuple)
-	if (result.closest !== undefined) {
+export function set(data: TupleValuePair[], tuple: Tuple, value: any) {
+	const result = binarySearchAssociativeList(data, tuple, compareTuple)
+	if (result.found !== undefined) {
+		// Replace the whole pair.
+		data.splice(result.found, 1, [tuple, value])
+		return true
+	} else if (result.closest !== undefined) {
 		// Insert at missing index.
-		data.splice(result.closest, 0, tuple)
+		data.splice(result.closest, 0, [tuple, value])
 		return true
 	}
 	return false
 }
 
-export function remove(data: Array<Tuple>, tuple: Tuple) {
-	let { found } = binarySearch(data, tuple, compareTuple)
+export function remove(data: TupleValuePair[], tuple: Tuple) {
+	let { found } = binarySearchAssociativeList(data, tuple, compareTuple)
 	if (found !== undefined) {
 		// Remove from index.
 		data.splice(found, 1)
@@ -99,7 +103,8 @@ export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
 	return true
 }
 
-export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
+// TODO: should we make this an iterator?
+export function scan(data: TupleValuePair[], args: ScanArgs = {}) {
 	const bounds = getBounds(args)
 	const start: Tuple | undefined = bounds.gte || bounds.gt
 	const end: Tuple | undefined = bounds.lte || bounds.lt
@@ -109,7 +114,7 @@ export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 	}
 
 	// Start at lower bound.
-	const result = binarySearch(data, start || [], compareTuple)
+	const result = binarySearchAssociativeList(data, start || [], compareTuple)
 	let i =
 		result.found !== undefined
 			? bounds.gt
@@ -117,7 +122,7 @@ export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 				: result.found
 			: result.closest
 
-	const results: Array<Tuple> = []
+	const results: TupleValuePair[] = []
 	while (true) {
 		// End of array.
 		if (i >= data.length) {
@@ -128,7 +133,7 @@ export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 			break
 		}
 		// Upper bound condition.
-		const tuple = data[i]
+		const [tuple, value] = data[i]
 
 		if (bounds.lt) {
 			const dir = compareTuple(tuple, bounds.lt)
@@ -142,7 +147,7 @@ export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 				break
 			}
 		}
-		results.push(tuple)
+		results.push([tuple, value])
 		i += 1
 	}
 	return results

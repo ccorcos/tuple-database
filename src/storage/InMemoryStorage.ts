@@ -1,12 +1,19 @@
-import { Tuple, ScanArgs, Writes, Storage, Transaction } from "./types"
-import { scan, remove, set } from "../helpers/sortedTupleArray"
+import * as t from "../helpers/sortedTupleArray"
+import * as tv from "../helpers/sortedTupleValuePairs"
+import {
+	ScanArgs,
+	Storage,
+	Transaction,
+	Tuple,
+	TupleValuePair,
+	Writes,
+} from "./types"
 
 export class InMemoryStorage implements Storage {
-	map: { [index: string]: Array<Tuple> } = {}
+	data: TupleValuePair[] = []
 
-	scan(index: string, args: ScanArgs = {}) {
-		const data = this.map[index] || []
-		return scan(data, args)
+	scan(args: ScanArgs = {}) {
+		return tv.scan(this.data, args)
 	}
 
 	transact() {
@@ -17,59 +24,47 @@ export class InMemoryStorage implements Storage {
 	}
 
 	commit(writes: Writes) {
-		for (const [name, { sets, removes }] of Object.entries(writes)) {
-			if (!this.map[name]) {
-				this.map[name] = []
-			}
-			for (const tuple of removes) {
-				remove(this.map[name], tuple)
-			}
-			for (const tuple of sets) {
-				set(this.map[name], tuple)
-			}
+		const { sets, removes } = writes
+		for (const tuple of removes) {
+			tv.remove(this.data, tuple)
+		}
+		for (const [tuple, value] of sets) {
+			tv.set(this.data, tuple, value)
 		}
 	}
 }
 
 interface TransactionArgs {
-	scan(index: string, args: ScanArgs): Array<Tuple>
+	scan(args: ScanArgs): TupleValuePair[]
 	commit(writes: Writes): void
 }
 
 export class InMemoryTransaction implements Transaction {
 	constructor(private storage: TransactionArgs) {}
 
-	writes: Writes = {}
+	writes: Writes = { sets: [], removes: [] }
 
-	set(index: string, value: Tuple) {
-		if (!this.writes[index]) {
-			this.writes[index] = { sets: [], removes: [] }
-		}
-		remove(this.writes[index].removes, value)
-		set(this.writes[index].sets, value)
+	set(tuple: Tuple, value: any) {
+		t.remove(this.writes.removes, tuple)
+		tv.set(this.writes.sets, tuple, value)
 		return this
 	}
 
-	remove(index: string, value: Tuple) {
-		if (!this.writes[index]) {
-			this.writes[index] = { sets: [], removes: [] }
-		}
-		remove(this.writes[index].sets, value)
-		set(this.writes[index].removes, value)
+	remove(tuple: Tuple) {
+		tv.remove(this.writes.sets, tuple)
+		t.set(this.writes.removes, tuple)
 		return this
 	}
 
-	scan(index: string, args: ScanArgs = {}) {
-		const result = this.storage.scan(index, args)
-		if (this.writes[index]) {
-			const sets = scan(this.writes[index].sets, args)
-			for (const tuple of sets) {
-				set(result, tuple)
-			}
-			const removes = scan(this.writes[index].removes, args)
-			for (const tuple of removes) {
-				remove(result, tuple)
-			}
+	scan(args: ScanArgs = {}) {
+		const result = this.storage.scan(args)
+		const sets = tv.scan(this.writes.sets, args)
+		for (const [tuple, value] of sets) {
+			tv.set(result, tuple, value)
+		}
+		const removes = t.scan(this.writes.removes, args)
+		for (const tuple of removes) {
+			tv.remove(result, tuple)
 		}
 		return result
 	}

@@ -5,12 +5,12 @@
 
 */
 
-import assert from "assert"
+import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
 import { sortedValues } from "../test/fixtures"
 import { InMemoryStorage } from "./InMemoryStorage"
-import { MAX, MIN, Storage, Tuple } from "./types"
+import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
 
 function storageTestSuite(
 	name: string,
@@ -20,554 +20,578 @@ function storageTestSuite(
 	describe(name, () => {
 		it("inserts in correct order", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 		})
 
 		it("inserts the same thing gets deduplicated", () => {
 			const store = createStorage()
-			const index = "abc"
 			const transaction = store.transact()
-			transaction.set(index, ["a", "a"])
-			transaction.set(index, ["a", "a"])
+			transaction.set(["a", "a"], 0)
+			transaction.set(["a", "a"], 0)
 			transaction.commit()
-			const data = store.scan(index)
-			assert.deepEqual(data, [["a", "a"]])
+			const data = store.scan()
+			assert.deepEqual(data, [[["a", "a"], 0]])
+		})
+
+		it("updates will overwrite the value", () => {
+			const store = createStorage()
+			const transaction = store.transact()
+			transaction.set(["a", "a"], 0)
+			transaction.set(["a", "a"], 1)
+			transaction.commit()
+			const data = store.scan()
+			assert.deepEqual(data, [[["a", "a"], 1]])
+		})
+
+		it("transaction value overwrites works", () => {
+			const store = createStorage()
+			const transaction = store.transact()
+			transaction.set(["a", "a"], 0)
+			transaction.commit()
+			const data = store.scan()
+			assert.deepEqual(data, [[["a", "a"], 0]])
+
+			const transaction2 = store.transact()
+			transaction2.set(["a", "a"], 1)
+			const data2 = transaction2.scan()
+			assert.deepEqual(data2, [[["a", "a"], 1]])
+
+			transaction2.commit()
+			const data3 = store.scan()
+			assert.deepEqual(data3, [[["a", "a"], 1]])
 		})
 
 		it("inserts the same thing gets deduplicated with ids", () => {
 			const store = createStorage()
-			const index = "abc"
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
-				.set(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
 		it("inserts get deduplicated in separate transactions", () => {
 			const store = createStorage()
-			const index = "abc"
+
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
-		it("1inserts get deduplicated set/remove in same transaction", () => {
+		it("inserts get deduplicated set/remove in same transaction", () => {
 			const store = createStorage()
-			const index = "abc"
+
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
-				.remove(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
+				.remove(["a", { uuid: "a" }])
 				.commit()
 
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 0, `data: ${JSON.stringify(data)}`)
 		})
 
 		it("inserts get deduplicated remove/set in same transaction", () => {
 			const store = createStorage()
-			const index = "abc"
+
 			store
 				.transact()
-				.remove(index, ["a", { uuid: "a" }])
-				.set(index, ["a", { uuid: "a" }])
+				.remove(["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
 		it("inserts get deduplicated set/remove in same transaction with initial tuple", () => {
 			const store = createStorage()
-			const index = "abc"
 
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
-				.remove(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 1)
+				.remove(["a", { uuid: "a" }])
 				.commit()
 
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 0)
 		})
 
 		it("inserts get deduplicated remove/set in same transaction with initial tuple", () => {
 			const store = createStorage()
-			const index = "abc"
 
 			store
 				.transact()
-				.set(index, ["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
 			store
 				.transact()
-				.remove(index, ["a", { uuid: "a" }])
-				.set(index, ["a", { uuid: "a" }])
+				.remove(["a", { uuid: "a" }])
+				.set(["a", { uuid: "a" }], 1)
 				.commit()
 
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
 		it("removes items correctly", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
-			assert.deepEqual(transaction.scan(index), items)
+			assert.deepEqual(transaction.scan(), items)
 
-			transaction.remove(index, ["a", "a", "c"])
-			transaction.remove(index, ["a", "c", "a"])
-			transaction.remove(index, ["a", "b", "b"])
+			transaction.remove(["a", "a", "c"])
+			transaction.remove(["a", "c", "a"])
+			transaction.remove(["a", "b", "b"])
 
-			const data = transaction.scan(index)
+			const data = transaction.scan()
 			assert.deepEqual(data, [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "b", "a"],
-				["a", "b", "c"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "b", "a"], 4],
+				[["a", "b", "c"], 6],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 			transaction.commit()
-			assert.deepEqual(store.scan(index), data)
+			assert.deepEqual(store.scan(), data)
 		})
 
 		it("scan gt", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gt: ["a", "a", MAX],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 		})
 
 		it("scan gt/lt", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "c", MIN],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
 			])
 
-			const result2 = store.scan(index, {
+			const result2 = store.scan({
 				gt: ["a", "b", MIN],
 				lt: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result2, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
 			])
 		})
 
 		it("scan prefix", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				prefix: ["a", "b"],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
 			])
 		})
 
 		it("scan prefix gte/lte", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "b", "d"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "b", "d"], 6.5],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
+
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				prefix: ["a", "b"],
 				gte: ["b"],
 				lte: ["d"],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "b", "d"],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "b", "d"], 6.5],
 			])
 		})
 
 		it("scan gte", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gte: ["a", "b", "a"],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 		})
 
 		it("scan gte/lte", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "c", MAX],
 			})
 
 			assert.deepEqual(result, [
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 		})
 
 		it("scan sorted gt", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gt: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result, [
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 		})
 
 		it("scan sorted gt/lt", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
 			])
 		})
 
 		it("scan sorted gte", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gte: ["a", "b", MIN],
 			})
 
 			assert.deepEqual(result, [
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			])
 		})
 
 		it("scan sorted gte/lte", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan(index, {
+			const result = store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "b", MAX],
 			})
 
 			assert.deepEqual(result, [
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
 			])
 		})
 
 		it("scan invalid bounds", () => {
 			const store = createStorage()
-			const index = "abc"
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
 			]
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
 
 			try {
-				store.scan(index, {
+				store.scan({
 					gte: ["a", "c"],
 					lte: ["a", "a"],
 				})
@@ -579,15 +603,56 @@ function storageTestSuite(
 
 		it("stores all types of values", () => {
 			const store = createStorage()
-			const index = "values"
-			const items: Array<Tuple> = sortedValues.map((item) => [item])
+			const items: TupleValuePair[] = sortedValues.map(
+				(item, i) => [[item], i] as TupleValuePair
+			)
 			const transaction = store.transact()
-			for (const item of _.shuffle(items)) {
-				transaction.set(index, item)
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
 			}
 			transaction.commit()
-			const data = store.scan(index)
+			const data = store.scan()
 			assert.deepEqual(data, items)
+		})
+
+		it("transaction overwrites when scanning data out", () => {
+			const store = createStorage()
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
+			]
+			const transaction = store.transact()
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+			const data = store.scan()
+			assert.deepEqual(data, items)
+
+			const result = store.scan({ prefix: ["a", "b"] })
+
+			assert.deepEqual(result, [
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+			])
+
+			const transaction2 = store.transact()
+			transaction2.set(["a", "b", "b"], 99)
+			const result2 = transaction2.scan({ prefix: ["a", "b"] })
+			assert.deepEqual(result2, [
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 99],
+				[["a", "b", "c"], 6],
+			])
 		})
 	})
 }
