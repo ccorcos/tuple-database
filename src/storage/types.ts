@@ -45,6 +45,8 @@ export type ScanArgs = {
 }
 
 export interface ReadOnlyStorage {
+	get(tuple: Tuple): any
+	exists(tuple: Tuple): boolean
 	scan(args: ScanArgs): TupleValuePair[]
 }
 
@@ -55,6 +57,8 @@ export type Operation =
 	| { op: "remove"; pair: TupleValuePair }
 
 export interface Storage {
+	get(tuple: Tuple): any
+	exists(tuple: Tuple): boolean
 	scan(args?: ScanArgs): TupleValuePair[]
 	transact(): Transaction
 	// commit(writes: Writes): void
@@ -62,6 +66,8 @@ export interface Storage {
 
 export interface Transaction {
 	readonly writes: Writes
+	get(tuple: Tuple): any
+	exists(tuple: Tuple): boolean
 	scan(args?: ScanArgs): TupleValuePair[]
 	set(tuple: Tuple, value: any): Transaction
 	remove(tuple: Tuple): Transaction

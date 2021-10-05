@@ -12,12 +12,22 @@ import {
 export class InMemoryStorage implements Storage {
 	data: TupleValuePair[] = []
 
+	get(tuple: Tuple) {
+		return tv.get(this.data, tuple)
+	}
+
+	exists(tuple: Tuple) {
+		return tv.exists(this.data, tuple)
+	}
+
 	scan(args: ScanArgs = {}) {
 		return tv.scan(this.data, args)
 	}
 
 	transact() {
 		return new InMemoryTransaction({
+			get: (...args) => this.get(...args),
+			exists: (...args) => this.exists(...args),
 			scan: (...args) => this.scan(...args),
 			commit: (...args) => this.commit(...args),
 		})
@@ -35,6 +45,8 @@ export class InMemoryStorage implements Storage {
 }
 
 interface TransactionArgs {
+	get(tuple: Tuple): any
+	exists(tuple: Tuple): boolean
 	scan(args: ScanArgs): TupleValuePair[]
 	commit(writes: Writes): void
 }
@@ -43,6 +55,27 @@ export class InMemoryTransaction implements Transaction {
 	constructor(private storage: TransactionArgs) {}
 
 	writes: Writes = { sets: [], removes: [] }
+
+	get(tuple: Tuple) {
+		// TODO: binary searching twice unnecessarily...
+		if (tv.exists(this.writes.sets, tuple)) {
+			return tv.get(this.writes.sets, tuple)
+		}
+		if (t.exists(this.writes.removes, tuple)) {
+			return
+		}
+		return this.storage.get(tuple)
+	}
+
+	exists(tuple: Tuple) {
+		if (tv.exists(this.writes.sets, tuple)) {
+			return true
+		}
+		if (t.exists(this.writes.removes, tuple)) {
+			return false
+		}
+		return this.storage.exists(tuple)
+	}
 
 	set(tuple: Tuple, value: any) {
 		t.remove(this.writes.removes, tuple)

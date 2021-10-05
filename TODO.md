@@ -15,6 +15,9 @@ TODO
 - No more "index" shard thing. If we ever were to shard, we'd manually choose which tuples to split out anyways.
 
 
+- subspace tests
+- classScheduling test.
+
 
 - https://apple.github.io/foundationdb/data-modeling.html
 

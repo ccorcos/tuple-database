@@ -103,7 +103,18 @@ export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
 	return true
 }
 
-// TODO: should we make this an iterator?
+export function get(data: TupleValuePair[], tuple: Tuple) {
+	const result = binarySearchAssociativeList(data, tuple || [], compareTuple)
+	if (result.found === undefined) return
+	const pair = data[result.found]
+	return pair[1]
+}
+
+export function exists(data: TupleValuePair[], tuple: Tuple) {
+	const result = binarySearchAssociativeList(data, tuple || [], compareTuple)
+	return result.found !== undefined
+}
+
 export function scan(data: TupleValuePair[], args: ScanArgs = {}) {
 	const bounds = getBounds(args)
 	const start: Tuple | undefined = bounds.gte || bounds.gt

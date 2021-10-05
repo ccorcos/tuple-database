@@ -12,6 +12,11 @@ export function set(data: Array<Tuple>, tuple: Tuple) {
 	return false
 }
 
+export function exists(data: Array<Tuple>, tuple: Tuple) {
+	const result = binarySearch(data, tuple, compareTuple)
+	return result.found !== undefined
+}
+
 export function remove(data: Array<Tuple>, tuple: Tuple) {
 	let { found } = binarySearch(data, tuple, compareTuple)
 	if (found !== undefined) {

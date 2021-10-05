@@ -654,6 +654,94 @@ function storageTestSuite(
 				[["a", "b", "c"], 6],
 			])
 		})
+
+		it("get", () => {
+			const store = createStorage()
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
+			]
+			const transaction = store.transact()
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+
+			assert.deepEqual(store.get(["a", "a", "c"]), 3)
+			assert.deepEqual(store.get(["a", "c", "c"]), 9)
+			assert.deepEqual(store.get(["a", "c", "d"]), undefined)
+		})
+
+		it("transaction overwrites get", () => {
+			const store = createStorage()
+
+			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
+
+			const tr = store.transact()
+			tr.set(["a"], 2)
+			assert.deepEqual(store.get(["a"]), 1)
+			assert.deepEqual(tr.get(["a"]), 2)
+
+			tr.remove(["b"])
+			assert.deepEqual(store.get(["b"]), 2)
+			assert.deepEqual(tr.get(["b"]), undefined)
+
+			tr.set(["d"], 99)
+			assert.deepEqual(store.get(["d"]), undefined)
+			assert.deepEqual(tr.get(["d"]), 99)
+		})
+
+		it("exists", () => {
+			const store = createStorage()
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
+			]
+			const transaction = store.transact()
+			for (const [key, value] of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+
+			assert.deepEqual(store.exists(["a", "a", "c"]), true)
+			assert.deepEqual(store.exists(["a", "c", "c"]), true)
+			assert.deepEqual(store.exists(["a", "c", "d"]), false)
+		})
+
+		it("transaction overwrites exists", () => {
+			const store = createStorage()
+
+			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
+
+			const tr = store.transact()
+			tr.set(["a"], 2)
+			assert.deepEqual(store.exists(["a"]), true)
+			assert.deepEqual(tr.exists(["a"]), true)
+
+			tr.remove(["b"])
+			assert.deepEqual(store.exists(["b"]), true)
+			assert.deepEqual(tr.exists(["b"]), false)
+
+			tr.set(["d"], 99)
+			assert.deepEqual(store.exists(["d"]), false)
+			assert.deepEqual(tr.exists(["d"]), true)
+		})
 	})
 }
 

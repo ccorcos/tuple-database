@@ -3,7 +3,7 @@ import * as _ from "lodash"
 import { describe, it } from "mocha"
 import { MAX, MIN, TupleValuePair } from "../storage/types"
 import { sortedValues } from "../test/fixtures"
-import { remove, scan, set } from "./sortedTupleValuePairs"
+import { exists, get, remove, scan, set } from "./sortedTupleValuePairs"
 
 describe("sortedTupleValuePairs", () => {
 	it("inserts in correct order", () => {
@@ -95,9 +95,7 @@ describe("sortedTupleValuePairs", () => {
 		}
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
-		})
+		const result = Array.from(scan(data, { gt: ["a", "a", MAX] }))
 
 		assert.deepEqual(result, [
 			[["a", "b", "a"], 3],
@@ -127,10 +125,12 @@ describe("sortedTupleValuePairs", () => {
 		}
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
-			lt: ["a", "c", MIN],
-		})
+		const result = Array.from(
+			scan(data, {
+				gt: ["a", "a", MAX],
+				lt: ["a", "c", MIN],
+			})
+		)
 
 		assert.deepEqual(result, [
 			[["a", "b", "a"], 3],
@@ -157,9 +157,7 @@ describe("sortedTupleValuePairs", () => {
 		}
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gte: ["a", "b"],
-		})
+		const result = Array.from(scan(data, { gte: ["a", "b"] }))
 
 		assert.deepEqual(result, [
 			[["a", "b", "a"], 3],
@@ -189,10 +187,12 @@ describe("sortedTupleValuePairs", () => {
 		}
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gte: ["a", "a", "c"],
-			lte: ["a", "c", MAX],
-		})
+		const result = Array.from(
+			scan(data, {
+				gte: ["a", "a", "c"],
+				lte: ["a", "c", MAX],
+			})
+		)
 
 		assert.deepEqual(result, [
 			[["a", "a", "c"], 2],
@@ -224,9 +224,7 @@ describe("sortedTupleValuePairs", () => {
 
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gt: ["a", "b", MAX],
-		})
+		const result = Array.from(scan(data, { gt: ["a", "b", MAX] }))
 
 		assert.deepEqual(result, [
 			[["a", "c", "a"], 6],
@@ -254,10 +252,12 @@ describe("sortedTupleValuePairs", () => {
 
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
-			lt: ["a", "b", MAX],
-		})
+		const result = Array.from(
+			scan(data, {
+				gt: ["a", "a", MAX],
+				lt: ["a", "b", MAX],
+			})
+		)
 
 		assert.deepEqual(result, [
 			[["a", "b", "a"], 3],
@@ -285,9 +285,7 @@ describe("sortedTupleValuePairs", () => {
 
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gte: ["a", "b"],
-		})
+		const result = Array.from(scan(data, { gte: ["a", "b"] }))
 
 		assert.deepEqual(result, [
 			[["a", "b", "a"], 3],
@@ -318,10 +316,12 @@ describe("sortedTupleValuePairs", () => {
 
 		assert.deepEqual(data, items)
 
-		const result = scan(data, {
-			gte: ["a", "a", "c"],
-			lte: ["a", "b", MAX],
-		})
+		const result = Array.from(
+			scan(data, {
+				gte: ["a", "a", "c"],
+				lte: ["a", "b", MAX],
+			})
+		)
 
 		assert.deepEqual(result, [
 			[["a", "a", "c"], 2],
@@ -391,5 +391,51 @@ describe("sortedTupleValuePairs", () => {
 			[["a", "a", "b"], 1],
 			[["a", "a", "c"], 3],
 		])
+	})
+
+	it("get value works", () => {
+		const items: TupleValuePair[] = [
+			[["a", "a", "a"], 0],
+			[["a", "a", "b"], 1],
+			[["a", "a", "c"], 2],
+			[["a", "b", "a"], 3],
+			[["a", "b", "b"], 4],
+			[["a", "b", "c"], 5],
+			[["a", "c", "a"], 6],
+			[["a", "c", "b"], 7],
+			[["a", "c", "c"], 8],
+		]
+		const data: TupleValuePair[] = []
+		for (const [key, value] of _.shuffle(items)) {
+			set(data, key, value)
+		}
+		assert.deepEqual(data, items)
+
+		assert.deepEqual(get(data, ["a", "a", "c"]), 2)
+		assert.deepEqual(get(data, ["a", "c", "c"]), 8)
+		assert.deepEqual(get(data, ["a", "c", "d"]), undefined)
+	})
+
+	it("key exists works", () => {
+		const items: TupleValuePair[] = [
+			[["a", "a", "a"], 0],
+			[["a", "a", "b"], 1],
+			[["a", "a", "c"], 2],
+			[["a", "b", "a"], 3],
+			[["a", "b", "b"], 4],
+			[["a", "b", "c"], 5],
+			[["a", "c", "a"], 6],
+			[["a", "c", "b"], 7],
+			[["a", "c", "c"], 8],
+		]
+		const data: TupleValuePair[] = []
+		for (const [key, value] of _.shuffle(items)) {
+			set(data, key, value)
+		}
+		assert.deepEqual(data, items)
+
+		assert.deepEqual(exists(data, ["a", "a", "c"]), true)
+		assert.deepEqual(exists(data, ["a", "c", "c"]), true)
+		assert.deepEqual(exists(data, ["a", "c", "d"]), false)
 	})
 })
