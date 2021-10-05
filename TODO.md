@@ -1,7 +1,13 @@
 
 ## TODO
 
-- https://apple.github.io/foundationdb/class-scheduling.html
+- implement the class scheduling example...
+	- https://apple.github.io/foundationdb/class-scheduling.html
+	- subspace helper class. its pure!
+	- subspace.range() returns a start and stop.
+	- everything is stored as raw bytes making range queries a bit simpler.
+
+
 - https://apple.github.io/foundationdb/data-modeling.html
 
 

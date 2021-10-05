@@ -6,15 +6,10 @@
 */
 
 import assert from "assert"
-import sqlite from "better-sqlite3"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
-import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
-import { ReactiveStorage } from "./ReactiveStorage"
-import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Storage, Tuple } from "./types"
 
 function storageTestSuite(
@@ -613,22 +608,3 @@ storageTestSuite(
 )
 
 const tmpDir = __dirname + "/../../tmp/"
-
-storageTestSuite(
-	"FileStorage",
-	sortedValues,
-	() => new FileStorage(tmpDir + randomId())
-)
-
-storageTestSuite(
-	"SQLiteStorage",
-	sortedValues,
-	() => new SQLiteStorage(sqlite(tmpDir + randomId() + ".db"))
-)
-
-storageTestSuite(
-	"ReactiveStorage(SQLiteStorage)",
-	sortedValues,
-	() =>
-		new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + randomId() + ".db")))
-)
