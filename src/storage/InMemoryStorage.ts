@@ -46,6 +46,11 @@ export class InMemoryStorage implements Storage {
 			tv.set(this.data, tuple, value)
 		}
 	}
+
+	close() {
+		// Nothing happens really. This is more important for SQLite.
+		return
+	}
 }
 
 interface TransactionArgs {

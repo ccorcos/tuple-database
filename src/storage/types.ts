@@ -62,6 +62,7 @@ export interface Storage {
 	scan(args?: ScanArgs): TupleValuePair[]
 	transact(): Transaction
 	// commit(writes: Writes): void
+	close(): void
 }
 
 export interface Transaction {

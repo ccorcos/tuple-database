@@ -17,11 +17,12 @@ import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
 function storageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: () => Storage
+	createStorage: (id: string) => Storage,
+	durable = true
 ) {
 	describe(name, () => {
 		it("inserts in correct order", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
 				[["a", "a", "b"], 2],
@@ -43,7 +44,7 @@ function storageTestSuite(
 		})
 
 		it("inserts the same thing gets deduplicated", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
 			transaction.set(["a", "a"], 0)
@@ -53,7 +54,7 @@ function storageTestSuite(
 		})
 
 		it("updates will overwrite the value", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
 			transaction.set(["a", "a"], 1)
@@ -63,7 +64,7 @@ function storageTestSuite(
 		})
 
 		it("transaction value overwrites works", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
 			transaction.commit()
@@ -81,7 +82,7 @@ function storageTestSuite(
 		})
 
 		it("inserts the same thing gets deduplicated with ids", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
@@ -92,7 +93,7 @@ function storageTestSuite(
 		})
 
 		it("inserts get deduplicated in separate transactions", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store
 				.transact()
@@ -109,7 +110,7 @@ function storageTestSuite(
 		})
 
 		it("inserts get deduplicated set/remove in same transaction", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store
 				.transact()
@@ -122,7 +123,7 @@ function storageTestSuite(
 		})
 
 		it("inserts get deduplicated remove/set in same transaction", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store
 				.transact()
@@ -135,7 +136,7 @@ function storageTestSuite(
 		})
 
 		it("inserts get deduplicated set/remove in same transaction with initial tuple", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store
 				.transact()
@@ -153,7 +154,7 @@ function storageTestSuite(
 		})
 
 		it("inserts get deduplicated remove/set in same transaction with initial tuple", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store
 				.transact()
@@ -171,7 +172,7 @@ function storageTestSuite(
 		})
 
 		it("removes items correctly", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -208,7 +209,7 @@ function storageTestSuite(
 		})
 
 		it("scan gt", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -244,7 +245,7 @@ function storageTestSuite(
 		})
 
 		it("scan gt/lt", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -289,7 +290,7 @@ function storageTestSuite(
 		})
 
 		it("scan prefix", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -322,7 +323,7 @@ function storageTestSuite(
 		})
 
 		it("scan prefix gte/lte", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -359,7 +360,7 @@ function storageTestSuite(
 		})
 
 		it("scan gte", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -395,7 +396,7 @@ function storageTestSuite(
 		})
 
 		it("scan gte/lte", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -433,7 +434,7 @@ function storageTestSuite(
 		})
 
 		it("scan sorted gt", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -466,7 +467,7 @@ function storageTestSuite(
 		})
 
 		it("scan sorted gt/lt", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -500,7 +501,7 @@ function storageTestSuite(
 		})
 
 		it("scan sorted gte", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -536,7 +537,7 @@ function storageTestSuite(
 		})
 
 		it("scan sorted gte/lte", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -571,7 +572,7 @@ function storageTestSuite(
 		})
 
 		it("scan invalid bounds", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -604,7 +605,7 @@ function storageTestSuite(
 		})
 
 		it("stores all types of values", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 			const items: TupleValuePair[] = sortedValues.map(
 				(item, i) => [[item], i] as TupleValuePair
 			)
@@ -618,7 +619,7 @@ function storageTestSuite(
 		})
 
 		it("transaction overwrites when scanning data out", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -658,7 +659,7 @@ function storageTestSuite(
 		})
 
 		it("get", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -683,7 +684,7 @@ function storageTestSuite(
 		})
 
 		it("transaction overwrites get", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
 
@@ -702,7 +703,7 @@ function storageTestSuite(
 		})
 
 		it("exists", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -727,7 +728,7 @@ function storageTestSuite(
 		})
 
 		it("transaction overwrites exists", () => {
-			const store = createStorage()
+			const store = createStorage(randomId())
 
 			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
 
@@ -744,6 +745,40 @@ function storageTestSuite(
 			assert.deepEqual(store.exists(["d"]), false)
 			assert.deepEqual(tr.exists(["d"]), true)
 		})
+
+		// All tests below here should be durable tests
+		if (!durable) return
+		describe("Persistence", () => {
+			it("persists properly", () => {
+				const id = randomId()
+				const store = createStorage(id)
+
+				const items: TupleValuePair[] = [
+					[["a", "a", "a"], 1],
+					[["a", "a", "b"], 2],
+					[["a", "a", "c"], 3],
+					[["a", "b", "a"], 4],
+					[["a", "b", "b"], 5],
+					[["a", "b", "c"], 6],
+					[["a", "c", "a"], 7],
+					[["a", "c", "b"], 8],
+					[["a", "c", "c"], 9],
+				]
+				const transaction = store.transact()
+				for (const [key, value] of _.shuffle(items)) {
+					transaction.set(key, value)
+				}
+				transaction.commit()
+				const data = store.scan()
+				assert.deepEqual(data, items)
+
+				store.close()
+
+				const store2 = createStorage(id)
+				const data2 = store2.scan()
+				assert.deepEqual(data2, items)
+			})
+		})
 	})
 }
 
@@ -759,7 +794,8 @@ inMemorySortedValues.splice(
 storageTestSuite(
 	"InMemoryStorage",
 	inMemorySortedValues,
-	() => new InMemoryStorage()
+	() => new InMemoryStorage(),
+	false
 )
 
 const tmpDir = __dirname + "/../../tmp/"
@@ -767,5 +803,5 @@ const tmpDir = __dirname + "/../../tmp/"
 storageTestSuite(
 	"FileStorage",
 	sortedValues,
-	() => new FileStorage(tmpDir + randomId())
+	(id) => new FileStorage(tmpDir + id)
 )
