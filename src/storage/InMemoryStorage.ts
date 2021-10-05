@@ -10,7 +10,11 @@ import {
 } from "./types"
 
 export class InMemoryStorage implements Storage {
-	data: TupleValuePair[] = []
+	data: TupleValuePair[]
+
+	constructor(data?: TupleValuePair[]) {
+		this.data = data || []
+	}
 
 	get(tuple: Tuple) {
 		return tv.get(this.data, tuple)

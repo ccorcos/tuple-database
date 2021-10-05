@@ -8,7 +8,9 @@
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
+import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
+import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
 
@@ -761,3 +763,9 @@ storageTestSuite(
 )
 
 const tmpDir = __dirname + "/../../tmp/"
+
+storageTestSuite(
+	"FileStorage",
+	sortedValues,
+	() => new FileStorage(tmpDir + randomId())
+)
