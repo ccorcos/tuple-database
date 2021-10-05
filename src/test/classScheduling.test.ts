@@ -83,7 +83,7 @@ const signup = transactional((tr, student: string, className: string) => {
 	if (remainingSeats <= 0) throw new Error("No remaining seats.")
 
 	const classes = tr.scan(attends.range([student]))
-	if (classes.length > 5) throw new Error("Too many classes.")
+	if (classes.length >= 5) throw new Error("Too many classes.")
 
 	tr.set(course.pack([className]), remainingSeats - 1)
 	tr.set(record, null)
@@ -109,7 +109,7 @@ const switchClasses = transactional(
 function getClasses(db: ReadOnlyStorage, student: string) {
 	const classes = db
 		.scan(attends.range([student]))
-		.map(([tuple, value]) => attends.unpack(tuple)[0] as string)
+		.map(([tuple, value]) => attends.unpack(tuple)[1] as string)
 	return classes
 }
 
