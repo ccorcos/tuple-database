@@ -8,6 +8,7 @@ import { UnreachableError } from "./Unreachable"
 
 // MIN < null < object < array < number < string < boolean < uuid < MAX
 export const encodingByte = {
+	// TODO: spread these out more so we can migrate things easier.
 	MIN: "a",
 	null: "b",
 	object: "c",

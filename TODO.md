@@ -14,34 +14,50 @@ Some notable differences:
 I've implemented the [class scheduling tutorial](https://apple.github.io/foundationdb/class-scheduling.html) from FoundationDb as a test in this project, demonstrating a similar API.
 
 
+Some more interesting tips about using this library here: https://apple.github.io/foundationdb/data-modeling.html
 
 
 ## TODO
 
-- classScheduling test.
+- get SQLite storage working again with tuple encoding.
+	- later: can we make a faster encoding using `buf.writeDoubleBE()`?
 
+- get reactive storage working again.
+	- use reactive-magic strategy for composing queries more naturally.
 
-- https://apple.github.io/foundationdb/data-modeling.html
+- Game counter using this abstraction
+	- Come up with a **good example** where we have to manually normalize data to motivate the triplestore.
+	- ui architecture stuff
+		- generic JSON abstraction
 
+- triplestore
+
+- react bindings for reactive storage... same api as scan ideally.
+- better types / runtime validators?
+
+- read the rest of the developer guide: https://apple.github.io/foundationdb/developer-guide.html
+
+- Game Counter can definitely use this abstraction.
+	- writes need to be normalized manually still, though maybe its not as gnarly.
+	- triplestore is really the goal though...
+	- use this for the html editor app state.
+		- edit file name / move file around.
+		-
+
+---
+
+What's up with the Triplestore then?
+- it's just an algebraic way of describing objects so that the database can handle indexing automatically.
+
+---
 
 - I wish the indexing layers we more separable from ReactiveStorage, but I guess its fine...
 
-- then we need to create runtime validators for type assertions.
+- Some kind of performance benchmark
 
+- Custom sort directions.
+	- We can get away with reversing the scan direction.
+	- But for complex apps (like Notion activities), we'll need compound sorting.
 
-- usability stuff
-	- useSubscribe should have the same api as scan so they can be swapped out.
-	- Might make sense for transaction to have the same apis as well? Prosemirror has state.tx which is interesting... Also tx.commit() might not make the most sense... though the fluent api is nice.
+- Better raw file format that feels more readable / accessible?
 
-- Write an article explaining this project in more detail.
-- Better reactivity performance?
-	There might be a way to do this with a btree, but I think it might be necessary to build
-	a proper hierarchical structure to make reactivity a more performant.
-- Some kind of benchmark?
-- better file format.
-
-## Later
-
-- custom storage
-	- no serialization
-	- custom sort directions

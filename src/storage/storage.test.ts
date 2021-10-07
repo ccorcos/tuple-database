@@ -6,12 +6,14 @@
 */
 
 import { strict as assert } from "assert"
+import sqlite from "better-sqlite3"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
+import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
 
 function storageTestSuite(
@@ -804,4 +806,10 @@ storageTestSuite(
 	"FileStorage",
 	sortedValues,
 	(id) => new FileStorage(tmpDir + id)
+)
+
+storageTestSuite(
+	"SQLiteStorage",
+	sortedValues,
+	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
 )

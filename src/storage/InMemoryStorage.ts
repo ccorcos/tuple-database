@@ -29,12 +29,7 @@ export class InMemoryStorage implements Storage {
 	}
 
 	transact() {
-		return new InMemoryTransaction({
-			get: (...args) => this.get(...args),
-			exists: (...args) => this.exists(...args),
-			scan: (...args) => this.scan(...args),
-			commit: (...args) => this.commit(...args),
-		})
+		return new InMemoryTransaction(this)
 	}
 
 	commit(writes: Writes) {
