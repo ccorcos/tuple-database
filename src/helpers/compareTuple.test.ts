@@ -1,14 +1,14 @@
+import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import assert from "assert"
-import {
-	compareValue,
-	compareTuple,
-	ValueToString,
-	TupleToString,
-} from "./compareTuple"
-import { sortedValues } from "../test/fixtures"
 import { Tuple } from "../storage/types"
+import { sortedValues } from "../test/fixtures"
+import {
+	compareTuple,
+	compareValue,
+	TupleToString,
+	ValueToString,
+} from "./compareTuple"
 
 describe("compareValue", () => {
 	it("sorting is correct", () => {

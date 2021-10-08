@@ -1,5 +1,5 @@
+import { strict as assert } from "assert"
 import { describe, it } from "mocha"
-import assert from "assert"
 import { invertString } from "./invertString"
 
 describe("invertString", () => {
