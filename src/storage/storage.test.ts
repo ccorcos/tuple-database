@@ -828,6 +828,86 @@ function storageTestSuite(
 					["name", "c", "Andrew"],
 				])
 			})
+
+			it("calls indexer before writing to tx so we can read if we need to", () => {
+				const store = createStorage(randomId())
+
+				type Person = { id: number; first: string; last: string; age: number }
+
+				store.index((tx, op) => {
+					if (op.tuple[0] !== "personById") return
+
+					if (op.prev) {
+						const prev = op.prev as Person
+						tx.remove(["personByAge", prev.age, prev.id])
+					}
+
+					if (op.type === "set") {
+						const person = op.value as Person
+						tx.set(["personByAge", person.age, person.id], person)
+					}
+				})
+
+				const people: Person[] = [
+					{ id: 1, first: "Chet", last: "Corcos", age: 29 },
+					{ id: 2, first: "Simon", last: "Last", age: 26 },
+					{ id: 3, first: "Jon", last: "Schwartz", age: 30 },
+					{ id: 4, first: "Luke", last: "Hansen", age: 29 },
+				]
+
+				const transaction = store.transact()
+				for (const person of _.shuffle(people)) {
+					transaction.set(["personById", person.id], person)
+				}
+				transaction.commit()
+
+				let result = store.scan().map(([tuple]) => tuple)
+
+				assert.deepEqual(result, [
+					["personByAge", 26, 2],
+					["personByAge", 29, 1],
+					["personByAge", 29, 4],
+					["personByAge", 30, 3],
+					["personById", 1],
+					["personById", 2],
+					["personById", 3],
+					["personById", 4],
+				])
+
+				const tx = store.transact()
+				result = tx
+					.remove(["personById", 3])
+					.scan()
+					.map(([tuple]) => tuple)
+
+				assert.deepEqual(result, [
+					["personByAge", 26, 2],
+					["personByAge", 29, 1],
+					["personByAge", 29, 4],
+					["personById", 1],
+					["personById", 2],
+					["personById", 4],
+				])
+
+				result = tx
+					.set(["personById", 1], {
+						id: 1,
+						first: "Chet",
+						last: "Corcos",
+						age: 30,
+					})
+					.scan()
+					.map(([tuple]) => tuple)
+
+				assert.deepEqual(result, [
+					["personByAge", 26, 2],
+					["personByAge", 29, 4],
+					["personByAge", 30, 1],
+					["personById", 1],
+					["personById", 2],
+					["personById", 4],
+				])
+			})
 		})
 
 		if (durable) {

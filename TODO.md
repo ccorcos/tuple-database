@@ -17,12 +17,12 @@ I've implemented the [class scheduling tutorial](https://apple.github.io/foundat
 Some more interesting tips about using this library here: https://apple.github.io/foundationdb/data-modeling.html
 
 
+- [] include indexer abstraction and subspace stuff.
+
 ## TODO
 
-- better readme. include indexer and subspace stuff.
-
-- get reactive storage working again.
-	- use reactive-magic strategy for composing queries more naturally.
+- use reactive-magic strategy for composing queries more naturally.
+	- get reactivity?
 
 - Game counter using this abstraction
 	- other foundationdb examples.

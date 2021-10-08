@@ -53,8 +53,8 @@ export interface ReadOnlyStorage {
 export type Writes = { sets: TupleValuePair[]; removes: Tuple[] }
 
 export type Operation =
-	| { type: "set"; tuple: Tuple; value: any }
-	| { type: "remove"; tuple: Tuple }
+	| { type: "set"; tuple: Tuple; value: any; prev: any }
+	| { type: "remove"; tuple: Tuple; prev: any }
 
 export type Indexer = (tx: Transaction, writes: Operation) => void
 

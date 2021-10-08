@@ -21,10 +21,9 @@ export function remove(data: TupleValuePair[], tuple: Tuple) {
 	let { found } = binarySearchAssociativeList(data, tuple, compareTuple)
 	if (found !== undefined) {
 		// Remove from index.
-		data.splice(found, 1)
-		return true
+		const pair = data.splice(found, 1)[0]
+		return pair
 	}
-	return false
 }
 
 export function get(data: TupleValuePair[], tuple: Tuple) {

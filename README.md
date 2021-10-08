@@ -2,9 +2,20 @@
 
 This database stores tuples in component-wise lexicographical sorted order.
 
+It is an ordered key-value database with some encoding facilities for storing numbers, booleans, and ordered dictionaries.
+
+This database works very similar to FoundationDb. In fact, I've created some abstractions modeled after their api. I've implemented the [class scheduling tutorial](https://apple.github.io/foundationdb/class-scheduling.html) from FoundationDb [as a test in this project](./src/test/classScheduling.test.ts).
+
+
+## API by example
+
+Creating a SQLite-backed database, writing and querying.
+
 ```ts
 import sqlite from "better-sqlite3"
 import { SQLiteStorage } from "tuple-database/storage/SQLiteStorage"
+
+const db = new SQLiteStorage(sqlite("./app.db"))
 
 const people = [
 	{ id: 1, first: "Chet", last: "Corcos", age: 29 },
@@ -13,79 +24,164 @@ const people = [
 	{ id: 4, first: "Luke", last: "Hansen", age: 29 },
 ]
 
-const sqliteStorage = new SQLiteStorage(sqlite("./app.db"))
-const transaction = sqliteStorage.transact()
+const tx = db.transact()
 for (const person of people) {
-	transaction.set("person", [person.age, person.last, person])
+	// Putting the id in there to make sure this tuple "key" is unique.
+	tx.set(["personByAge", person.age, person.id], person)
 }
-transaction.commit()
+tx.commit()
 
-console.log(sqliteStorage.scan("person", { lt: [30] }))
+console.log(db.scan({ prefix: ["personByAge"], lt: [30] }))
 // [
-//   [ 26, 'Last', { id: 2, first: 'Simon', last: 'Last', age: 26 } ],
-//   [ 29, 'Corcos', { id: 1, first: 'Chet', last: 'Corcos', age: 29 } ],
-//   [ 29, 'Hansen', { id: 4, first: 'Luke', last: 'Hansen', age: 29 } ]
+//   [[ 26, 2 ], { id: 2, first: 'Simon', last: 'Last', age: 26 } ],
+//   [[ 29, 1 ], { id: 1, first: 'Chet', last: 'Corcos', age: 29 } ],
+//   [[ 29, 4 ], { id: 4, fsirst: 'Luke', last: 'Hansen', age: 29 } ]
 // ]
 ```
 
-Queries are also reactive based on the index and any prefix for the `gt/lt` arguments.
+We can create multiple indexes of the same data so we can query things conveniently.
+
+```ts
+const tx = db.transact()
+for (const person of people) {
+	// Putting the id in there to make sure this tuple "key" is unique.
+	tx.set(["personById", person.id], person)
+	tx.set(["personByLastFirst", person.last, person.first, person.id], person)
+	tx.set(["personByFirstLast", person.first, person.last, person.id], person)
+	tx.set(["personByAge", person.age, person.id], person)
+}
+tx.commit()
+```
+
+It can get tricky to remember and tedious to write to all of these different indexes when updating a single person record, so you can define indexer functions to do this automatically.
+
+```ts
+db.index((tx, op) => {
+	if (op.tuple[0] !== "personById") return
+
+	// Delete the index rows for the previous value.
+	if (op.prev) {
+		const preson = op.prev
+		tx.remove(["personByLastFirst", person.last, person.first, person.id], person)
+		tx.remove(["personByFirstLast", person.first, person.last, person.id], person)
+		tx.remove(["personByAge", person.age, person.id], person)
+	}
+
+	// Create the new index rows.
+	if (op.type === "set") {
+		const person = op.value
+		tx.remove(["personByLastFirst", person.last, person.first, person.id], person)
+		tx.remove(["personByFirstLast", person.first, person.last, person.id], person)
+		tx.remove(["personByAge", person.age, person.id], person)
+	}
+})
+```
+
+There are also some nice abstractions inspired by FoundationDb such as `Subspace` and `transactional`.
+
+When dealing with a big application with logs of data, its helpful to use a Subspace to manage tuple prefixes.
+
+```ts
+import { Subspace } from "tuple-database"
+
+const contacts = new Subspace("contacts")
+const byAge = contacts.subspace("byAge")
+
+contacts.pack([1]) // ["contacts", 1]
+contacts.unpack(["contacts", 1]) // [1]
+
+byAge.pack([29, 1]) // ["contacts", "byAge", 29, 1]
+byAge.unpack(["contacts", "byAge", 29, 1]) // [29, 1]
+```
+
+So we might use this for contructing an entire application data model and use them to pack and unpack tuples.
+
+```ts
+db.transact()
+	.set(contacts.pack([person.id]), person)
+	.set(byAge.pack([person.age, person.id]), person)
+	.commit()
+
+// Use range for prefix queries into the subspace.
+byAge.range([29])
+// => {gte: ["contacts", "byAge", 29, MIN], lte: ["contacts", "byAge", 29, MAX]}
+
+// Unpack the tuples to remove the prefix.
+db.scan(byAge.range([29])).map(([tuple, value]) => byAge.unpack(tuple))
+// => [[29, 1], [29, 4]]
+```
+
+There's also a nice helper function for composing writes to the database.
+
+```ts
+import { transactional } from "tuple-database"
+
+const setPersonById = transactional((tx, person) => {
+	tx.set(byAge.pack([person.id]), person)
+})
+
+const setPersonByAge = transactional((tx, person) => {
+	tx.set(byAge.pack([person.age, person.id]), person)
+})
+
+const setPerson = transactional((tx, person) => {
+	setPersonById(tx, person)
+	setPersonByAge(tx, person)
+})
+
+// When you call a transactional function with a transaction, the transaction will not be committed,
+// but when you call with a database, it will create and commit the transaction. This allows you to
+// compose writes together.
+
+setPerson(db, { id: 1, first: 'Chet', last: 'Corcos', age: 29 })
+```
+
+This `transactional` abstraction is a more explicit alternative to the `.index()` API. I'm not entirely sure which I like more just yet, but I'm learning towards `transactional` as a better way to go.
+
+
+Last but not least, queries are also reactive based on the prefix for the `gt/lt` arguments.
 
 ```ts
 import { ReactiveStorage, MIN, MAX } from "tuple-database"
 
-const reactiveStorage = new ReactiveStorage(sqliteStorage)
+db = new ReactiveStorage(db)
 
-const [results, unsubscribe] = reactiveStorage.subscribe(
-	"person",
-	{ gte: [30, MIN], lte: [30, MAX] }, // Alternatively, we could use { prefix: [30] }
+const unsubscribe = db.subscribe(
+	byAge.range([30]),
 	(updates) => {
 		console.log("UPDATES", updates)
 	}
 )
 
-console.log(results)
+console.log(db.scan(byAge.range([30])))
 // [
 //   [ 30, 'Schwartz', { id: 3, first: 'Jon', last: 'Schwartz', age: 30 } ]
 // ]
 
 // Update my age from 29 -> 30.
-reactiveStorage
-	.transact()
-	.remove("person", [29, "Corcos", { id: 1, first: 'Chet', last: 'Corcos', age: 29 }])
-	.set("person", [30, "Corcos", { id: 1, first: 'Chet', last: 'Corcos', age: 30 }])
-	.commit()
+updatePerson({ id: 1, first: 'Chet', last: 'Corcos', age: 30 })
 
 // > UPDATES {
 // 	person: {
-// 		sets: [[30, "Corcos", { id: 1, first: "Chet", last: "Corcos", age: 30 }]],
+// 		sets: [[["contacts", "byAge", 30, 1], { id: 1, first: "Chet", last: "Corcos", age: 30 }]],
 // 		removes: [],
 // 	},
 // }
 
 // Update Simon's age from 26 -> 27
-reactiveStorage
-	.transact()
-	.remove("person", [26, 'Last', { id: 2, first: 'Simon', last: 'Last', age: 26 }])
-	.set("person", [27, 'Last', { id: 2, first: 'Simon', last: 'Last', age: 27 }])
-	.commit()
+updatePerson({ id: 2, first: 'Simon', last: 'Last', age: 27 })
 
 // Update doesn't log because it falls outside the query.
 ```
 
-You can also add indexers to your `ReactiveStorage` to build up abstractions like a triple store.
+For more interesting tips about data modeling using this library read this: https://apple.github.io/foundationdb/data-modeling.html
 
-```ts
-const reactiveStorage = new ReactiveStorage(sqliteStorage, [
-	(tx, op) => {
-		if (op.index === "eav") {
-			const [e, a, v] = op.tuple
-			tx[op.type]("ave", [a, v, e])
-			tx[op.type]("vea", [v, e, a])
-			tx[op.type]("vae", [v, a, e])
-		}
-	}
-])
-```
+## Comparison with FoundationDb
+
+- This database is meant to be embedded, not multi-tenant hosted in the cloud. There is no support for concurrent writes at the moment, though it could later on.
+- This database also has reactive queries, similar to Firebase.
+- This database also has indexing hooks so you can manage your own indexes.
+- FoundationDb relies on the serialization process for running range queries. They do this by simply adding  `\0x00` and `0xff` bytes to the end of a serializied tuple prefix. This is really convenient, but it doesn't work for an in-memory database that does not serialize the data. Serialization for an in-memory database is just an unnecessary performance hit. That's why we have the `MIN` and `MAX` symbols.
 
 ## Why?
 
@@ -96,16 +192,4 @@ The goal of this project is to create a dead-simple database. It's just a binary
 This database pushes all of the data modeling and indexing details down to you, the developer, so you get fine-grained control over read/write performance trade-offs.
 
 Last but not least, this database is designed to be embedded in [local-first](https://www.inkandswitch.com/local-first.html) applications.
-
-## Example
-
-To run the example app, clone this repo, then:
-
-```sh
-npm install
-npm run build
-cd example
-npm install
-npm start
-```
 

@@ -91,19 +91,23 @@ export class InMemoryTransaction implements Transaction {
 	}
 
 	set(tuple: Tuple, value: any) {
+		// Don't fetch this if we don't need it for the indexers.
+		const prev = this.storage.indexers.length ? this.get(tuple) : null
 		t.remove(this.writes.removes, tuple)
 		tv.set(this.writes.sets, tuple, value)
 		for (const indexer of this.storage.indexers) {
-			indexer(this, { type: "set", tuple, value })
+			indexer(this, { type: "set", tuple, value, prev })
 		}
 		return this
 	}
 
 	remove(tuple: Tuple) {
+		// Don't fetch this if we don't need it for the indexers.
+		const prev = this.storage.indexers.length ? this.get(tuple) : null
 		tv.remove(this.writes.sets, tuple)
 		t.set(this.writes.removes, tuple)
 		for (const indexer of this.storage.indexers) {
-			indexer(this, { type: "remove", tuple })
+			indexer(this, { type: "remove", tuple, prev })
 		}
 		return this
 	}
