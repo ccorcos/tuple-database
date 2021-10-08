@@ -3,14 +3,14 @@ import * as tv from "../helpers/sortedTupleValuePairs"
 import {
 	Indexer,
 	ScanArgs,
-	Storage,
-	Transaction,
 	Tuple,
+	TupleStorage,
+	TupleTransaction,
 	TupleValuePair,
 	Writes,
 } from "./types"
 
-export class InMemoryStorage implements Storage {
+export class InMemoryStorage implements TupleStorage {
 	data: TupleValuePair[]
 
 	constructor(data?: TupleValuePair[]) {
@@ -64,7 +64,7 @@ export interface TransactionArgs {
 	commit(writes: Writes): void
 }
 
-export class InMemoryTransaction implements Transaction {
+export class InMemoryTransaction implements TupleTransaction {
 	constructor(private storage: TransactionArgs) {}
 
 	writes: Writes = { sets: [], removes: [] }

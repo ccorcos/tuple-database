@@ -5,13 +5,13 @@ import { InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
 	ScanArgs,
-	Storage,
 	Tuple,
+	TupleStorage,
 	TupleValuePair,
 	Writes,
 } from "./types"
 
-export class SQLiteStorage implements Storage {
+export class SQLiteStorage implements TupleStorage {
 	/**
 	 * import sqlite from "better-sqlite3"
 	 * new SQLiteStorage(sqlite("path/to.db"))

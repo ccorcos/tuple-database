@@ -15,12 +15,12 @@ import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { ReactiveStorage } from "./ReactiveStorage"
 import { SQLiteStorage } from "./SQLiteStorage"
-import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
+import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
 
 function storageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => Storage,
+	createStorage: (id: string) => TupleStorage,
 	durable = true
 ) {
 	describe(name, () => {

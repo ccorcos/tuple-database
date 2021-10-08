@@ -5,16 +5,24 @@ import {
 	normalizeBounds,
 } from "../helpers/sortedTupleArray"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
-import { Indexer, MIN, ScanArgs, Storage, Tuple, Value, Writes } from "./types"
+import {
+	Indexer,
+	MIN,
+	ScanArgs,
+	Tuple,
+	TupleStorage,
+	Value,
+	Writes,
+} from "./types"
 
 export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
-export class ReactiveStorage implements Storage {
+export class ReactiveStorage implements TupleStorage {
 	debug = false
 
-	constructor(private storage: Storage) {}
+	constructor(private storage: TupleStorage) {}
 
 	private log(...args: any[]) {
 		if (this.debug) {

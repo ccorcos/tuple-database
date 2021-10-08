@@ -44,7 +44,7 @@ export type ScanArgs = {
 	limit?: number
 }
 
-export interface ReadOnlyStorage {
+export interface ReadOnlyTupleStorage {
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
 	scan(args?: ScanArgs): TupleValuePair[]
@@ -56,16 +56,16 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
 	| { type: "remove"; tuple: Tuple; prev: any }
 
-export type Indexer = (tx: Transaction, writes: Operation) => void
+export type Indexer = (tx: TupleTransaction, writes: Operation) => void
 
-export interface Storage extends ReadOnlyStorage {
+export interface TupleStorage extends ReadOnlyTupleStorage {
 	index(indexer: Indexer): this
-	transact(): Transaction
+	transact(): TupleTransaction
 	commit(writes: Writes): void
 	close(): void
 }
 
-export interface Transaction extends ReadOnlyStorage {
+export interface TupleTransaction extends ReadOnlyTupleStorage {
 	readonly writes: Writes
 	set(tuple: Tuple, value: any): this
 	remove(tuple: Tuple): this
