@@ -784,18 +784,9 @@ function storageTestSuite(
 	})
 }
 
-// Add this class
-class AnyObject {}
-const inMemorySortedValues = [...sortedValues]
-inMemorySortedValues.splice(
-	inMemorySortedValues.indexOf(null) + 1,
-	0,
-	new AnyObject()
-)
-
 storageTestSuite(
 	"InMemoryStorage",
-	inMemorySortedValues,
+	sortedValues,
 	() => new InMemoryStorage(),
 	false
 )

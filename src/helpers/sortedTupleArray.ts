@@ -30,7 +30,7 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function getBounds(args: ScanArgs): Bounds {
+export function normalizeBounds(args: ScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -105,7 +105,7 @@ export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
 }
 
 export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
-	const bounds = getBounds(args)
+	const bounds = normalizeBounds(args)
 	const start: Tuple | undefined = bounds.gte || bounds.gt
 	const end: Tuple | undefined = bounds.lte || bounds.lt
 

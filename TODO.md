@@ -19,16 +19,26 @@ Some more interesting tips about using this library here: https://apple.github.i
 
 ## TODO
 
-- get SQLite storage working again with tuple encoding.
-	- later: can we make a faster encoding using `buf.writeDoubleBE()`?
-
 - get reactive storage working again.
 	- use reactive-magic strategy for composing queries more naturally.
 
 - Game counter using this abstraction
+	- other foundationdb examples.
+		https://apple.github.io/foundationdb/data-modeling.html
 	- Come up with a **good example** where we have to manually normalize data to motivate the triplestore.
 	- ui architecture stuff
-		- generic JSON abstraction
+		- generic JSON abstractionc
+
+
+
+### Later:
+- can we make a faster encoding using `buf.writeDoubleBE()`?
+- spread out the tuple encoding so we can migrate later
+
+---
+
+
+
 
 - triplestore
 

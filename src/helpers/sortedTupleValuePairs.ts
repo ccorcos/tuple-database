@@ -1,6 +1,7 @@
-import { MAX, ScanArgs, Tuple, TupleValuePair } from "../storage/types"
+import { ScanArgs, Tuple, TupleValuePair } from "../storage/types"
 import { binarySearchAssociativeList } from "./binarySearchAssociativeList"
 import { compareTuple } from "./compareTuple"
+import { normalizeBounds } from "./sortedTupleArray"
 
 export function set(data: TupleValuePair[], tuple: Tuple, value: any) {
 	const result = binarySearchAssociativeList(data, tuple, compareTuple)
@@ -26,83 +27,6 @@ export function remove(data: TupleValuePair[], tuple: Tuple) {
 	return false
 }
 
-/**
- * Gets the tuple bounds taking into account any prefix specified.
- */
-export function getBounds(args: ScanArgs): Bounds {
-	let gte: Tuple | undefined
-	let gt: Tuple | undefined
-	let lte: Tuple | undefined
-	let lt: Tuple | undefined
-
-	if (args.gte) {
-		if (args.prefix) {
-			gte = [...args.prefix, ...args.gte]
-		} else {
-			gte = [...args.gte]
-		}
-	} else if (args.gt) {
-		if (args.prefix) {
-			gt = [...args.prefix, ...args.gt]
-		} else {
-			gt = [...args.gt]
-		}
-	} else if (args.prefix) {
-		gte = [...args.prefix]
-	}
-
-	if (args.lte) {
-		if (args.prefix) {
-			lte = [...args.prefix, ...args.lte]
-		} else {
-			lte = [...args.lte]
-		}
-	} else if (args.lt) {
-		if (args.prefix) {
-			lt = [...args.prefix, ...args.lt]
-		} else {
-			lt = [...args.lt]
-		}
-	} else if (args.prefix) {
-		lte = [...args.prefix, MAX]
-	}
-
-	return { gte, gt, lte, lt }
-}
-
-export type Bounds = {
-	/** This prevents developers from accidentally using ScanArgs instead of TupleBounds */
-	prefix?: never
-	gte?: Tuple
-	gt?: Tuple
-	lte?: Tuple
-	lt?: Tuple
-}
-
-export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
-	if (bounds.gt) {
-		if (compareTuple(tuple, bounds.gt) !== 1) {
-			return false
-		}
-	}
-	if (bounds.gte) {
-		if (compareTuple(tuple, bounds.gte) === -1) {
-			return false
-		}
-	}
-	if (bounds.lt) {
-		if (compareTuple(tuple, bounds.lt) !== -1) {
-			return false
-		}
-	}
-	if (bounds.lte) {
-		if (compareTuple(tuple, bounds.lte) === 1) {
-			return false
-		}
-	}
-	return true
-}
-
 export function get(data: TupleValuePair[], tuple: Tuple) {
 	const result = binarySearchAssociativeList(data, tuple || [], compareTuple)
 	if (result.found === undefined) return
@@ -116,7 +40,7 @@ export function exists(data: TupleValuePair[], tuple: Tuple) {
 }
 
 export function scan(data: TupleValuePair[], args: ScanArgs = {}) {
-	const bounds = getBounds(args)
+	const bounds = normalizeBounds(args)
 	const start: Tuple | undefined = bounds.gte || bounds.gt
 	const end: Tuple | undefined = bounds.lte || bounds.lt
 

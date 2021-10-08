@@ -11,22 +11,15 @@ export function compareValue(a: Value, b: Value): number {
 		if (at === "array") {
 			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
-			if (isPlainObject(a)) {
-				if (isPlainObject(b)) {
-					// Plain objects are ordered.
-					// This is convenient for duck-typing things like `{date: "2021-12-01"}`
-					return compareObject(a as any, b as any)
-				} else {
-					// class < json
-					return 1
-				}
-			} else if (isPlainObject(b)) {
-				return -1
-			} else {
-				// But we also allow for aribtrary class objects.
-				// TODO: allow prototype.compare and prototype.serialize
-				return 0
+			// TODO: prototype.compare for classes.
+
+			if (!isPlainObject(a) || !isPlainObject(b)) {
+				throw new Error("Cannot store uncomparable objects in tuples.")
 			}
+
+			// Plain objects are ordered.
+			// This is convenient for meta types like `{date: "2021-12-01"}` =>  [["date", "2021-12-01"]]
+			return compareObject(a as any, b as any)
 		} else if (at === "MAX") {
 			return 0
 		} else if (at === "MIN") {
