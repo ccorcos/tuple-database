@@ -17,7 +17,7 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function normalizeBounds(args: TupleScanArgs): Bounds {
+export function normalizeTupleBounds(args: TupleScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -69,30 +69,6 @@ export type Bounds = {
 
 export function scan(data: Array<Tuple>, args: TupleScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
-	const bounds = normalizeBounds(rest)
+	const bounds = normalizeTupleBounds(rest)
 	return sortedList.scan(data, { limit, reverse, ...bounds }, compareTuple)
-}
-
-export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
-	if (bounds.gt) {
-		if (compareTuple(tuple, bounds.gt) !== 1) {
-			return false
-		}
-	}
-	if (bounds.gte) {
-		if (compareTuple(tuple, bounds.gte) === -1) {
-			return false
-		}
-	}
-	if (bounds.lt) {
-		if (compareTuple(tuple, bounds.lt) !== -1) {
-			return false
-		}
-	}
-	if (bounds.lte) {
-		if (compareTuple(tuple, bounds.lte) === 1) {
-			return false
-		}
-	}
-	return true
 }

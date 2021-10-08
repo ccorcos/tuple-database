@@ -3,12 +3,19 @@ import { Compare } from "./compare"
 
 export function set<T>(list: T[], item: T, cmp: Compare<T>) {
 	const result = binarySearch(list, item, cmp)
-	if (result.closest !== undefined) {
+	if (result.found !== undefined) {
+		// Replace the whole item.
+		list.splice(result.found, 1, item)
+	} else {
 		// Insert at missing index.
 		list.splice(result.closest, 0, item)
-		return true
 	}
-	return false
+}
+
+export function get<T>(list: T[], item: T, cmp: Compare<T>) {
+	const result = binarySearch(list, item, cmp)
+	if (result.found === undefined) return
+	return list[result.found]
 }
 
 export function exists<T>(list: T[], item: T, cmp: Compare<T>) {
@@ -20,10 +27,8 @@ export function remove<T>(list: T[], item: T, cmp: Compare<T>) {
 	let { found } = binarySearch(list, item, cmp)
 	if (found !== undefined) {
 		// Remove from index.
-		list.splice(found, 1)
-		return true
+		return list.splice(found, 1)[0]
 	}
-	return false
 }
 
 export type ScanArgs<T> = {

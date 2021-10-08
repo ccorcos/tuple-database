@@ -1,6 +1,6 @@
 import { Database, Statement, Transaction } from "better-sqlite3"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { normalizeBounds } from "../helpers/sortedTupleArray"
+import { normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
@@ -78,7 +78,7 @@ export class SQLiteStorage implements TupleStorage {
 	}
 
 	scan = (args: TupleScanArgs = {}) => {
-		const bounds = normalizeBounds(args)
+		const bounds = normalizeTupleBounds(args)
 
 		// Bounds.
 		let start = bounds.gte ? encodeTuple(bounds.gte) : undefined

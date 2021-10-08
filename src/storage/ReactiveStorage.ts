@@ -1,9 +1,6 @@
+import { compareTuple } from "../helpers/compareTuple"
 import { randomId } from "../helpers/randomId"
-import {
-	Bounds,
-	isWithinBounds,
-	normalizeBounds,
-} from "../helpers/sortedTupleArray"
+import { Bounds, normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
@@ -71,7 +68,7 @@ export class ReactiveStorage implements TupleStorage {
 	subscribe = (args: TupleScanArgs, callback: Callback) => {
 		this.log("db/subscribe", args)
 
-		const bounds = normalizeBounds(args)
+		const bounds = normalizeTupleBounds(args)
 		const prefix = getBoundsPrefix(bounds)
 
 		const id = randomId()
@@ -113,7 +110,7 @@ export class ReactiveStorage implements TupleStorage {
 		for (const listener of this.getListenersForTuple(tuple)) {
 			const { callback, bounds } = listener
 
-			if (isWithinBounds(tuple, bounds)) {
+			if (isWithinTupleBounds(tuple, bounds)) {
 				callbacks.push(callback)
 			} else {
 				// TODO: track how in-efficient listeners are here.
@@ -170,4 +167,28 @@ function iterateTuplePrefixes(tuple: Tuple) {
 		prefixes.push(prefix)
 	}
 	return prefixes
+}
+
+function isWithinTupleBounds(tuple: Tuple, bounds: Bounds) {
+	if (bounds.gt) {
+		if (compareTuple(tuple, bounds.gt) !== 1) {
+			return false
+		}
+	}
+	if (bounds.gte) {
+		if (compareTuple(tuple, bounds.gte) === -1) {
+			return false
+		}
+	}
+	if (bounds.lt) {
+		if (compareTuple(tuple, bounds.lt) !== -1) {
+			return false
+		}
+	}
+	if (bounds.lte) {
+		if (compareTuple(tuple, bounds.lte) === 1) {
+			return false
+		}
+	}
+	return true
 }
