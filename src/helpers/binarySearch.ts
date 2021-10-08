@@ -1,12 +1,14 @@
 import { Compare } from "./compare"
 
+export type BinarySearchResult =
+	| { found: number; closest?: undefined }
+	| { found?: undefined; closest: number }
+
 export function binarySearch<T>(
 	list: Array<T>,
 	item: T,
 	cmp: Compare<T>
-):
-	| { found: number; closest?: undefined }
-	| { found?: undefined; closest: number } {
+): BinarySearchResult {
 	var min = 0
 	var max = list.length - 1
 	while (min <= max) {

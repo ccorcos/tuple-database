@@ -1,3 +1,4 @@
+import { BinarySearchResult } from "./binarySearch"
 import { Compare } from "./compare"
 
 // Binary search an associative array.
@@ -5,9 +6,7 @@ export function binarySearchAssociativeList<T>(
 	list: [T, any][],
 	item: T,
 	cmp: Compare<T>
-):
-	| { found: number; closest?: undefined }
-	| { found?: undefined; closest: number } {
+): BinarySearchResult {
 	var min = 0
 	var max = list.length - 1
 	while (min <= max) {
