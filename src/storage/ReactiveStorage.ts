@@ -68,6 +68,7 @@ export class ReactiveStorage implements Storage {
 
 		const id = randomId()
 		const value: Listener = { callback, bounds }
+
 		this.listeners.transact().set([prefix, id], value).commit()
 
 		const unsubscribe = () => {
@@ -84,7 +85,10 @@ export class ReactiveStorage implements Storage {
 		// Look for listeners at each prefix of the tuple.
 		for (const prefix of iterateTuplePrefixes(tuple)) {
 			// this.listeners.transact().set([prefix, id], { callback, bounds }).commit()
-			const results = this.listeners.scan({ gte: [prefix], lt: [prefix, MIN] })
+			const results = this.listeners.scan({
+				gte: [prefix],
+				lt: [[...prefix, MIN]],
+			})
 
 			for (const [_prefix, value] of results) {
 				listeners.push(value)
