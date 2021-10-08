@@ -56,10 +56,10 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any }
 	| { type: "remove"; tuple: Tuple }
 
-export type Indexer = (tx: Transaction, op: Operation) => void
+export type Indexer = (tx: Transaction, writes: Operation) => void
 
 export interface Storage extends ReadOnlyStorage {
-	index(indexer: Indexer): void
+	index(indexer: Indexer): this
 	transact(): Transaction
 	commit(writes: Writes): void
 	close(): void
@@ -67,7 +67,7 @@ export interface Storage extends ReadOnlyStorage {
 
 export interface Transaction extends ReadOnlyStorage {
 	readonly writes: Writes
-	set(tuple: Tuple, value: any): Transaction
-	remove(tuple: Tuple): Transaction
+	set(tuple: Tuple, value: any): this
+	remove(tuple: Tuple): this
 	commit(): void
 }

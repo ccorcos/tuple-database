@@ -19,6 +19,8 @@ Some more interesting tips about using this library here: https://apple.github.i
 
 ## TODO
 
+- better readme. include indexer and subspace stuff.
+
 - get reactive storage working again.
 	- use reactive-magic strategy for composing queries more naturally.
 

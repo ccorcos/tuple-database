@@ -13,6 +13,7 @@ import { randomId } from "../helpers/randomId"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
+import { ReactiveStorage } from "./ReactiveStorage"
 import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Storage, Tuple, TupleValuePair } from "./types"
 
@@ -872,6 +873,13 @@ storageTestSuite(
 	false
 )
 
+storageTestSuite(
+	"ReactiveStorage(InMemoryStorage)",
+	sortedValues,
+	() => new ReactiveStorage(new InMemoryStorage()),
+	false
+)
+
 const tmpDir = __dirname + "/../../tmp/"
 
 storageTestSuite(
@@ -884,4 +892,10 @@ storageTestSuite(
 	"SQLiteStorage",
 	sortedValues,
 	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+)
+
+storageTestSuite(
+	"ReactiveStorage(SQLiteStorage)",
+	sortedValues,
+	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
 )

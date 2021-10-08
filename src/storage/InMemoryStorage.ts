@@ -56,7 +56,7 @@ export class InMemoryStorage implements Storage {
 	}
 }
 
-interface TransactionArgs {
+export interface TransactionArgs {
 	indexers: Indexer[]
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
