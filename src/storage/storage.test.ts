@@ -748,39 +748,120 @@ function storageTestSuite(
 			assert.deepEqual(tr.exists(["d"]), true)
 		})
 
-		// All tests below here should be durable tests
-		if (!durable) return
-		describe("Persistence", () => {
-			it("persists properly", () => {
-				const id = randomId()
-				const store = createStorage(id)
+		describe("indexing", () => {
+			it("bidirectional friends", () => {
+				const store = createStorage(randomId())
+
+				store.index((tx, op) => {
+					if (op.type === "set") {
+						const [a, e, v] = op.tuple
+						if (a !== "friend") return
+						if (tx.exists([a, v, e])) return
+						tx.set([a, v, e], op.value)
+					} else {
+						const [a, e, v] = op.tuple
+						if (a !== "friend") return
+						if (!tx.exists([a, v, e])) return
+						tx.remove([a, v, e])
+					}
+				})
 
 				const items: TupleValuePair[] = [
-					[["a", "a", "a"], 1],
-					[["a", "a", "b"], 2],
-					[["a", "a", "c"], 3],
-					[["a", "b", "a"], 4],
-					[["a", "b", "b"], 5],
-					[["a", "b", "c"], 6],
-					[["a", "c", "a"], 7],
-					[["a", "c", "b"], 8],
-					[["a", "c", "c"], 9],
+					[["friend", "a", "b"], null],
+					[["friend", "a", "c"], null],
+					[["friend", "b", "c"], null],
+					[["name", "a", "Chet"], null],
+					[["name", "b", "Meghan"], null],
+					[["name", "c", "Andrew"], null],
 				]
 				const transaction = store.transact()
 				for (const [key, value] of _.shuffle(items)) {
 					transaction.set(key, value)
 				}
 				transaction.commit()
-				const data = store.scan()
-				assert.deepEqual(data, items)
 
-				store.close()
+				let result = store.scan().map(([tuple]) => tuple)
 
-				const store2 = createStorage(id)
-				const data2 = store2.scan()
-				assert.deepEqual(data2, items)
+				assert.deepEqual(result, [
+					["friend", "a", "b"],
+					["friend", "a", "c"],
+					["friend", "b", "a"],
+					["friend", "b", "c"],
+					["friend", "c", "a"],
+					["friend", "c", "b"],
+					["name", "a", "Chet"],
+					["name", "b", "Meghan"],
+					["name", "c", "Andrew"],
+				])
+
+				const tx = store.transact()
+				result = tx
+					.remove(["friend", "a", "b"])
+					.scan()
+					.map(([tuple]) => tuple)
+
+				assert.deepEqual(result, [
+					["friend", "a", "c"],
+					["friend", "b", "c"],
+					["friend", "c", "a"],
+					["friend", "c", "b"],
+					["name", "a", "Chet"],
+					["name", "b", "Meghan"],
+					["name", "c", "Andrew"],
+				])
+
+				result = tx
+					.set(["friend", "d", "a"], null)
+					.scan()
+					.map(([tuple]) => tuple)
+
+				assert.deepEqual(result, [
+					["friend", "a", "c"],
+					["friend", "a", "d"],
+					["friend", "b", "c"],
+					["friend", "c", "a"],
+					["friend", "c", "b"],
+					["friend", "d", "a"],
+					["name", "a", "Chet"],
+					["name", "b", "Meghan"],
+					["name", "c", "Andrew"],
+				])
 			})
 		})
+
+		if (durable) {
+			describe("Persistence", () => {
+				it("persists properly", () => {
+					const id = randomId()
+					const store = createStorage(id)
+
+					const items: TupleValuePair[] = [
+						[["a", "a", "a"], 1],
+						[["a", "a", "b"], 2],
+						[["a", "a", "c"], 3],
+						[["a", "b", "a"], 4],
+						[["a", "b", "b"], 5],
+						[["a", "b", "c"], 6],
+						[["a", "c", "a"], 7],
+						[["a", "c", "b"], 8],
+						[["a", "c", "c"], 9],
+					]
+					const transaction = store.transact()
+					for (const [key, value] of _.shuffle(items)) {
+						transaction.set(key, value)
+					}
+					transaction.commit()
+					const data = store.scan()
+					assert.deepEqual(data, items)
+
+					store.close()
+
+					const store2 = createStorage(id)
+					const data2 = store2.scan()
+					assert.deepEqual(data2, items)
+				})
+			})
+		}
 	})
 }
 

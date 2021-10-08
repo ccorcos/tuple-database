@@ -1,6 +1,7 @@
 import * as t from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
 import {
+	Indexer,
 	ScanArgs,
 	Storage,
 	Transaction,
@@ -14,6 +15,13 @@ export class InMemoryStorage implements Storage {
 
 	constructor(data?: TupleValuePair[]) {
 		this.data = data || []
+	}
+
+	indexers: Indexer[] = []
+
+	index(indexer: Indexer) {
+		this.indexers.push(indexer)
+		return this
 	}
 
 	get(tuple: Tuple) {
@@ -49,6 +57,7 @@ export class InMemoryStorage implements Storage {
 }
 
 interface TransactionArgs {
+	indexers: Indexer[]
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
 	scan(args: ScanArgs): TupleValuePair[]
@@ -84,12 +93,18 @@ export class InMemoryTransaction implements Transaction {
 	set(tuple: Tuple, value: any) {
 		t.remove(this.writes.removes, tuple)
 		tv.set(this.writes.sets, tuple, value)
+		for (const indexer of this.storage.indexers) {
+			indexer(this, { type: "set", tuple, value })
+		}
 		return this
 	}
 
 	remove(tuple: Tuple) {
 		tv.remove(this.writes.sets, tuple)
 		t.set(this.writes.removes, tuple)
+		for (const indexer of this.storage.indexers) {
+			indexer(this, { type: "remove", tuple })
+		}
 		return this
 	}
 

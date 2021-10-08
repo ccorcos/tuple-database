@@ -2,7 +2,14 @@ import { Database, Statement, Transaction } from "better-sqlite3"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 import { normalizeBounds } from "../helpers/sortedTupleArray"
 import { InMemoryTransaction } from "./InMemoryStorage"
-import { ScanArgs, Storage, Tuple, TupleValuePair, Writes } from "./types"
+import {
+	Indexer,
+	ScanArgs,
+	Storage,
+	Tuple,
+	TupleValuePair,
+	Writes,
+} from "./types"
 
 export class SQLiteStorage implements Storage {
 	/**
@@ -45,6 +52,13 @@ export class SQLiteStorage implements Storage {
 				}
 			}
 		)
+	}
+
+	indexers: Indexer[] = []
+
+	index(indexer: Indexer) {
+		this.indexers.push(indexer)
+		return this
 	}
 
 	private getQuery: Statement

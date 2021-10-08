@@ -47,29 +47,26 @@ export type ScanArgs = {
 export interface ReadOnlyStorage {
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
-	scan(args: ScanArgs): TupleValuePair[]
+	scan(args?: ScanArgs): TupleValuePair[]
 }
 
 export type Writes = { sets: TupleValuePair[]; removes: Tuple[] }
 
 export type Operation =
-	| { op: "set"; pair: TupleValuePair }
-	| { op: "remove"; pair: TupleValuePair }
+	| { type: "set"; tuple: Tuple; value: any }
+	| { type: "remove"; tuple: Tuple }
 
-export interface Storage {
-	get(tuple: Tuple): any
-	exists(tuple: Tuple): boolean
-	scan(args?: ScanArgs): TupleValuePair[]
+export type Indexer = (tx: Transaction, op: Operation) => void
+
+export interface Storage extends ReadOnlyStorage {
+	index(indexer: Indexer): void
 	transact(): Transaction
-	// commit(writes: Writes): void
+	commit(writes: Writes): void
 	close(): void
 }
 
-export interface Transaction {
+export interface Transaction extends ReadOnlyStorage {
 	readonly writes: Writes
-	get(tuple: Tuple): any
-	exists(tuple: Tuple): boolean
-	scan(args?: ScanArgs): TupleValuePair[]
 	set(tuple: Tuple, value: any): Transaction
 	remove(tuple: Tuple): Transaction
 	commit(): void

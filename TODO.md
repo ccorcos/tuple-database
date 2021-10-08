@@ -32,6 +32,8 @@ Some more interesting tips about using this library here: https://apple.github.i
 
 
 ### Later:
+- proper abstraction for encoding/decoding objects, with `prototype.{compare, serialize, deserialize}`
+
 - can we make a faster encoding using `buf.writeDoubleBE()`?
 - spread out the tuple encoding so we can migrate later
 
