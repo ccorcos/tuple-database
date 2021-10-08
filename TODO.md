@@ -1,24 +1,3 @@
-## Next Readme
-
-This database works very similar to FoundationDb.
-
-Thus, we're using some familiar abstractions.
-- [Subspace](https://github.com/apple/foundationdb/blob/dc3cebe8d904a704f734524943fc074dbaa59efc/bindings/python/fdb/subspace_impl.py) for handling tuple prefixes.
-- And transactional for composing writes together.
-
-Some notable differences:
-- This API does not support async concurrent writes, though it could later on, leveraging similar transaction retry logic.
-- The in-memory storage system does not serialize, so we need `MIN` and `MAX` symbols to do prefix queries rather than being able to simply add `\0x00` and `0xff` bytes to the end of a serializied tuple.
-
-
-I've implemented the [class scheduling tutorial](https://apple.github.io/foundationdb/class-scheduling.html) from FoundationDb as a test in this project, demonstrating a similar API.
-
-
-Some more interesting tips about using this library here: https://apple.github.io/foundationdb/data-modeling.html
-
-
-- [] include indexer abstraction and subspace stuff.
-
 ## TODO
 
 - use reactive-magic strategy for composing queries more naturally.
@@ -32,7 +11,6 @@ Some more interesting tips about using this library here: https://apple.github.i
 		- generic JSON abstractionc
 
 
-
 ### Later:
 - proper abstraction for encoding/decoding objects, with `prototype.{compare, serialize, deserialize}`
 
@@ -40,7 +18,6 @@ Some more interesting tips about using this library here: https://apple.github.i
 - spread out the tuple encoding so we can migrate later
 
 ---
-
 
 
 
