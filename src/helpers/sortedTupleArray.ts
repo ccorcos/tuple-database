@@ -1,36 +1,23 @@
-import { MAX, ScanArgs, Tuple } from "../storage/types"
-import { binarySearch } from "./binarySearch"
+import { MAX, Tuple, TupleScanArgs } from "../storage/types"
 import { compareTuple } from "./compareTuple"
+import * as sortedList from "./sortedList"
 
 export function set(data: Array<Tuple>, tuple: Tuple) {
-	const result = binarySearch(data, tuple, compareTuple)
-	if (result.closest !== undefined) {
-		// Insert at missing index.
-		data.splice(result.closest, 0, tuple)
-		return true
-	}
-	return false
+	return sortedList.set(data, tuple, compareTuple)
 }
 
 export function exists(data: Array<Tuple>, tuple: Tuple) {
-	const result = binarySearch(data, tuple, compareTuple)
-	return result.found !== undefined
+	return sortedList.exists(data, tuple, compareTuple)
 }
 
 export function remove(data: Array<Tuple>, tuple: Tuple) {
-	let { found } = binarySearch(data, tuple, compareTuple)
-	if (found !== undefined) {
-		// Remove from index.
-		data.splice(found, 1)
-		return true
-	}
-	return false
+	return sortedList.remove(data, tuple, compareTuple)
 }
 
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function normalizeBounds(args: ScanArgs): Bounds {
+export function normalizeBounds(args: TupleScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -80,6 +67,12 @@ export type Bounds = {
 	lt?: Tuple
 }
 
+export function scan(data: Array<Tuple>, args: TupleScanArgs = {}) {
+	const { limit, reverse, ...rest } = args
+	const bounds = normalizeBounds(rest)
+	return sortedList.scan(data, { limit, reverse, ...bounds }, compareTuple)
+}
+
 export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
 	if (bounds.gt) {
 		if (compareTuple(tuple, bounds.gt) !== 1) {
@@ -102,53 +95,4 @@ export function isWithinBounds(tuple: Tuple, bounds: Bounds) {
 		}
 	}
 	return true
-}
-
-export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
-	const bounds = normalizeBounds(args)
-	const start: Tuple | undefined = bounds.gte || bounds.gt
-	const end: Tuple | undefined = bounds.lte || bounds.lt
-
-	if (start && end && compareTuple(start, end) > 0) {
-		throw new Error("Invalid bounds.")
-	}
-
-	// Start at lower bound.
-	const result = binarySearch(data, start || [], compareTuple)
-	let i =
-		result.found !== undefined
-			? bounds.gt
-				? result.found + 1
-				: result.found
-			: result.closest
-
-	const results: Array<Tuple> = []
-	while (true) {
-		// End of array.
-		if (i >= data.length) {
-			break
-		}
-		if (args.limit && results.length >= args.limit) {
-			// Limit condition.
-			break
-		}
-		// Upper bound condition.
-		const tuple = data[i]
-
-		if (bounds.lt) {
-			const dir = compareTuple(tuple, bounds.lt)
-			if (dir >= 0) {
-				break
-			}
-		}
-		if (bounds.lte) {
-			const dir = compareTuple(tuple, bounds.lte)
-			if (dir > 0) {
-				break
-			}
-		}
-		results.push(tuple)
-		i += 1
-	}
-	return results
 }

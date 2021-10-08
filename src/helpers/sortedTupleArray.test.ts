@@ -1,373 +1,128 @@
+import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import * as assert from "assert"
-import { scan, remove, set } from "./sortedTupleArray"
 import { MAX, MIN, Tuple } from "../storage/types"
-import { sortedValues } from "../test/fixtures"
+import { scan, set } from "./sortedTupleArray"
 
 describe("sortedTupleArray", () => {
-	it("inserts in correct order", () => {
-		for (let i = 0; i < 10; i++) {
-			const items = [
-				["a", "a", "a"],
-				["a", "a", "b"],
-				["a", "a", "c"],
-				["a", "b", "a"],
-				["a", "b", "b"],
-				["a", "b", "c"],
-				["a", "c", "a"],
-				["a", "c", "b"],
-				["a", "c", "c"],
-			]
-			const data: Array<Tuple> = []
+	describe("prefix basics", () => {
+		const items: Tuple[] = [
+			[],
+			["a"],
+			["a", "a"],
+			["a", "b"],
+			["b"],
+			["b", "a"],
+			["b", "b"],
+		]
+
+		it("sorts prefixes in the correct order", () => {
+			const data: Tuple[] = []
 			for (const item of _.shuffle(items)) {
 				set(data, item)
 			}
 			assert.deepEqual(data, items)
-		}
-	})
-
-	it("removes items correctly", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		remove(data, ["a", "a", "c"])
-		remove(data, ["a", "c", "a"])
-		remove(data, ["a", "b", "b"])
-
-		assert.deepEqual(data, [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "b", "a"],
-			["a", "b", "c"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("works with deep-compare", () => {
-		const items = [
-			["a", { b: "c" }],
-			["a", { uuid: "a" }],
-			["a", { uuid: "v" }],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		remove(data, ["a", { uuid: "a" }])
-		remove(data, ["a", { b: "c" }])
-
-		assert.deepEqual(data.length, 1)
-	})
-
-	it("scan gt", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
 		})
 
-		assert.deepEqual(result, [
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("scan gt/lt", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
-			lt: ["a", "c", MIN],
+		it("prefix", () => {
+			const result = scan(items, { prefix: ["a"] })
+			assert.deepEqual(result, [["a"], ["a", "a"], ["a", "b"]])
 		})
 
-		assert.deepEqual(result, [
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-		])
-	})
-
-	it("scan gte", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gte: ["a", "b"],
+		it("prefix limit", () => {
+			const result = scan(items, { prefix: ["a"], limit: 2 })
+			assert.deepEqual(result, [["a"], ["a", "a"]])
 		})
 
-		assert.deepEqual(result, [
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("scan gte/lte", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gte: ["a", "a", "c"],
-			lte: ["a", "c", MAX],
+		it("prefix limit truncated", () => {
+			const result = scan(items, { prefix: ["a"], limit: 10 })
+			assert.deepEqual(result, [["a"], ["a", "a"], ["a", "b"]])
 		})
 
-		assert.deepEqual(result, [
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("scan sorted gt", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gt: ["a", "b", MAX],
+		it("prefix reverse", () => {
+			const result = scan(items, { prefix: ["a"], reverse: true })
+			assert.deepEqual(result, [["a", "b"], ["a", "a"], ["a"]])
 		})
 
-		assert.deepEqual(result, [
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("scan sorted gt/lt", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gt: ["a", "a", MAX],
-			lt: ["a", "b", MAX],
+		it("prefix reverse limit", () => {
+			const result = scan(items, { prefix: ["a"], limit: 2, reverse: true })
+			assert.deepEqual(result, [
+				["a", "b"],
+				["a", "a"],
+			])
 		})
 
-		assert.deepEqual(result, [
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-		])
+		it("prefix reverse limit truncated", () => {
+			const result = scan(items, { prefix: ["a"], limit: 10, reverse: true })
+			assert.deepEqual(result, [["a", "b"], ["a", "a"], ["a"]])
+		})
 	})
 
-	it("scan sorted gte", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
+	describe("bounds", () => {
+		const items: Tuple[] = [
+			[],
+			["a"],
+			["a", "a"],
+			["a", "b"],
+			["a", "c"],
+			["b"],
+			["b", "a"],
+			["b", "b"],
+			["b", "c"],
 		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
 
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gte: ["a", "b"],
+		it("prefix gt MIN", () => {
+			const result = scan(items, { prefix: ["a"], gt: [MIN] })
+			assert.deepEqual(result, [
+				["a", "a"],
+				["a", "b"],
+				["a", "c"],
+			])
 		})
 
-		assert.deepEqual(result, [
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		])
-	})
-
-	it("scan sorted gte/lte", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
-
-		assert.deepEqual(data, items)
-
-		const result = scan(data, {
-			gte: ["a", "a", "c"],
-			lte: ["a", "b", MAX],
+		it("prefix gt MIN reverse", () => {
+			const result = scan(items, { prefix: ["a"], gt: [MIN], reverse: true })
+			assert.deepEqual(result, [
+				["a", "c"],
+				["a", "b"],
+				["a", "a"],
+			])
 		})
 
-		assert.deepEqual(result, [
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-		])
-	})
+		it("prefix gt", () => {
+			const result = scan(items, { prefix: ["a"], gt: ["a"] })
+			assert.deepEqual(result, [
+				["a", "b"],
+				["a", "c"],
+			])
+		})
 
-	it("scan invalid bounds", () => {
-		const items = [
-			["a", "a", "a"],
-			["a", "a", "b"],
-			["a", "a", "c"],
-			["a", "b", "a"],
-			["a", "b", "b"],
-			["a", "b", "c"],
-			["a", "c", "a"],
-			["a", "c", "b"],
-			["a", "c", "c"],
-		]
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
+		it("prefix gt reverse", () => {
+			const result = scan(items, { prefix: ["a"], gt: ["a"], reverse: true })
+			assert.deepEqual(result, [
+				["a", "c"],
+				["a", "b"],
+			])
+		})
 
-		assert.deepEqual(data, items)
+		it("prefix lt MAX", () => {
+			const result = scan(items, { prefix: ["a"], lt: [MAX] })
+			assert.deepEqual(result, [["a"], ["a", "a"], ["a", "b"], ["a", "c"]])
+		})
 
-		try {
-			scan(data, {
-				gte: ["a", "c"],
-				lte: ["a", "a"],
-			})
-			assert.fail("Should fail.")
-		} catch (error) {
-			assert.ok(error)
-		}
-	})
+		it("prefix lt MAX reverse", () => {
+			const result = scan(items, { prefix: ["a"], lt: [MAX], reverse: true })
+			assert.deepEqual(result, [["a", "c"], ["a", "b"], ["a", "a"], ["a"]])
+		})
 
-	it("stores all types of values", () => {
-		const items: Array<Tuple> = sortedValues.map((item) => [item])
-		const data: Array<Tuple> = []
-		for (const item of _.shuffle(items)) {
-			set(data, item)
-		}
+		it("prefix lt", () => {
+			const result = scan(items, { prefix: ["a"], lt: ["c"] })
+			assert.deepEqual(result, [["a"], ["a", "a"], ["a", "b"]])
+		})
 
-		assert.deepEqual(data, items)
+		it("prefix lt reverse", () => {
+			const result = scan(items, { prefix: ["a"], lt: ["c"], reverse: true })
+			assert.deepEqual(result, [["a", "b"], ["a", "a"], ["a"]])
+		})
 	})
 })

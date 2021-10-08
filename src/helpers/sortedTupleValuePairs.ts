@@ -1,4 +1,4 @@
-import { ScanArgs, Tuple, TupleValuePair } from "../storage/types"
+import { Tuple, TupleScanArgs, TupleValuePair } from "../storage/types"
 import { binarySearchAssociativeList } from "./binarySearch"
 import { compareTuple } from "./compareTuple"
 import { normalizeBounds } from "./sortedTupleArray"
@@ -38,7 +38,7 @@ export function exists(data: TupleValuePair[], tuple: Tuple) {
 	return result.found !== undefined
 }
 
-export function scan(data: TupleValuePair[], args: ScanArgs = {}) {
+export function scan(data: TupleValuePair[], args: TupleScanArgs = {}) {
 	const bounds = normalizeBounds(args)
 	const start: Tuple | undefined = bounds.gte || bounds.gt
 	const end: Tuple | undefined = bounds.lte || bounds.lt

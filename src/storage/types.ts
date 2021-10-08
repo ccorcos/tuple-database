@@ -35,12 +35,12 @@ export type TupleValuePair = [Tuple, any]
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
-export type ScanArgs = {
-	prefix?: Tuple
+export type TupleScanArgs = {
 	gt?: Tuple
 	gte?: Tuple
 	lt?: Tuple
 	lte?: Tuple
+	prefix?: Tuple
 	limit?: number
 	reverse?: boolean
 }
@@ -48,7 +48,7 @@ export type ScanArgs = {
 export interface ReadOnlyTupleStorage {
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
-	scan(args?: ScanArgs): TupleValuePair[]
+	scan(args?: TupleScanArgs): TupleValuePair[]
 }
 
 export type Writes = { sets: TupleValuePair[]; removes: Tuple[] }
