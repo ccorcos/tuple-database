@@ -1,6 +1,6 @@
 set -e
 
-npm version minor
+npm version patch
 
 rm -rf build
 npm run build
