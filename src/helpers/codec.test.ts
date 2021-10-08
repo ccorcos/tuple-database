@@ -1,11 +1,11 @@
+import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import * as assert from "assert"
-import { sortedValues } from "../test/fixtures"
-import { encodeValue, decodeValue, decodeTuple, encodeTuple } from "./codec"
-import { compare } from "./compare"
-import { ValueToString, TupleToString } from "./compareTuple"
 import { Tuple } from "../storage/types"
+import { sortedValues } from "../test/fixtures"
+import { decodeTuple, decodeValue, encodeTuple, encodeValue } from "./codec"
+import { compare } from "./compare"
+import { TupleToString, ValueToString } from "./compareTuple"
 
 describe("codec", () => {
 	describe("encodeValue", () => {

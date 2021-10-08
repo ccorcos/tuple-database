@@ -1,5 +1,5 @@
 import { ScanArgs, Tuple, TupleValuePair } from "../storage/types"
-import { binarySearchAssociativeList } from "./binarySearchAssociativeList"
+import { binarySearchAssociativeList } from "./binarySearch"
 import { compareTuple } from "./compareTuple"
 import { normalizeBounds } from "./sortedTupleArray"
 

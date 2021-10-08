@@ -42,6 +42,7 @@ export type ScanArgs = {
 	lt?: Tuple
 	lte?: Tuple
 	limit?: number
+	reverse?: boolean
 }
 
 export interface ReadOnlyTupleStorage {
