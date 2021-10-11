@@ -12,6 +12,9 @@ export function compareValue(a: Value, b: Value): number {
 			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
 			// TODO: prototype.compare for classes.
+			// NOTE: it's a bit contentious to allow for unsortable data inside a sorted array.
+			// But it is convenient at times to be able to do this sometimes and just assume that
+			// thee classes are unsorted.
 			if (isPlainObject(a)) {
 				if (isPlainObject(b)) {
 					// Plain objects are ordered.
