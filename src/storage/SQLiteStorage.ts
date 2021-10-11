@@ -4,8 +4,8 @@ import { normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
+	ScanArgs,
 	Tuple,
-	TupleScanArgs,
 	TupleStorage,
 	TupleValuePair,
 	Writes,
@@ -77,7 +77,7 @@ export class SQLiteStorage implements TupleStorage {
 		return Boolean(result[1])
 	}
 
-	scan = (args: TupleScanArgs = {}) => {
+	scan = (args: ScanArgs = {}) => {
 		const bounds = normalizeTupleBounds(args)
 
 		// Bounds.

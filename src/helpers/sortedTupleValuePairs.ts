@@ -1,4 +1,4 @@
-import { Tuple, TupleScanArgs, TupleValuePair } from "../storage/types"
+import { ScanArgs, Tuple, TupleValuePair } from "../storage/types"
 import { compareTuple } from "./compareTuple"
 import * as sortedList from "./sortedList"
 import { normalizeTupleBounds } from "./sortedTupleArray"
@@ -24,7 +24,7 @@ export function exists(data: TupleValuePair[], tuple: Tuple) {
 	return sortedList.exists(data, [tuple, null], compareTupleValuePair)
 }
 
-function normalizeTupleValuePairBounds(args: TupleScanArgs) {
+function normalizeTupleValuePairBounds(args: ScanArgs) {
 	const bounds = normalizeTupleBounds(args)
 	const { gt, lt, gte, lte } = bounds
 	return {
@@ -35,7 +35,7 @@ function normalizeTupleValuePairBounds(args: TupleScanArgs) {
 	}
 }
 
-export function scan(data: TupleValuePair[], args: TupleScanArgs = {}) {
+export function scan(data: TupleValuePair[], args: ScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
 	const bounds = normalizeTupleValuePairBounds(rest)
 	return sortedList.scan(

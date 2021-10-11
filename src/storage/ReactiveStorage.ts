@@ -5,8 +5,8 @@ import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
 	MIN,
+	ScanArgs,
 	Tuple,
-	TupleScanArgs,
 	TupleStorage,
 	Value,
 	Writes,
@@ -35,7 +35,7 @@ export class ReactiveStorage implements TupleStorage {
 		return this.storage.exists(tuple)
 	}
 
-	scan(args?: TupleScanArgs) {
+	scan(args?: ScanArgs) {
 		return this.storage.scan(args)
 	}
 
@@ -65,7 +65,7 @@ export class ReactiveStorage implements TupleStorage {
 
 	private listeners = new InMemoryStorage()
 
-	subscribe = (args: TupleScanArgs, callback: Callback) => {
+	subscribe = (args: ScanArgs, callback: Callback) => {
 		this.log("db/subscribe", args)
 
 		const bounds = normalizeTupleBounds(args)

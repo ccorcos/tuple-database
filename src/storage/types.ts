@@ -35,7 +35,7 @@ export type TupleValuePair = [Tuple, any]
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
-export type TupleScanArgs = {
+export type ScanArgs = {
 	gt?: Tuple
 	gte?: Tuple
 	lt?: Tuple
@@ -48,7 +48,7 @@ export type TupleScanArgs = {
 export interface ReadOnlyTupleStorage {
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
-	scan(args?: TupleScanArgs): TupleValuePair[]
+	scan(args?: ScanArgs): TupleValuePair[]
 }
 
 export type Writes = { sets: TupleValuePair[]; removes: Tuple[] }
@@ -57,16 +57,16 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
 	| { type: "remove"; tuple: Tuple; prev: any }
 
-export type Indexer = (tx: TupleTransaction, writes: Operation) => void
+export type Indexer = (tx: Transaction, writes: Operation) => void
 
 export interface TupleStorage extends ReadOnlyTupleStorage {
 	index(indexer: Indexer): this
-	transact(): TupleTransaction
+	transact(): Transaction
 	commit(writes: Writes): void
 	close(): void
 }
 
-export interface TupleTransaction extends ReadOnlyTupleStorage {
+export interface Transaction extends ReadOnlyTupleStorage {
 	readonly writes: Writes
 	set(tuple: Tuple, value: any): this
 	remove(tuple: Tuple): this

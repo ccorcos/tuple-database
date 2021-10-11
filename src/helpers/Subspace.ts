@@ -1,4 +1,4 @@
-import { MAX, MIN, Tuple, TupleScanArgs } from "../storage/types"
+import { MAX, MIN, ScanArgs, Tuple } from "../storage/types"
 
 // Similar to FoundationDb's abstraction.
 // https://github.com/apple/foundationdb/blob/dc3cebe8d904a704f734524943fc074dbaa59efc/bindings/python/fdb/subspace_impl.py
@@ -16,7 +16,7 @@ export class Subspace {
 	subspace(...more: Tuple) {
 		return new Subspace(...this.pack(more))
 	}
-	range(tuple: Tuple = []): TupleScanArgs {
+	range(tuple: Tuple = []): ScanArgs {
 		return {
 			gte: this.pack([...tuple, MIN]),
 			lte: this.pack([...tuple, MAX]),

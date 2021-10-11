@@ -1,4 +1,4 @@
-import { MAX, Tuple, TupleScanArgs } from "../storage/types"
+import { MAX, ScanArgs, Tuple } from "../storage/types"
 import { compareTuple } from "./compareTuple"
 import * as sortedList from "./sortedList"
 
@@ -17,7 +17,7 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function normalizeTupleBounds(args: TupleScanArgs): Bounds {
+export function normalizeTupleBounds(args: ScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -67,7 +67,7 @@ export type Bounds = {
 	lt?: Tuple
 }
 
-export function scan(data: Array<Tuple>, args: TupleScanArgs = {}) {
+export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
 	const bounds = normalizeTupleBounds(rest)
 	return sortedList.scan(data, { limit, reverse, ...bounds }, compareTuple)

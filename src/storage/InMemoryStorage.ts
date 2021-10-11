@@ -2,10 +2,10 @@ import * as t from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
 import {
 	Indexer,
+	ScanArgs,
+	Transaction,
 	Tuple,
-	TupleScanArgs,
 	TupleStorage,
-	TupleTransaction,
 	TupleValuePair,
 	Writes,
 } from "./types"
@@ -32,7 +32,7 @@ export class InMemoryStorage implements TupleStorage {
 		return tv.exists(this.data, tuple)
 	}
 
-	scan(args: TupleScanArgs = {}) {
+	scan(args: ScanArgs = {}) {
 		return tv.scan(this.data, args)
 	}
 
@@ -60,11 +60,11 @@ export interface TransactionArgs {
 	indexers: Indexer[]
 	get(tuple: Tuple): any
 	exists(tuple: Tuple): boolean
-	scan(args: TupleScanArgs): TupleValuePair[]
+	scan(args: ScanArgs): TupleValuePair[]
 	commit(writes: Writes): void
 }
 
-export class InMemoryTransaction implements TupleTransaction {
+export class InMemoryTransaction implements Transaction {
 	constructor(private storage: TransactionArgs) {}
 
 	writes: Writes = { sets: [], removes: [] }
@@ -112,7 +112,7 @@ export class InMemoryTransaction implements TupleTransaction {
 		return this
 	}
 
-	scan(args: TupleScanArgs = {}) {
+	scan(args: ScanArgs = {}) {
 		const result = this.storage.scan(args)
 		const sets = tv.scan(this.writes.sets, args)
 		for (const [tuple, value] of sets) {
