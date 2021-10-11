@@ -1,5 +1,6 @@
 import { strict as assert } from "assert"
 import * as _ from "lodash"
+import { shuffle } from "lodash"
 import { describe, it } from "mocha"
 import { Tuple } from "../storage/types"
 import { sortedValues } from "../test/fixtures"
@@ -24,6 +25,24 @@ describe("compareValue", () => {
 				)
 			}
 		}
+	})
+
+	it("sorts class objects properly", () => {
+		class A {}
+
+		const values = shuffle([
+			{ a: 1 },
+			{ a: 2 },
+			{ b: -1 },
+			new A(),
+			new A(),
+		]).sort(compareValue)
+
+		assert.deepEqual(values[0], { a: 1 })
+		assert.deepEqual(values[1], { a: 2 })
+		assert.deepEqual(values[2], { b: -1 })
+		assert.ok(values[3] instanceof A)
+		assert.ok(values[4] instanceof A)
 	})
 })
 

@@ -12,14 +12,22 @@ export function compareValue(a: Value, b: Value): number {
 			return compareTuple(a as any, b as any)
 		} else if (at === "object") {
 			// TODO: prototype.compare for classes.
-
-			if (!isPlainObject(a) || !isPlainObject(b)) {
-				throw new Error("Cannot store uncomparable objects in tuples.")
+			if (isPlainObject(a)) {
+				if (isPlainObject(b)) {
+					// Plain objects are ordered.
+					// This is convenient for meta types like `{date: "2021-12-01"}` =>  [["date", "2021-12-01"]]
+					return compareObject(a as any, b as any)
+				} else {
+					// json > class
+					return -1
+				}
+			} else if (isPlainObject(b)) {
+				// json > class
+				return 1
+			} else {
+				// class != class
+				return 1
 			}
-
-			// Plain objects are ordered.
-			// This is convenient for meta types like `{date: "2021-12-01"}` =>  [["date", "2021-12-01"]]
-			return compareObject(a as any, b as any)
 		} else if (at === "MAX") {
 			return 0
 		} else if (at === "MIN") {
