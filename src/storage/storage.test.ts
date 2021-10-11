@@ -953,29 +953,31 @@ storageTestSuite(
 	false
 )
 
-storageTestSuite(
-	"ReactiveStorage(InMemoryStorage)",
-	sortedValues,
-	() => new ReactiveStorage(new InMemoryStorage()),
-	false
-)
+if (false) {
+	storageTestSuite(
+		"ReactiveStorage(InMemoryStorage)",
+		sortedValues,
+		() => new ReactiveStorage(new InMemoryStorage()),
+		false
+	)
 
-const tmpDir = __dirname + "/../../tmp/"
+	const tmpDir = __dirname + "/../../tmp/"
 
-storageTestSuite(
-	"FileStorage",
-	sortedValues,
-	(id) => new FileStorage(tmpDir + id)
-)
+	storageTestSuite(
+		"FileStorage",
+		sortedValues,
+		(id) => new FileStorage(tmpDir + id)
+	)
 
-storageTestSuite(
-	"SQLiteStorage",
-	sortedValues,
-	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
-)
+	storageTestSuite(
+		"SQLiteStorage",
+		sortedValues,
+		(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+	)
 
-storageTestSuite(
-	"ReactiveStorage(SQLiteStorage)",
-	sortedValues,
-	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
-)
+	storageTestSuite(
+		"ReactiveStorage(SQLiteStorage)",
+		sortedValues,
+		(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
+	)
+}

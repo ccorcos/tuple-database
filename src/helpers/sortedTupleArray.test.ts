@@ -58,6 +58,191 @@ describe("sortedTupleArray", () => {
 		})
 	})
 
+	describe("prefix composition", () => {
+		const items: Tuple[] = [
+			["a", "a", "a"],
+			["a", "a", "b"],
+			["a", "a", "c"],
+			["a", "b", "a"],
+			["a", "b", "b"],
+			["a", "b", "c"],
+			["a", "c", "a"],
+			["a", "c", "b"],
+			["a", "c", "c"],
+			["b", "a", "a"],
+			["b", "a", "b"],
+			["b", "a", "c"],
+			["b", "b", "a"],
+			["b", "b", "b"],
+			["b", "b", "c"],
+			["b", "c", "a"],
+			["b", "c", "b"],
+			["b", "c", "c"],
+		]
+
+		it("prefix gt", () => {
+			const result = scan(items, { prefix: ["a"], gt: ["a", MAX] })
+			assert.deepEqual(result, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			])
+		})
+
+		it("prefix gt reverse", () => {
+			const result = scan(items, {
+				prefix: ["a"],
+				gt: ["a", MAX],
+				reverse: true,
+			})
+			assert.deepEqual(
+				result,
+				[
+					["a", "b", "a"],
+					["a", "b", "b"],
+					["a", "b", "c"],
+					["a", "c", "a"],
+					["a", "c", "b"],
+					["a", "c", "c"],
+				].reverse()
+			)
+		})
+
+		it("prefix lt", () => {
+			const result = scan(items, { prefix: ["a"], lt: ["b"] })
+			assert.deepEqual(result, [
+				["a", "a", "a"],
+				["a", "a", "b"],
+				["a", "a", "c"],
+			])
+		})
+
+		it("prefix lt reverse", () => {
+			const result = scan(items, { prefix: ["a"], lt: ["b"], reverse: true })
+			assert.deepEqual(
+				result,
+				[
+					["a", "a", "a"],
+					["a", "a", "b"],
+					["a", "a", "c"],
+				].reverse()
+			)
+		})
+
+		it("prefix gt/lt", () => {
+			const result = scan(items, { prefix: ["a"], gt: ["a", MAX], lt: ["c"] })
+			assert.deepEqual(result, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+			])
+		})
+
+		it("prefix gt/lt reverse", () => {
+			const result = scan(items, {
+				prefix: ["a"],
+				gt: ["a", MAX],
+				lt: ["c"],
+				reverse: true,
+			})
+			assert.deepEqual(
+				result,
+				[
+					["a", "b", "a"],
+					["a", "b", "b"],
+					["a", "b", "c"],
+				].reverse()
+			)
+		})
+
+		it("prefix gte", () => {
+			const result = scan(items, { prefix: ["a"], gte: ["b"] })
+			assert.deepEqual(result, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			])
+		})
+
+		it("prefix gte reverse", () => {
+			const result = scan(items, { prefix: ["a"], gte: ["b"], reverse: true })
+			assert.deepEqual(
+				result,
+				[
+					["a", "b", "a"],
+					["a", "b", "b"],
+					["a", "b", "c"],
+					["a", "c", "a"],
+					["a", "c", "b"],
+					["a", "c", "c"],
+				].reverse()
+			)
+		})
+
+		it("prefix lte", () => {
+			const result = scan(items, { prefix: ["a"], lte: ["a", MAX] })
+			assert.deepEqual(result, [
+				["a", "a", "a"],
+				["a", "a", "b"],
+				["a", "a", "c"],
+			])
+		})
+
+		it("prefix lte reverse", () => {
+			const result = scan(items, {
+				prefix: ["a"],
+				lte: ["a", MAX],
+				reverse: true,
+			})
+			assert.deepEqual(
+				result,
+				[
+					["a", "a", "a"],
+					["a", "a", "b"],
+					["a", "a", "c"],
+				].reverse()
+			)
+		})
+
+		it("prefix gte/lte", () => {
+			const result = scan(items, { prefix: ["a"], gte: ["b"], lte: ["c", MAX] })
+			assert.deepEqual(result, [
+				["a", "b", "a"],
+				["a", "b", "b"],
+				["a", "b", "c"],
+				["a", "c", "a"],
+				["a", "c", "b"],
+				["a", "c", "c"],
+			])
+		})
+
+		it("prefix gte/lte reverse", () => {
+			const result = scan(items, {
+				prefix: ["a"],
+				gte: ["b"],
+				lte: ["c", MAX],
+				reverse: true,
+			})
+			assert.deepEqual(
+				result,
+				[
+					["a", "b", "a"],
+					["a", "b", "b"],
+					["a", "b", "c"],
+					["a", "c", "a"],
+					["a", "c", "b"],
+					["a", "c", "c"],
+				].reverse()
+			)
+		})
+	})
+
 	describe("bounds", () => {
 		const items: Tuple[] = [
 			[],
