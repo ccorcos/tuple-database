@@ -44,6 +44,12 @@ describe("compareValue", () => {
 		assert.ok(values[3] instanceof A)
 		assert.ok(values[4] instanceof A)
 	})
+
+	it("Compares object equality", () => {
+		class A {}
+		const a = new A()
+		assert.equal(compareValue(a, a), 0)
+	})
 })
 
 describe("compareTuple", () => {
