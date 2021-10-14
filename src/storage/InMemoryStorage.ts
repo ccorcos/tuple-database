@@ -40,18 +40,6 @@ export class InMemoryStorage implements TupleStorage {
 		return new InMemoryTransaction(this)
 	}
 
-	// write(writes: Writes) {
-	// 	const tx = this.transact()
-	// 	const { sets, removes } = writes
-	// 	for (const tuple of removes) {
-	// 		tx.remove(this.data, tuple)
-	// 	}
-	// 	for (const [tuple, value] of sets) {
-	// 		tx.set(this.data, tuple, value)
-	// 	}
-	// 	tx.commit()
-	// }
-
 	// TODO: it's unclear what the consequences are of this ordering.
 	// Also, if we were to run more indexers after this bulk write, what are the race conditions?
 	commit(writes: Writes) {
@@ -122,6 +110,19 @@ export class InMemoryTransaction implements Transaction {
 		t.set(this.writes.remove, tuple)
 		for (const indexer of this.storage.indexers) {
 			indexer(this, { type: "remove", tuple, prev })
+		}
+		return this
+	}
+
+	write(writes: Writes) {
+		// TODO: it's unclear what the consequences are of this ordering.
+		// Also, if we were to run more indexers after this bulk write, what are the race conditions?
+		const { set, remove } = writes
+		for (const tuple of remove || []) {
+			this.remove(tuple)
+		}
+		for (const [tuple, value] of set || []) {
+			this.set(tuple, value)
 		}
 		return this
 	}

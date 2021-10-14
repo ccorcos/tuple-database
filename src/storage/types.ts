@@ -70,5 +70,6 @@ export interface Transaction extends ReadOnlyTupleStorage {
 	readonly writes: Writes
 	set(tuple: Tuple, value: any): this
 	remove(tuple: Tuple): this
+	write(writes: Writes): this
 	commit(): void
 }

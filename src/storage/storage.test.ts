@@ -211,6 +211,47 @@ function storageTestSuite(
 			assert.deepEqual(store.scan(), data)
 		})
 
+		it("transaction.write()", () => {
+			const store = createStorage(randomId())
+
+			const items: TupleValuePair[] = [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "b", "a"], 4],
+				[["a", "b", "b"], 5],
+				[["a", "b", "c"], 6],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
+			]
+
+			store.transact().write({ set: items }).commit()
+			let data = store.scan()
+			assert.deepEqual(data, items)
+
+			store
+				.transact()
+				.write({
+					remove: [
+						["a", "b", "a"],
+						["a", "b", "b"],
+						["a", "b", "c"],
+					],
+				})
+				.commit()
+
+			data = store.scan()
+			assert.deepEqual(data, [
+				[["a", "a", "a"], 1],
+				[["a", "a", "b"], 2],
+				[["a", "a", "c"], 3],
+				[["a", "c", "a"], 7],
+				[["a", "c", "b"], 8],
+				[["a", "c", "c"], 9],
+			])
+		})
+
 		it("scan gt", () => {
 			const store = createStorage(randomId())
 
@@ -953,31 +994,29 @@ storageTestSuite(
 	false
 )
 
-if (false) {
-	storageTestSuite(
-		"ReactiveStorage(InMemoryStorage)",
-		sortedValues,
-		() => new ReactiveStorage(new InMemoryStorage()),
-		false
-	)
+storageTestSuite(
+	"ReactiveStorage(InMemoryStorage)",
+	sortedValues,
+	() => new ReactiveStorage(new InMemoryStorage()),
+	false
+)
 
-	const tmpDir = __dirname + "/../../tmp/"
+const tmpDir = __dirname + "/../../tmp/"
 
-	storageTestSuite(
-		"FileStorage",
-		sortedValues,
-		(id) => new FileStorage(tmpDir + id)
-	)
+storageTestSuite(
+	"FileStorage",
+	sortedValues,
+	(id) => new FileStorage(tmpDir + id)
+)
 
-	storageTestSuite(
-		"SQLiteStorage",
-		sortedValues,
-		(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
-	)
+storageTestSuite(
+	"SQLiteStorage",
+	sortedValues,
+	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+)
 
-	storageTestSuite(
-		"ReactiveStorage(SQLiteStorage)",
-		sortedValues,
-		(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
-	)
-}
+storageTestSuite(
+	"ReactiveStorage(SQLiteStorage)",
+	sortedValues,
+	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
+)
