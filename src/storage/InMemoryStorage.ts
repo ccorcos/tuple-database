@@ -59,7 +59,7 @@ export class InMemoryStorage implements TupleStorage {
 		for (const tuple of remove || []) {
 			tv.remove(this.data, tuple)
 		}
-		for (const [tuple, value] of set) {
+		for (const [tuple, value] of set || []) {
 			tv.set(this.data, tuple, value)
 		}
 	}
@@ -81,7 +81,7 @@ export interface TransactionArgs {
 export class InMemoryTransaction implements Transaction {
 	constructor(private storage: TransactionArgs) {}
 
-	writes: Writes = { set: [], remove: [] }
+	writes: Required<Writes> = { set: [], remove: [] }
 
 	get(tuple: Tuple) {
 		// TODO: binary searching twice unnecessarily...

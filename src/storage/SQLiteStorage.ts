@@ -132,8 +132,8 @@ export class SQLiteStorage implements TupleStorage {
 	}
 
 	commit = (writes: Writes) => {
-		const { sets, removes } = writes
-		this.writeFacts({ inserts: sets, deletes: removes })
+		const { set: inserts, remove: deletes } = writes
+		this.writeFacts({ inserts, deletes })
 	}
 
 	close() {

@@ -51,7 +51,7 @@ export interface ReadOnlyTupleStorage {
 	scan(args?: ScanArgs): TupleValuePair[]
 }
 
-export type Writes = { set: TupleValuePair[]; remove: Tuple[] }
+export type Writes = { set?: TupleValuePair[]; remove?: Tuple[] }
 
 export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
