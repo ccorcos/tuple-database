@@ -2,11 +2,8 @@
 
 
 - tuple database improvements
-	- allow writing all at once.
-	- call the indexers when commiting directly
 	- {key, value} object so that it isnt a valid tuple for the key.
-	- withTransaction
-
+		- Lets skip this for now... its gross when using write(), but we could fix that I suppose
 
 - use reactive-magic strategy for composing queries more naturally.
 	- get reactivity?
