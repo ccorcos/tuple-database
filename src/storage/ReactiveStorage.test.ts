@@ -40,8 +40,8 @@ describe("ReactiveStorage", () => {
 		store.transact().set(["a", "b", 1], 1).commit()
 
 		assert.deepStrictEqual(hoist, {
-			sets: [[["a", "b", 1], 1]],
-			removes: [],
+			set: [[["a", "b", 1], 1]],
+			remove: [],
 		} as Writes)
 	})
 
@@ -75,8 +75,8 @@ describe("ReactiveStorage", () => {
 		store.transact().remove(["a", "b", "a"]).commit()
 
 		assert.deepStrictEqual(hoist, {
-			sets: [],
-			removes: [["a", "b", "a"]],
+			set: [],
+			remove: [["a", "b", "a"]],
 		} as Writes)
 	})
 
@@ -110,8 +110,8 @@ describe("ReactiveStorage", () => {
 		store.transact().set(["a", "b", "a"], 99).commit()
 
 		assert.deepStrictEqual(hoist, {
-			sets: [[["a", "b", "a"], 99]],
-			removes: [],
+			set: [[["a", "b", "a"], 99]],
+			remove: [],
 		} as Writes)
 	})
 
@@ -165,8 +165,8 @@ describe("ReactiveStorage", () => {
 		assert.deepStrictEqual(hoist2, undefined)
 
 		assert.deepStrictEqual(hoist3, {
-			sets: [[["a", "c", 1], 1]],
-			removes: [],
+			set: [[["a", "c", 1], 1]],
+			remove: [],
 		} as Writes)
 	})
 
@@ -224,8 +224,8 @@ describe("ReactiveStorage", () => {
 			.commit()
 
 		assert.deepStrictEqual(hoist, {
-			sets: [[["ave", "type", "Person", "0003"], null]],
-			removes: [],
+			set: [[["ave", "type", "Person", "0003"], null]],
+			remove: [],
 		} as Writes)
 	})
 })

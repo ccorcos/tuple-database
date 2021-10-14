@@ -1,5 +1,13 @@
 ## TODO
 
+
+- tuple database improvements
+	- allow writing all at once.
+	- call the indexers when commiting directly
+	- {key, value} object so that it isnt a valid tuple for the key.
+	- withTransaction
+
+
 - use reactive-magic strategy for composing queries more naturally.
 	- get reactivity?
 

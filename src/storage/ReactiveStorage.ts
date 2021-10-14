@@ -124,19 +124,19 @@ export class ReactiveStorage implements TupleStorage {
 	private getEmits = (writes: Writes) => {
 		const emits = new Map<Callback, Writes>()
 
-		for (const [tuple, value] of writes.sets) {
+		for (const [tuple, value] of writes.set) {
 			const callbacks = this.getCallbacksForTuple(tuple)
 			for (const callback of callbacks) {
-				if (!emits.has(callback)) emits.set(callback, { sets: [], removes: [] })
-				emits.get(callback)!.sets.push([tuple, value])
+				if (!emits.has(callback)) emits.set(callback, { set: [], remove: [] })
+				emits.get(callback)!.set.push([tuple, value])
 			}
 		}
 
-		for (const tuple of writes.removes) {
+		for (const tuple of writes.remove) {
 			const callbacks = this.getCallbacksForTuple(tuple)
 			for (const callback of callbacks) {
-				if (!emits.has(callback)) emits.set(callback, { sets: [], removes: [] })
-				emits.get(callback)!.removes.push(tuple)
+				if (!emits.has(callback)) emits.set(callback, { set: [], remove: [] })
+				emits.get(callback)!.remove.push(tuple)
 			}
 		}
 

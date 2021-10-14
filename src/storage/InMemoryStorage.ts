@@ -40,12 +40,26 @@ export class InMemoryStorage implements TupleStorage {
 		return new InMemoryTransaction(this)
 	}
 
+	// write(writes: Writes) {
+	// 	const tx = this.transact()
+	// 	const { sets, removes } = writes
+	// 	for (const tuple of removes) {
+	// 		tx.remove(this.data, tuple)
+	// 	}
+	// 	for (const [tuple, value] of sets) {
+	// 		tx.set(this.data, tuple, value)
+	// 	}
+	// 	tx.commit()
+	// }
+
+	// TODO: it's unclear what the consequences are of this ordering.
+	// Also, if we were to run more indexers after this bulk write, what are the race conditions?
 	commit(writes: Writes) {
-		const { sets, removes } = writes
-		for (const tuple of removes) {
+		const { set, remove } = writes
+		for (const tuple of remove || []) {
 			tv.remove(this.data, tuple)
 		}
-		for (const [tuple, value] of sets) {
+		for (const [tuple, value] of set) {
 			tv.set(this.data, tuple, value)
 		}
 	}
@@ -67,24 +81,24 @@ export interface TransactionArgs {
 export class InMemoryTransaction implements Transaction {
 	constructor(private storage: TransactionArgs) {}
 
-	writes: Writes = { sets: [], removes: [] }
+	writes: Writes = { set: [], remove: [] }
 
 	get(tuple: Tuple) {
 		// TODO: binary searching twice unnecessarily...
-		if (tv.exists(this.writes.sets, tuple)) {
-			return tv.get(this.writes.sets, tuple)
+		if (tv.exists(this.writes.set, tuple)) {
+			return tv.get(this.writes.set, tuple)
 		}
-		if (t.exists(this.writes.removes, tuple)) {
+		if (t.exists(this.writes.remove, tuple)) {
 			return
 		}
 		return this.storage.get(tuple)
 	}
 
 	exists(tuple: Tuple) {
-		if (tv.exists(this.writes.sets, tuple)) {
+		if (tv.exists(this.writes.set, tuple)) {
 			return true
 		}
-		if (t.exists(this.writes.removes, tuple)) {
+		if (t.exists(this.writes.remove, tuple)) {
 			return false
 		}
 		return this.storage.exists(tuple)
@@ -93,8 +107,8 @@ export class InMemoryTransaction implements Transaction {
 	set(tuple: Tuple, value: any) {
 		// Don't fetch this if we don't need it for the indexers.
 		const prev = this.storage.indexers.length ? this.get(tuple) : null
-		t.remove(this.writes.removes, tuple)
-		tv.set(this.writes.sets, tuple, value)
+		t.remove(this.writes.remove, tuple)
+		tv.set(this.writes.set, tuple, value)
 		for (const indexer of this.storage.indexers) {
 			indexer(this, { type: "set", tuple, value, prev })
 		}
@@ -104,8 +118,8 @@ export class InMemoryTransaction implements Transaction {
 	remove(tuple: Tuple) {
 		// Don't fetch this if we don't need it for the indexers.
 		const prev = this.storage.indexers.length ? this.get(tuple) : null
-		tv.remove(this.writes.sets, tuple)
-		t.set(this.writes.removes, tuple)
+		tv.remove(this.writes.set, tuple)
+		t.set(this.writes.remove, tuple)
 		for (const indexer of this.storage.indexers) {
 			indexer(this, { type: "remove", tuple, prev })
 		}
@@ -114,11 +128,11 @@ export class InMemoryTransaction implements Transaction {
 
 	scan(args: ScanArgs = {}) {
 		const result = this.storage.scan(args)
-		const sets = tv.scan(this.writes.sets, args)
+		const sets = tv.scan(this.writes.set, args)
 		for (const [tuple, value] of sets) {
 			tv.set(result, tuple, value)
 		}
-		const removes = t.scan(this.writes.removes, args)
+		const removes = t.scan(this.writes.remove, args)
 		for (const tuple of removes) {
 			tv.remove(result, tuple)
 		}
