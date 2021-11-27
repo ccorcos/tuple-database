@@ -57,7 +57,7 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
 	| { type: "remove"; tuple: Tuple; prev: any }
 
-export type Indexer = (tx: Transaction, writes: Operation) => void
+export type Indexer = (tx: Transaction, op: Operation) => void
 
 export interface TupleStorage extends ReadOnlyTupleStorage {
 	index(indexer: Indexer): this
