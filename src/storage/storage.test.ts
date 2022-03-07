@@ -6,17 +6,16 @@
 */
 
 import { strict as assert } from "assert"
-import sqlite from "better-sqlite3"
+// import sqlite from "better-sqlite3"
 import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
-import { transactional } from "../main"
+import { ReactiveStorage, transactional } from "../main"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
-import { ReactiveStorage } from "./ReactiveStorage"
-import { SQLiteStorage } from "./SQLiteStorage"
+// import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
 
 function storageTestSuite(
@@ -953,22 +952,24 @@ function storageTestSuite(
 			})
 		})
 
-		describe("MVCC - Multi-View Concurrency Control", () => {
+		describe.only("MVCC - Multi-View Concurrency Control", () => {
 			// Basically, concurrent transactional read-writes.
 
 			it("probably doesnt work yet", () => {
 				const id = randomId()
 				const store = createStorage(id)
-				store.commit({ set: [[["lamp"], true]] })
+
+				// The lamp is off
+				store.commit({ set: [[["lamp"], false]] })
 
 				// Chet wants the lamp on, Meghan wants the lamp off.
 				const chet = store.transact()
 				const meghan = store.transact()
 
-				// Chet
+				// Chet turns it on if its off.
 				if (!chet.get(["lamp"])) chet.set(["lamp"], true)
 
-				// Meghan
+				// Meghan turns it off if its on.
 				if (meghan.get(["lamp"])) meghan.set(["lamp"], false)
 
 				// Someone has to lose. Whoever commits first wins.
@@ -982,7 +983,7 @@ function storageTestSuite(
 				meghan2.commit()
 
 				// And she has her way.
-				assert.equal(store.get(["lamp"]), true)
+				assert.equal(store.get(["lamp"]), false)
 			})
 
 			it("should probably generalize to scans as well", () => {
@@ -1019,13 +1020,13 @@ function storageTestSuite(
 						const total = sum(
 							pairs.map(([tuple, _value]) => tuple[2] as number)
 						)
-						tx.remove([["total", getCurrentTotal()]])
+						tx.remove(["total", getCurrentTotal()])
 						tx.set(["total", total], null)
 					}
 
 					// But crucially, we reset the whole total whenever someone scores.
 					const playerScore = getPlayerScore(player)
-					tx.remove([["player", player, playerScore]])
+					tx.remove(["player", player, playerScore])
 					tx.set(["player", player, playerScore + inc], null)
 
 					resetTotal()
@@ -1110,14 +1111,14 @@ storageTestSuite(
 	(id) => new FileStorage(tmpDir + id)
 )
 
-storageTestSuite(
-	"SQLiteStorage",
-	sortedValues,
-	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
-)
+// storageTestSuite(
+// 	"SQLiteStorage",
+// 	sortedValues,
+// 	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+// )
 
-storageTestSuite(
-	"ReactiveStorage(SQLiteStorage)",
-	sortedValues,
-	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
-)
+// storageTestSuite(
+// 	"ReactiveStorage(SQLiteStorage)",
+// 	sortedValues,
+// 	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
+// )

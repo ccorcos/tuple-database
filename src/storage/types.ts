@@ -14,6 +14,8 @@ redesign the semantics of the api to get rid of those.
 
 */
 
+import { Bounds } from "../helpers/sortedTupleArray"
+
 export type Value =
 	| string
 	| number
@@ -51,6 +53,7 @@ export interface ReadOnlyTupleStorage {
 	scan(args?: ScanArgs): TupleValuePair[]
 }
 
+// TODO: call this a "Write" or a "Commit"
 export type Writes = { set?: TupleValuePair[]; remove?: Tuple[] }
 
 export type Operation =
@@ -62,11 +65,15 @@ export type Indexer = (tx: Transaction, op: Operation) => void
 export interface TupleStorage extends ReadOnlyTupleStorage {
 	index(indexer: Indexer): this
 	transact(): Transaction
-	commit(writes: Writes): void
+	// TODO: this function should not have optional params
+	commit(writes: Writes, txId?: number, reads?: Bounds[]): void
 	close(): void
 }
 
+export type TxId = number
+
 export interface Transaction extends ReadOnlyTupleStorage {
+	id: TxId
 	readonly writes: Writes
 	set(tuple: Tuple, value: any): this
 	remove(tuple: Tuple): this

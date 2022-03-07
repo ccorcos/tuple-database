@@ -1,16 +1,12 @@
-import { compareTuple } from "../helpers/compareTuple"
 import { randomId } from "../helpers/randomId"
-import { Bounds, normalizeTupleBounds } from "../helpers/sortedTupleArray"
-import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
 import {
-	Indexer,
-	MIN,
-	ScanArgs,
-	Tuple,
-	TupleStorage,
-	Value,
-	Writes,
-} from "./types"
+	Bounds,
+	isTupleWithinBounds,
+	normalizeTupleBounds,
+	prefixTupleBounds,
+} from "../helpers/sortedTupleArray"
+import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
+import { Indexer, MIN, ScanArgs, Tuple, TupleStorage, Writes } from "./types"
 
 export type Callback = (write: Writes) => void
 
@@ -48,12 +44,21 @@ export class ReactiveStorage implements TupleStorage {
 
 	transact() {
 		// NOTE: we're bypassing the storage transaction.
-		return new InMemoryTransaction(this)
+		return new InMemoryTransaction(
+			{
+				indexers: this.indexers,
+				get: this.get.bind(this),
+				exists: this.exists.bind(this),
+				scan: this.scan.bind(this),
+				commit: this.commit.bind(this),
+			},
+			this.storage.transact().id
+		)
 	}
 
-	commit(writes: Writes) {
+	commit(writes: Writes, txId?: number, reads?: Bounds[]) {
 		const updates = this.getEmits(writes)
-		this.storage.commit(writes)
+		this.storage.commit(writes, txId, reads)
 		for (const [callback, writes] of updates.entries()) {
 			callback(writes)
 		}
@@ -69,7 +74,7 @@ export class ReactiveStorage implements TupleStorage {
 		this.log("db/subscribe", args)
 
 		const bounds = normalizeTupleBounds(args)
-		const prefix = getBoundsPrefix(bounds)
+		const prefix = prefixTupleBounds(bounds)
 
 		const id = randomId()
 		const value: Listener = { callback, bounds }
@@ -110,7 +115,7 @@ export class ReactiveStorage implements TupleStorage {
 		for (const listener of this.getListenersForTuple(tuple)) {
 			const { callback, bounds } = listener
 
-			if (isWithinTupleBounds(tuple, bounds)) {
+			if (isTupleWithinBounds(tuple, bounds)) {
 				callbacks.push(callback)
 			} else {
 				// TODO: track how in-efficient listeners are here.
@@ -144,22 +149,6 @@ export class ReactiveStorage implements TupleStorage {
 	}
 }
 
-/** Compute the prefix that captures all bounds. */
-function getBoundsPrefix(bounds: Bounds) {
-	const prefix: Value[] = []
-	const start = bounds.gt || bounds.gte || []
-	const end = bounds.lt || bounds.lte || []
-	const len = Math.min(start.length, end.length)
-	for (let i = 0; i < len; i++) {
-		if (start[i] === end[i]) {
-			prefix.push(start[i])
-		} else {
-			break
-		}
-	}
-	return prefix
-}
-
 function iterateTuplePrefixes(tuple: Tuple) {
 	const prefixes: Tuple[] = []
 	for (let i = 0; i < tuple.length; i++) {
@@ -167,28 +156,4 @@ function iterateTuplePrefixes(tuple: Tuple) {
 		prefixes.push(prefix)
 	}
 	return prefixes
-}
-
-function isWithinTupleBounds(tuple: Tuple, bounds: Bounds) {
-	if (bounds.gt) {
-		if (compareTuple(tuple, bounds.gt) !== 1) {
-			return false
-		}
-	}
-	if (bounds.gte) {
-		if (compareTuple(tuple, bounds.gte) === -1) {
-			return false
-		}
-	}
-	if (bounds.lt) {
-		if (compareTuple(tuple, bounds.lt) !== -1) {
-			return false
-		}
-	}
-	if (bounds.lte) {
-		if (compareTuple(tuple, bounds.lte) === 1) {
-			return false
-		}
-	}
-	return true
 }

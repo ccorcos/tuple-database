@@ -1,4 +1,5 @@
 import * as fs from "fs-extra"
+import { Bounds } from "../helpers/sortedTupleArray"
 import { InMemoryStorage } from "./InMemoryStorage"
 import { TupleValuePair, Writes } from "./types"
 
@@ -24,8 +25,8 @@ export class FileStorage extends InMemoryStorage {
 		this.cache = cache
 	}
 
-	commit(writes: Writes) {
-		super.commit(writes)
+	commit(writes: Writes, txId?: number, reads: Bounds[] = []) {
+		super.commit(writes, txId, reads)
 		this.cache.set(this.data)
 	}
 }

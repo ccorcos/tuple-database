@@ -3,6 +3,9 @@
 
 - mvcc tests with sync api first.
 	- define a concurrency conflict.
+
+- extract MVCC logic and use with SQLiteStorage.
+
 - use async types
 
 

@@ -58,6 +58,46 @@ export function normalizeTupleBounds(args: ScanArgs): Bounds {
 	return { gte, gt, lte, lt }
 }
 
+/** Compute the prefix that captures all bounds. */
+export function prefixTupleBounds(bounds: Bounds) {
+	const prefix: Tuple = []
+	const start = bounds.gt || bounds.gte || []
+	const end = bounds.lt || bounds.lte || []
+	const len = Math.min(start.length, end.length)
+	for (let i = 0; i < len; i++) {
+		if (start[i] === end[i]) {
+			prefix.push(start[i])
+		} else {
+			break
+		}
+	}
+	return prefix
+}
+
+export function isTupleWithinBounds(tuple: Tuple, bounds: Bounds) {
+	if (bounds.gt) {
+		if (compareTuple(tuple, bounds.gt) !== 1) {
+			return false
+		}
+	}
+	if (bounds.gte) {
+		if (compareTuple(tuple, bounds.gte) === -1) {
+			return false
+		}
+	}
+	if (bounds.lt) {
+		if (compareTuple(tuple, bounds.lt) !== -1) {
+			return false
+		}
+	}
+	if (bounds.lte) {
+		if (compareTuple(tuple, bounds.lte) === 1) {
+			return false
+		}
+	}
+	return true
+}
+
 export type Bounds = {
 	/** This prevents developers from accidentally using ScanArgs instead of TupleBounds */
 	prefix?: never
