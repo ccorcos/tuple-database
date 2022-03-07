@@ -8,8 +8,10 @@
 import { strict as assert } from "assert"
 import sqlite from "better-sqlite3"
 import * as _ from "lodash"
+import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
+import { transactional } from "../main"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
@@ -947,6 +949,105 @@ function storageTestSuite(
 					["personById", 1],
 					["personById", 2],
 					["personById", 4],
+				])
+			})
+		})
+
+		describe("MVCC - Multi-View Concurrency Control", () => {
+			// Basically, concurrent transactional read-writes.
+
+			it("probably doesnt work yet", () => {
+				const id = randomId()
+				const store = createStorage(id)
+				store.commit({ set: [[["lamp"], true]] })
+
+				// Chet wants the lamp on, Meghan wants the lamp off.
+				const chet = store.transact()
+				const meghan = store.transact()
+
+				// Chet
+				if (!chet.get(["lamp"])) chet.set(["lamp"], true)
+
+				// Meghan
+				if (meghan.get(["lamp"])) meghan.set(["lamp"], false)
+
+				// Someone has to lose. Whoever commits first wins.
+				chet.commit()
+				assert.throws(() => meghan.commit())
+				assert.equal(store.get(["lamp"]), true)
+
+				// Meghan will have to try again.
+				const meghan2 = store.transact()
+				if (meghan2.get(["lamp"])) meghan2.set(["lamp"], false)
+				meghan2.commit()
+
+				// And she has her way.
+				assert.equal(store.get(["lamp"]), true)
+			})
+
+			it("should probably generalize to scans as well", () => {
+				const id = randomId()
+				const store = createStorage(id)
+				store.commit({
+					set: [
+						// TODO: add test using value as well.
+						[["player", "chet", 0], null],
+						[["player", "meghan", 0], null],
+						[["total", 0], null],
+					],
+				})
+
+				// We have a score keeping game.
+				const addScore = transactional((tx, player: string, inc: number) => {
+					// It has this miserable api, lol.
+					const getPlayerScore = (player: string) => {
+						const pairs = tx.scan({ prefix: ["player", player] })
+						if (pairs.length !== 1) throw new Error("Missing player.")
+						const [[tuple, _value]] = pairs
+						return tuple[2] as number
+					}
+
+					const getCurrentTotal = () => {
+						const totals = tx.scan({ prefix: ["total"] })
+						if (totals.length !== 1) throw new Error("Too many totals.")
+						const [[tuple, _value]] = totals
+						return tuple[1] as number
+					}
+
+					const resetTotal = () => {
+						const pairs = tx.scan({ prefix: ["player"] })
+						const total = sum(
+							pairs.map(([tuple, _value]) => tuple[2] as number)
+						)
+						tx.remove([["total", getCurrentTotal()]])
+						tx.set(["total", total], null)
+					}
+
+					// But crucially, we reset the whole total whenever someone scores.
+					const playerScore = getPlayerScore(player)
+					tx.remove([["player", player, playerScore]])
+					tx.set(["player", player, playerScore + inc], null)
+
+					resetTotal()
+				})
+
+				// Chet an meghan are playing a game.
+				const chet = store.transact()
+				const meghan = store.transact()
+
+				// Chet
+				addScore(chet, "chet", 1)
+				addScore(meghan, "meghan", 1)
+
+				// Whoever commits first will win.
+				meghan.commit()
+				assert.throws(() => chet.commit())
+
+				// Most importantly, the total will never be incorrect.
+				assert.deepEqual(store.scan({ prefix: [] }), [
+					[["player", "chet", 0], null],
+					[["player", "meghan", 1], null],
+					[["total", 1], null],
 				])
 			})
 		})

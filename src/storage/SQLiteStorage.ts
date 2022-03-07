@@ -38,16 +38,16 @@ export class SQLiteStorage implements TupleStorage {
 				inserts,
 				deletes,
 			}: {
-				inserts: TupleValuePair[]
-				deletes: Tuple[]
+				inserts: TupleValuePair[] | undefined
+				deletes: Tuple[] | undefined
 			}) => {
-				for (const [tuple, value] of inserts) {
+				for (const [tuple, value] of inserts || []) {
 					insertQuery.run({
 						key: encodeTuple(tuple),
 						value: JSON.stringify(value),
 					})
 				}
-				for (const tuple of deletes) {
+				for (const tuple of deletes || []) {
 					deleteQuery.run({ key: encodeTuple(tuple) })
 				}
 			}

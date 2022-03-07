@@ -1,6 +1,17 @@
 ## TODO
 
 
+- mvcc tests with sync api first.
+	- define a concurrency conflict.
+- use async types
+
+
+
+- async version
+- typed subspace
+- minimal triplestore example
+- benchmarks
+
 - tuple database improvements
 	- {key, value} object so that it isnt a valid tuple for the key.
 		- Lets skip this for now... its gross when using write(), but we could fix that I suppose
