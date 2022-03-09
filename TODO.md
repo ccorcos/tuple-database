@@ -2,11 +2,14 @@
 
 
 - mvcc tests with sync api first.
-	- define a concurrency conflict.
+	- extract MVCC logic and use with SQLiteStorage.
+	- MVCC test that demonstrates that we're using proper bounds and not just prefixes.
+		- does it really matter though? we should mention that either way is probably just fine.
 
-- extract MVCC logic and use with SQLiteStorage.
-
-- use async types
+- use async types and async storage.
+- basic triplestore example with indexers.
+- how to use this in a UI with some kind of async backend.
+	- how to cache in-process, or not?
 
 
 

@@ -952,7 +952,7 @@ function storageTestSuite(
 			})
 		})
 
-		describe.only("MVCC - Multi-View Concurrency Control", () => {
+		describe.only("MVCC - Multi-version Concurrency Control", () => {
 			// Basically, concurrent transactional read-writes.
 
 			it("probably doesnt work yet", () => {
