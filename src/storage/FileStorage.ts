@@ -1,7 +1,6 @@
 import * as fs from "fs-extra"
-import { Bounds } from "../helpers/sortedTupleArray"
 import { InMemoryStorage } from "./InMemoryStorage"
-import { TupleValuePair, Writes } from "./types"
+import { TupleValuePair, TxId, Writes } from "./types"
 
 function parseFile(str: string): TupleValuePair[] {
 	if (str === "") {
@@ -25,8 +24,8 @@ export class FileStorage extends InMemoryStorage {
 		this.cache = cache
 	}
 
-	commit(writes: Writes, txId?: number, reads: Bounds[] = []) {
-		super.commit(writes, txId, reads)
+	commit(writes: Writes, txId?: TxId) {
+		super.commit(writes, txId)
 		this.cache.set(this.data)
 	}
 }
