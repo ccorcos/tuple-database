@@ -1,5 +1,7 @@
+import { randomId } from "../helpers/randomId"
 import * as t from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
+import { ConcurrencyLog } from "./ConcurrencyLog"
 import {
 	Indexer,
 	ScanArgs,
@@ -10,10 +12,6 @@ import {
 	TxId,
 	Writes,
 } from "./types"
-
-type WriteLogItem =
-	| { type: "tx-start"; txId: TxId }
-	| { type: "write"; tuples: Tuple[] }
 
 /*
 
@@ -26,7 +24,6 @@ WriteLog is a list of concurrent writes.
 When tx1 commits, it will have to reconcile its reads with the
 concurrent writes.
 */
-type WriteLog = WriteLogItem[]
 
 function* iterateWrittenTuples(write: Writes) {
 	for (const [tuple, _value] of write.set || []) {
@@ -41,7 +38,7 @@ function getWrittenTuples(write: Writes) {
 	return Array.from(iterateWrittenTuples(write))
 }
 
-function iterate<T>(array: T[]): [number, T][] {
+function enumerate<T>(array: T[]): [number, T][] {
 	const pairs: [number, T][] = []
 	for (let i = 0; i < array.length; i++) {
 		pairs.push([i, array[i]])
@@ -49,7 +46,7 @@ function iterate<T>(array: T[]): [number, T][] {
 	return pairs
 }
 
-function iterateReverse<T>(array: T[]): [number, T][] {
+function enumerateReverse<T>(array: T[]): [number, T][] {
 	const pairs: [number, T][] = []
 	for (let i = array.length - 1; i >= 0; i--) {
 		pairs.push([i, array[i]])
@@ -59,91 +56,45 @@ function iterateReverse<T>(array: T[]): [number, T][] {
 
 export class InMemoryStorage implements TupleStorage {
 	data: TupleValuePair[]
+	indexers: Indexer[] = []
+	log = new ConcurrencyLog()
 
 	constructor(data?: TupleValuePair[]) {
 		this.data = data || []
 	}
-
-	indexers: Indexer[] = []
 
 	index(indexer: Indexer) {
 		this.indexers.push(indexer)
 		return this
 	}
 
-	get(tuple: Tuple) {
+	get(tuple: Tuple, txId?: TxId) {
+		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
 		return tv.get(this.data, tuple)
 	}
 
-	exists(tuple: Tuple) {
+	exists(tuple: Tuple, txId?: TxId) {
+		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
 		return tv.exists(this.data, tuple)
 	}
 
-	scan(args: ScanArgs = {}) {
+	scan(args: ScanArgs = {}, txId?: TxId) {
+		if (txId) this.log.read(txId, t.normalizeTupleBounds(args))
 		return tv.scan(this.data, args)
 	}
 
-	// Keep track of concurrent read/writes.
-	private writeLog: WriteLog = []
-
-	private nextTxId: TxId = 0
-	private createTxId = () => {
-		const txId = this.nextTxId
-		this.nextTxId += 1
-		this.writeLog.push({ type: "tx-start", txId })
-		return txId
-	}
-
-	transact() {
-		return new InMemoryTransaction(this, this.createTxId())
+	transact(txId?: TxId) {
+		const id = txId || randomId()
+		return new InMemoryTransaction(this, id)
 	}
 
 	// TODO: it's unclear what the consequences are of this ordering.
 	// Also, if we were to run more indexers after this bulk write, what are the race conditions?
-	commit(writes: Writes, txId?: number, reads: t.Bounds[] = []) {
-		if (!txId) txId = this.createTxId()
-
-		let conflict: { tuple: Tuple; read: t.Bounds } | undefined
-		for (const [i, item] of iterateReverse(this.writeLog)) {
-			// Search for conflicts in this write.
-			if (!conflict) {
-				if (item.type === "write") {
-					checkConflict: for (const tuple of item.tuples) {
-						for (const read of reads) {
-							if (t.isTupleWithinBounds(tuple, read)) {
-								conflict = { tuple, read }
-								// Continue with cleanup and throw the conflict error after.
-								break checkConflict
-							}
-						}
-					}
-				}
-			}
-
-			// Look for the txId and cleanup the log, even if there's a conflict.
-			if (item.type === "tx-start" && item.txId === txId) {
-				// If we've made it to the beginning of the log.
-				if (i === 0) {
-					// Delete the tx-start item.
-					this.writeLog.shift()
-					// And keep deleting writes until we've made it to the next transaction.
-					while (this.writeLog.length && this.writeLog[0].type === "write")
-						this.writeLog.shift()
-				} else {
-					// Otherwise, we just remove the tx-start item.
-					this.writeLog.splice(i, 1)
-				}
-				break
-			}
+	commit(writes: Writes, txId?: string) {
+		if (txId) this.log.commit(txId)
+		for (const tuple of getWrittenTuples(writes)) {
+			this.log.write(txId, tuple)
 		}
-
-		if (conflict)
-			throw new Error("Conflict: " + JSON.stringify(conflict, null, 2))
-
-		// If the writeLog is empty, then there are no active transactions so we don't
-		// need to record.
-		if (this.writeLog.length)
-			this.writeLog.push({ type: "write", tuples: getWrittenTuples(writes) })
 
 		const { set, remove } = writes
 		for (const tuple of remove || []) {
@@ -160,12 +111,12 @@ export class InMemoryStorage implements TupleStorage {
 	}
 }
 
-export interface TransactionArgs {
+export type TransactionArgs = {
 	indexers: Indexer[]
-	get(tuple: Tuple): any
-	exists(tuple: Tuple): boolean
-	scan(args: ScanArgs): TupleValuePair[]
-	commit(writes: Writes, txId: number, reads: t.Bounds[]): void
+	get(tuple: Tuple, txId: TxId): any
+	exists(tuple: Tuple, txId: TxId): boolean
+	scan(args: ScanArgs, txId: TxId): TupleValuePair[]
+	commit(writes: Writes, txId: TxId): void
 }
 
 export class InMemoryTransaction implements Transaction {
@@ -173,11 +124,7 @@ export class InMemoryTransaction implements Transaction {
 
 	writes: Required<Writes> = { set: [], remove: [] }
 
-	reads: t.Bounds[] = []
-
 	get(tuple: Tuple) {
-		this.reads.push({ gte: tuple, lte: tuple })
-
 		// TODO: binary searching twice unnecessarily...
 		if (tv.exists(this.writes.set, tuple)) {
 			return tv.get(this.writes.set, tuple)
@@ -185,19 +132,17 @@ export class InMemoryTransaction implements Transaction {
 		if (t.exists(this.writes.remove, tuple)) {
 			return
 		}
-		return this.storage.get(tuple)
+		return this.storage.get(tuple, this.id)
 	}
 
 	exists(tuple: Tuple) {
-		this.reads.push({ gte: tuple, lte: tuple })
-
 		if (tv.exists(this.writes.set, tuple)) {
 			return true
 		}
 		if (t.exists(this.writes.remove, tuple)) {
 			return false
 		}
-		return this.storage.exists(tuple)
+		return this.storage.exists(tuple, this.id)
 	}
 
 	set(tuple: Tuple, value: any) {
@@ -236,12 +181,7 @@ export class InMemoryTransaction implements Transaction {
 	}
 
 	scan(args: ScanArgs = {}) {
-		// TODO: read could also just be bounds. There's a perf trade-off.
-		// More granular reactivity at a
-		const bounds = t.normalizeTupleBounds(args)
-		this.reads.push(bounds)
-
-		const result = this.storage.scan(args)
+		const result = this.storage.scan(args, this.id)
 		const sets = tv.scan(this.writes.set, args)
 		for (const [tuple, value] of sets) {
 			tv.set(result, tuple, value)
@@ -254,6 +194,6 @@ export class InMemoryTransaction implements Transaction {
 	}
 
 	commit() {
-		return this.storage.commit(this.writes, this.id, this.reads)
+		return this.storage.commit(this.writes, this.id)
 	}
 }

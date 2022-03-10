@@ -6,7 +6,15 @@ import {
 	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
 import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
-import { Indexer, MIN, ScanArgs, Tuple, TupleStorage, Writes } from "./types"
+import {
+	Indexer,
+	MIN,
+	ScanArgs,
+	Tuple,
+	TupleStorage,
+	TxId,
+	Writes,
+} from "./types"
 
 export type Callback = (write: Writes) => void
 
@@ -23,16 +31,16 @@ export class ReactiveStorage implements TupleStorage {
 		}
 	}
 
-	get(tuple: Tuple) {
-		return this.storage.get(tuple)
+	get(tuple: Tuple, txId?: TxId) {
+		return this.storage.get(tuple, txId)
 	}
 
-	exists(tuple: Tuple) {
-		return this.storage.exists(tuple)
+	exists(tuple: Tuple, txId?: TxId) {
+		return this.storage.exists(tuple, txId)
 	}
 
-	scan(args?: ScanArgs) {
-		return this.storage.scan(args)
+	scan(args?: ScanArgs, txId?: TxId) {
+		return this.storage.scan(args, txId)
 	}
 
 	indexers: Indexer[] = []
@@ -56,9 +64,9 @@ export class ReactiveStorage implements TupleStorage {
 		)
 	}
 
-	commit(writes: Writes, txId?: number, reads?: Bounds[]) {
+	commit(writes: Writes, txId?: TxId) {
 		const updates = this.getEmits(writes)
-		this.storage.commit(writes, txId, reads)
+		this.storage.commit(writes, txId)
 		for (const [callback, writes] of updates.entries()) {
 			callback(writes)
 		}

@@ -11,9 +11,8 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
-import { ReactiveStorage, transactional } from "../main"
+import { transactional } from "../main"
 import { sortedValues } from "../test/fixtures"
-import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
 // import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
@@ -952,7 +951,7 @@ function storageTestSuite(
 			})
 		})
 
-		describe.only("MVCC - Multi-version Concurrency Control", () => {
+		describe("MVCC - Multi-version Concurrency Control", () => {
 			// Basically, concurrent transactional read-writes.
 
 			it("probably doesnt work yet", () => {
@@ -1096,20 +1095,20 @@ storageTestSuite(
 	false
 )
 
-storageTestSuite(
-	"ReactiveStorage(InMemoryStorage)",
-	sortedValues,
-	() => new ReactiveStorage(new InMemoryStorage()),
-	false
-)
+// storageTestSuite(
+// 	"ReactiveStorage(InMemoryStorage)",
+// 	sortedValues,
+// 	() => new ReactiveStorage(new InMemoryStorage()),
+// 	false
+// )
 
-const tmpDir = __dirname + "/../../tmp/"
+// const tmpDir = __dirname + "/../../tmp/"
 
-storageTestSuite(
-	"FileStorage",
-	sortedValues,
-	(id) => new FileStorage(tmpDir + id)
-)
+// storageTestSuite(
+// 	"FileStorage",
+// 	sortedValues,
+// 	(id) => new FileStorage(tmpDir + id)
+// )
 
 // storageTestSuite(
 // 	"SQLiteStorage",
