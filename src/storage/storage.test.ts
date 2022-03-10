@@ -6,6 +6,7 @@
 */
 
 import { strict as assert } from "assert"
+import sqlite from "better-sqlite3"
 // import sqlite from "better-sqlite3"
 import * as _ from "lodash"
 import { sum } from "lodash"
@@ -15,6 +16,7 @@ import { ReactiveStorage, transactional } from "../main"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
+import { SQLiteStorage } from "./SQLiteStorage"
 // import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
 
@@ -955,7 +957,7 @@ function storageTestSuite(
 		describe("MVCC - Multi-version Concurrency Control", () => {
 			// Basically, concurrent transactional read-writes.
 
-			it("probably doesnt work yet", () => {
+			it("works", () => {
 				const id = randomId()
 				const store = createStorage(id)
 
@@ -1111,14 +1113,14 @@ storageTestSuite(
 	(id) => new FileStorage(tmpDir + id)
 )
 
-// storageTestSuite(
-// 	"SQLiteStorage",
-// 	sortedValues,
-// 	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
-// )
+storageTestSuite(
+	"SQLiteStorage",
+	sortedValues,
+	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+)
 
-// storageTestSuite(
-// 	"ReactiveStorage(SQLiteStorage)",
-// 	sortedValues,
-// 	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
-// )
+storageTestSuite(
+	"ReactiveStorage(SQLiteStorage)",
+	sortedValues,
+	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
+)

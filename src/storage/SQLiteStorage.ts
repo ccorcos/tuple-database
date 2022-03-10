@@ -1,6 +1,9 @@
 import { Database, Statement, Transaction } from "better-sqlite3"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
+import { iterateWrittenTuples } from "../helpers/iterateTuples"
+import { randomId } from "../helpers/randomId"
 import { normalizeTupleBounds } from "../helpers/sortedTupleArray"
+import { ConcurrencyLog } from "./ConcurrencyLog"
 import { InMemoryTransaction } from "./InMemoryStorage"
 import {
 	Indexer,
@@ -61,24 +64,29 @@ export class SQLiteStorage implements TupleStorage {
 		return this
 	}
 
+	log = new ConcurrencyLog()
+
 	private getQuery: Statement
 	private existsQuery: Statement
 	private writeFacts: Transaction
 
-	get(tuple: Tuple) {
+	get(tuple: Tuple, txId?: string) {
+		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
 		const result = this.getQuery.get({ key: encodeTuple(tuple) })
 		if (result === undefined) return
 		return JSON.parse(result.value)
 	}
 
-	exists(tuple: Tuple) {
+	exists(tuple: Tuple, txId?: string) {
+		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
 		const result = this.existsQuery.get({ key: encodeTuple(tuple) })
 		if (result === undefined) return false
 		return Boolean(result[1])
 	}
 
-	scan = (args: ScanArgs = {}) => {
+	scan = (args: ScanArgs = {}, txId?: string) => {
 		const bounds = normalizeTupleBounds(args)
+		if (txId) this.log.read(txId, bounds)
 
 		// Bounds.
 		let start = bounds.gte ? encodeTuple(bounds.gte) : undefined
@@ -127,11 +135,17 @@ export class SQLiteStorage implements TupleStorage {
 		)
 	}
 
-	transact() {
-		return new InMemoryTransaction(this)
+	transact(txId?: string) {
+		const id = txId || randomId()
+		return new InMemoryTransaction(this, id)
 	}
 
-	commit = (writes: Writes) => {
+	commit = (writes: Writes, txId?: string) => {
+		if (txId) this.log.commit(txId)
+		for (const tuple of iterateWrittenTuples(writes)) {
+			this.log.write(txId, tuple)
+		}
+
 		const { set: inserts, remove: deletes } = writes
 		this.writeFacts({ inserts, deletes })
 	}

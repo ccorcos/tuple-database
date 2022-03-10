@@ -1,3 +1,4 @@
+import { iterateWrittenTuples } from "../helpers/iterateTuples"
 import { randomId } from "../helpers/randomId"
 import * as t from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
@@ -12,47 +13,6 @@ import {
 	TxId,
 	Writes,
 } from "./types"
-
-/*
-
-WriteLog is a list of concurrent writes.
-- tx1
-- ["a"] // left over from tx2
-- tx3
-- ["b"] // left over from tx2
-
-When tx1 commits, it will have to reconcile its reads with the
-concurrent writes.
-*/
-
-function* iterateWrittenTuples(write: Writes) {
-	for (const [tuple, _value] of write.set || []) {
-		yield tuple
-	}
-	for (const tuple of write.remove || []) {
-		yield tuple
-	}
-}
-
-function getWrittenTuples(write: Writes) {
-	return Array.from(iterateWrittenTuples(write))
-}
-
-function enumerate<T>(array: T[]): [number, T][] {
-	const pairs: [number, T][] = []
-	for (let i = 0; i < array.length; i++) {
-		pairs.push([i, array[i]])
-	}
-	return pairs
-}
-
-function enumerateReverse<T>(array: T[]): [number, T][] {
-	const pairs: [number, T][] = []
-	for (let i = array.length - 1; i >= 0; i--) {
-		pairs.push([i, array[i]])
-	}
-	return pairs
-}
 
 export class InMemoryStorage implements TupleStorage {
 	data: TupleValuePair[]
@@ -92,7 +52,7 @@ export class InMemoryStorage implements TupleStorage {
 	// Also, if we were to run more indexers after this bulk write, what are the race conditions?
 	commit(writes: Writes, txId?: string) {
 		if (txId) this.log.commit(txId)
-		for (const tuple of getWrittenTuples(writes)) {
+		for (const tuple of iterateWrittenTuples(writes)) {
 			this.log.write(txId, tuple)
 		}
 

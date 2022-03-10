@@ -2,8 +2,12 @@
 
 - Send txId with reads, optionally.
 
+- extract concurrency control away from storage mechanism.
+
 - run indexers in transaction?
 	- we need to register conflict read here too...
+
+
 
 - mvcc tests with sync api first.
 	- extract MVCC logic and use with SQLiteStorage.
