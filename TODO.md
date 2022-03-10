@@ -1,37 +1,28 @@
 ## TODO
 
-- Send txId with reads, optionally.
-
-- extract concurrency control away from storage mechanism.
-
 - run indexers in transaction?
 	- we need to register conflict read here too...
 
 
+- generic storage interface that we can wrap with our concurrency control.
+- async storage interface as well.
 
-- mvcc tests with sync api first.
-	- extract MVCC logic and use with SQLiteStorage.
-	- MVCC test that demonstrates that we're using proper bounds and not just prefixes.
-		- does it really matter though? we should mention that either way is probably just fine.
 
-- use async types and async storage.
-- basic triplestore example with indexers.
+- minimal triplestore example
+- typed subspace
+- benchmarks
+
 - how to use this in a UI with some kind of async backend.
 	- how to cache in-process, or not?
 
+- use reactive-magic strategy for composing queries more naturally.
+	- get reactivity?
 
-
-- async version
-- typed subspace
-- minimal triplestore example
-- benchmarks
 
 - tuple database improvements
 	- {key, value} object so that it isnt a valid tuple for the key.
 		- Lets skip this for now... its gross when using write(), but we could fix that I suppose
 
-- use reactive-magic strategy for composing queries more naturally.
-	- get reactivity?
 
 - Game counter using this abstraction
 	- other foundationdb examples.

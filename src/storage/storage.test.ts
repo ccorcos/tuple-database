@@ -1053,6 +1053,24 @@ function storageTestSuite(
 					[["total", 1], null],
 				])
 			})
+
+			it("computes granular conflict based on tuple bounds, not prefix", () => {
+				const id = randomId()
+				const store = createStorage(id)
+
+				const a = store.transact()
+				const b = store.transact()
+
+				a.scan({ gte: [1], lt: [10] })
+				b.scan({ gte: [10] })
+
+				const c = store.transact()
+				c.set([10], null)
+				c.commit()
+
+				a.commit() // ok
+				assert.throws(() => b.commit())
+			})
 		})
 
 		if (durable) {
