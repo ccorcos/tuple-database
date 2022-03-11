@@ -1,6 +1,6 @@
 /*
 
-	./node_modules/.bin/ts-node src/tools/compileSyncDatabase.ts
+	./node_modules/.bin/ts-node src/tools/compileMacros.ts
 
 */
 
