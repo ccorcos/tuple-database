@@ -12,20 +12,16 @@ import { ConcurrencyLog } from "../ConcurrencyLog"
 import {
 	ScanArgs,
 	Tuple,
-	TupleStorage,
+	TupleDatabaseApi,
+	TupleStorageApi,
+	TupleTransactionApi,
 	TupleValuePair,
 	TxId,
 	Writes,
 } from "../types"
 
-export interface ReadOnlyTupleDatabase {
-	get(tuple: Tuple, txId?: TxId): any
-	exists(tuple: Tuple, txId?: TxId): boolean
-	scan(args?: ScanArgs, txId?: TxId): TupleValuePair[]
-}
-
-export class TupleDatabase {
-	constructor(private storage: TupleStorage) {}
+export class TupleDatabase implements TupleDatabaseApi {
+	constructor(private storage: TupleStorageApi) {}
 
 	log = new ConcurrencyLog()
 
@@ -55,11 +51,6 @@ export class TupleDatabase {
 		return this.storage.scan({ ...bounds, reverse, limit })
 	}
 
-	transact(txId?: TxId) {
-		const id = txId || randomId()
-		return new TupleTransaction(this, id)
-	}
-
 	commit(writes: Writes, txId?: string) {
 		if (txId) this.log.commit(txId)
 		for (const tuple of iterateWrittenTuples(writes)) {
@@ -72,13 +63,18 @@ export class TupleDatabase {
 		this.log.cancel(txId)
 	}
 
+	transact(txId?: TxId) {
+		const id = txId || randomId()
+		return new TupleTransaction(this, id)
+	}
+
 	close() {
 		this.storage.close()
 	}
 }
 
-export class TupleTransaction {
-	constructor(private storage: TupleDatabase, public id: TxId) {}
+export class TupleTransaction implements TupleTransactionApi {
+	constructor(private storage: TupleDatabaseApi, public id: TxId) {}
 
 	writes: Required<Writes> = { set: [], remove: [] }
 

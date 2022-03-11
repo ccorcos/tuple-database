@@ -63,14 +63,52 @@ export type ScanStorageArgs = {
 	reverse?: boolean
 }
 
-export type TupleStorage = {
+export type TupleStorageApi = {
 	scan(args: ScanStorageArgs): TupleValuePair[]
 	commit(writes: Writes): void
 	close(): void
 }
 
-export type AsyncTupleStorage = {
+export type AsyncTupleStorageApi = {
 	scan(args: ScanStorageArgs): Promise<TupleValuePair[]>
 	commit(writes: Writes): Promise<void>
 	close(): Promise<void>
+}
+
+export type ReadOnlyAsyncTupleDatabaseApi = {
+	get(tuple: Tuple, txId?: TxId): Promise<any>
+	exists(tuple: Tuple, txId?: TxId): Promise<boolean>
+	scan(args?: ScanArgs, txId?: TxId): Promise<TupleValuePair[]>
+}
+
+export type AsyncTupleDatabaseApi = ReadOnlyAsyncTupleDatabaseApi & {
+	commit(writes: Writes, txId?: string): Promise<void>
+	cancel(txId: string): Promise<void>
+}
+
+export type AsyncTupleTransactionApi = ReadOnlyAsyncTupleDatabaseApi & {
+	set(tuple: Tuple, value: any): AsyncTupleTransactionApi
+	remove(tuple: Tuple): AsyncTupleTransactionApi
+	write(writes: Writes): AsyncTupleTransactionApi
+	commit(): Promise<void>
+	cancel(): Promise<void>
+}
+
+export type ReadOnlyTupleDatabaseApi = {
+	get(tuple: Tuple, txId?: TxId): any
+	exists(tuple: Tuple, txId?: TxId): boolean
+	scan(args?: ScanArgs, txId?: TxId): TupleValuePair[]
+}
+
+export type TupleDatabaseApi = ReadOnlyTupleDatabaseApi & {
+	commit(writes: Writes, txId?: string): void
+	cancel(txId: string): void
+}
+
+export type TupleTransactionApi = ReadOnlyTupleDatabaseApi & {
+	set(tuple: Tuple, value: any): TupleTransactionApi
+	remove(tuple: Tuple): TupleTransactionApi
+	write(writes: Writes): TupleTransactionApi
+	commit(): void
+	cancel(): void
 }

@@ -3,12 +3,12 @@ import { decodeTuple, encodeTuple } from "../helpers/codec"
 import {
 	ScanStorageArgs,
 	Tuple,
-	TupleStorage,
+	TupleStorageApi,
 	TupleValuePair,
 	Writes,
 } from "./types"
 
-export class SQLiteTupleStorage implements TupleStorage {
+export class SQLiteTupleStorage implements TupleStorageApi {
 	/**
 	 * import sqlite from "better-sqlite3"
 	 * new SQLiteTupleStorage(sqlite("path/to.db"))

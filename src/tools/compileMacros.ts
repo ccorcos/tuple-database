@@ -13,11 +13,11 @@ const rootPath = path.resolve(__dirname, "../..")
 function convertAsyncToSync(contents: string) {
 	// Collapse union types.
 	contents = contents.replace(
-		/AsyncTupleStorage \| TupleStorage/g,
-		"TupleStorage"
+		/AsyncTupleStorageApi \| TupleStorageApi/g,
+		"TupleStorageApi"
 	)
 	contents = contents.replace(
-		/TupleStorage \| AsyncTupleStorage/g,
+		/TupleStorage \| AsyncTupleStorageApi/g,
 		"TupleStorage"
 	)
 

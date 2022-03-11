@@ -6,10 +6,8 @@ import { describe, it } from "mocha"
 import { Subspace } from "../helpers/Subspace"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import {
-	ReadOnlyTupleDatabase,
-	TupleDatabase,
-} from "../storage/sync/TupleDatabase"
+import { TupleDatabase } from "../storage/sync/TupleDatabase"
+import { ReadOnlyTupleDatabaseApi } from "../storage/types"
 
 const scheduling = new Subspace("scheduling")
 const course = scheduling.subspace("class")
@@ -68,7 +66,7 @@ const init = transactional((tr) => {
 	}
 })
 
-function availableClasses(db: ReadOnlyTupleDatabase) {
+function availableClasses(db: ReadOnlyTupleDatabaseApi) {
 	return db
 		.scan(course.range())
 		.filter(([tuple, value]) => value > 0)
@@ -109,7 +107,7 @@ const switchClasses = transactional(
 	}
 )
 
-function getClasses(db: ReadOnlyTupleDatabase, student: string) {
+function getClasses(db: ReadOnlyTupleDatabaseApi, student: string) {
 	const classes = db
 		.scan(attends.range([student]))
 		.map(([tuple, value]) => attends.unpack(tuple)[1] as string)

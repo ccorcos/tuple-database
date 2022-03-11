@@ -1,7 +1,12 @@
 import * as tv from "../helpers/sortedTupleValuePairs"
-import { ScanStorageArgs, TupleStorage, TupleValuePair, Writes } from "./types"
+import {
+	ScanStorageArgs,
+	TupleStorageApi,
+	TupleValuePair,
+	Writes,
+} from "./types"
 
-export class InMemoryTupleStorage implements TupleStorage {
+export class InMemoryTupleStorage implements TupleStorageApi {
 	data: TupleValuePair[]
 
 	constructor(data?: TupleValuePair[]) {

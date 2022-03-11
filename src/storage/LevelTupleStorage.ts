@@ -7,13 +7,13 @@ import {
 	encodeValue,
 } from "../helpers/codec"
 import {
-	AsyncTupleStorage,
+	AsyncTupleStorageApi,
 	ScanStorageArgs,
 	TupleValuePair,
 	Writes,
 } from "./types"
 
-export class LevelTupleStorage implements AsyncTupleStorage {
+export class LevelTupleStorage implements AsyncTupleStorageApi {
 	/**
 	 * import level from "level"
 	 * new LevelTupleStorage(level("path/to.db"))

@@ -8,11 +8,11 @@ import {
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
 import { TupleDatabase } from "../sync/TupleDatabase"
 import {
-	AsyncTupleStorage,
+	AsyncTupleStorageApi,
 	MIN,
 	ScanArgs,
 	Tuple,
-	TupleStorage,
+	TupleStorageApi,
 	TxId,
 	Writes,
 } from "../types"
@@ -25,7 +25,7 @@ type Listener = { callback: Callback; bounds: Bounds }
 export class ReactiveAsyncTupleDatabase extends AsyncTupleDatabase {
 	debug = false
 
-	constructor(storage: TupleStorage | AsyncTupleStorage) {
+	constructor(storage: TupleStorageApi | AsyncTupleStorageApi) {
 		super(storage)
 	}
 

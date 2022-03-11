@@ -5,23 +5,19 @@ import { Bounds, normalizeTupleBounds } from "../../helpers/sortedTupleArray"
 import * as tv from "../../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import {
-	AsyncTupleStorage,
+	AsyncTupleDatabaseApi,
+	AsyncTupleStorageApi,
+	AsyncTupleTransactionApi,
 	ScanArgs,
 	Tuple,
-	TupleStorage,
+	TupleStorageApi,
 	TupleValuePair,
 	TxId,
 	Writes,
 } from "../types"
 
-export interface ReadOnlyAsyncTupleDatabase {
-	get(tuple: Tuple, txId?: TxId): Promise<any>
-	exists(tuple: Tuple, txId?: TxId): Promise<boolean>
-	scan(args?: ScanArgs, txId?: TxId): Promise<TupleValuePair[]>
-}
-
-export class AsyncTupleDatabase {
-	constructor(private storage: TupleStorage | AsyncTupleStorage) {}
+export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
+	constructor(private storage: TupleStorageApi | AsyncTupleStorageApi) {}
 
 	log = new ConcurrencyLog()
 
@@ -51,11 +47,6 @@ export class AsyncTupleDatabase {
 		return this.storage.scan({ ...bounds, reverse, limit })
 	}
 
-	transact(txId?: TxId) {
-		const id = txId || randomId()
-		return new AsyncTupleTransaction(this, id)
-	}
-
 	async commit(writes: Writes, txId?: string) {
 		if (txId) this.log.commit(txId)
 		for (const tuple of iterateWrittenTuples(writes)) {
@@ -64,8 +55,13 @@ export class AsyncTupleDatabase {
 		await this.storage.commit(writes)
 	}
 
-	cancel(txId: string) {
+	async cancel(txId: string) {
 		this.log.cancel(txId)
+	}
+
+	transact(txId?: TxId) {
+		const id = txId || randomId()
+		return new AsyncTupleTransaction(this, id)
 	}
 
 	async close() {
@@ -73,8 +69,8 @@ export class AsyncTupleDatabase {
 	}
 }
 
-export class AsyncTupleTransaction {
-	constructor(private storage: AsyncTupleDatabase, public id: TxId) {}
+export class AsyncTupleTransaction implements AsyncTupleTransactionApi {
+	constructor(private storage: AsyncTupleDatabaseApi, public id: TxId) {}
 
 	writes: Required<Writes> = { set: [], remove: [] }
 

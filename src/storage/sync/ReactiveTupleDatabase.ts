@@ -12,7 +12,7 @@ import {
 } from "../../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
 import { TupleDatabase } from "../sync/TupleDatabase"
-import { MIN, ScanArgs, Tuple, TupleStorage, TxId, Writes } from "../types"
+import { MIN, ScanArgs, Tuple, TupleStorageApi, TxId, Writes } from "../types"
 
 export type Callback = (write: Writes) => void
 
@@ -21,7 +21,7 @@ type Listener = { callback: Callback; bounds: Bounds }
 export class ReactiveTupleDatabase extends TupleDatabase {
 	debug = false
 
-	constructor(storage: TupleStorage) {
+	constructor(storage: TupleStorageApi) {
 		super(storage)
 	}
 
