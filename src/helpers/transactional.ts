@@ -25,7 +25,7 @@ export function transactionalAsync<I extends any[], O>(
 	}
 }
 
-export function composeTx<T>(
+function composeTx<T>(
 	dbOrTx: TupleDatabase | TupleTransaction,
 	fn: (tx: TupleTransaction) => T
 ) {
@@ -36,7 +36,7 @@ export function composeTx<T>(
 	return result
 }
 
-export async function composeTxAsync<T>(
+async function composeTxAsync<T>(
 	dbOrTx: AsyncTupleDatabase | AsyncTupleTransaction,
 	fn: (tx: AsyncTupleTransaction) => Promise<T>
 ) {

@@ -1,16 +1,7 @@
 ## TODO
 
-- generate sync storage test
-- reactive async storage
+- database over wire abstraction...
 	- subscribe should be async over wire somehow..
-- async transactional
-
-- async leveldb interface
-	- async storage tests.
-
-
-	assert.rejects -> assert.throws
-
 
 - typed subspace
 - minimal triplestore example
