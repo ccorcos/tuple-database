@@ -1,3 +1,8 @@
+/*
+
+This file is generated from asyncStorageTestSuite.ts
+
+*/
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { sum } from "lodash"
@@ -1084,6 +1089,7 @@ export function storageTestSuite(
 						transaction.set(key, value)
 					}
 					transaction.commit()
+
 					const data = store.scan()
 					assert.deepEqual(data, items)
 

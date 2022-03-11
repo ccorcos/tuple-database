@@ -10,9 +10,10 @@ import * as path from "path"
 
 const rootPath = path.resolve(__dirname, "../..")
 
-function convert(inputPath: string, outputPath: string) {
+function convertAsyncToSync(inputPath: string, outputPath: string) {
 	let contents = fs.readFileSync(inputPath, "utf8")
 
+	// Collapse union types.
 	contents = contents.replace(
 		/AsyncTupleStorage \| TupleStorage/g,
 		"TupleStorage"
@@ -22,9 +23,16 @@ function convert(inputPath: string, outputPath: string) {
 		"TupleStorage"
 	)
 
+	// Maintain camelcase
+	contents = contents.replace(/async(.)/g, (x) => x.toLowerCase())
+
+	// Remove async
 	contents = contents.replace(/[Aa]sync/g, "")
 	contents = contents.replace(/await/g, "")
 	contents = contents.replace(/Promise<([^>]+)>/g, "$1")
+
+	// Sync test assertions.
+	contents = contents.replace(/assert\.rejects/g, "assert.throws")
 
 	contents = `
 /*
@@ -46,7 +54,12 @@ ${contents}
 	)
 }
 
-convert(
+convertAsyncToSync(
 	path.join(rootPath, "src/storage/AsyncTupleDatabase.ts"),
 	path.join(rootPath, "src/storage/TupleDatabase.ts")
+)
+
+convertAsyncToSync(
+	path.join(rootPath, "src/test/asyncStorageTestSuite.ts"),
+	path.join(rootPath, "src/test/storageTestSuite.ts")
 )
