@@ -1,3 +1,8 @@
+/*
+
+This file is generated from AsyncTupleDatabase.ts
+
+*/
 import { iterateWrittenTuples } from "../helpers/iterateTuples"
 import { randomId } from "../helpers/randomId"
 import * as t from "../helpers/sortedTupleArray"

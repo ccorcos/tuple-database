@@ -9,8 +9,8 @@ import * as fs from "fs"
 import * as path from "path"
 
 const rootPath = path.resolve(__dirname, "../..")
-const inputPath = path.join(rootPath, "AsyncTupleDatabase.ts")
-const outputPath = path.join(rootPath, "TupleDatabase.ts")
+const inputPath = path.join(rootPath, "src/storage/AsyncTupleDatabase.ts")
+const outputPath = path.join(rootPath, "src/storage/TupleDatabase.ts")
 
 let contents = fs.readFileSync(inputPath, "utf8")
 
@@ -28,4 +28,6 @@ ${contents}
 `
 
 fs.writeFileSync(outputPath, contents)
-execSync("node_modules/.bin/prettier -i " + outputPath)
+execSync(
+	path.join(rootPath, "node_modules/.bin/prettier") + " --write " + outputPath
+)
