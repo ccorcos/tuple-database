@@ -6,7 +6,10 @@ import { describe, it } from "mocha"
 import { Subspace } from "../helpers/Subspace"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { ReadOnlyTupleDatabase, TupleDatabase } from "../storage/TupleDatabase"
+import {
+	ReadOnlyTupleDatabase,
+	TupleDatabase,
+} from "../storage/sync/TupleDatabase"
 
 const scheduling = new Subspace("scheduling")
 const course = scheduling.subspace("class")

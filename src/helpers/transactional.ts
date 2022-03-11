@@ -1,8 +1,8 @@
 import {
 	AsyncTupleDatabase,
 	AsyncTupleTransaction,
-} from "../storage/AsyncTupleDatabase"
-import { TupleDatabase, TupleTransaction } from "../storage/TupleDatabase"
+} from "../storage/async/AsyncTupleDatabase"
+import { TupleDatabase, TupleTransaction } from "../storage/sync/TupleDatabase"
 
 // Accepts a transaction or a database and allows you to compose transactions together.
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html

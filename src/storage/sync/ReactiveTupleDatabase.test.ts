@@ -1,16 +1,21 @@
+/*
+
+This file is generated from ReactiveAsyncTupleDatabase.test.ts
+
+*/
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { ReactiveAsyncTupleDatabase } from "./ReactiveAsyncTupleDatabase"
-import { MAX, MIN, TupleValuePair, Writes } from "./types"
+import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
+import { MAX, MIN, TupleValuePair, Writes } from "../types"
+import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
 
 function createStorage() {
-	return new ReactiveAsyncTupleDatabase(new InMemoryTupleStorage())
+	return new ReactiveTupleDatabase(new InMemoryTupleStorage())
 }
 
-describe("ReactiveAsyncTupleDatabase", () => {
-	it("works with set", async () => {
+describe("ReactiveTupleDatabase", () => {
+	it("works with set", () => {
 		const store = createStorage()
 		const items: TupleValuePair[] = [
 			[["a", "a", "a"], 1],
@@ -27,9 +32,9 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		for (const [key, value] of _.shuffle(items)) {
 			transaction.set(key, value)
 		}
-		await transaction.commit()
+		transaction.commit()
 
-		const data = await store.scan()
+		const data = store.scan()
 		assert.deepEqual(data, items)
 
 		let hoist: Writes | undefined
@@ -37,7 +42,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 			hoist = writes
 		})
 
-		await store.transact().set(["a", "b", 1], 1).commit()
+		store.transact().set(["a", "b", 1], 1).commit()
 
 		assert.deepStrictEqual(hoist, {
 			set: [[["a", "b", 1], 1]],
@@ -45,7 +50,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		} as Writes)
 	})
 
-	it("works with remove", async () => {
+	it("works with remove", () => {
 		const store = createStorage()
 		const items: TupleValuePair[] = [
 			[["a", "a", "a"], 1],
@@ -62,9 +67,9 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		for (const [key, value] of _.shuffle(items)) {
 			transaction.set(key, value)
 		}
-		await transaction.commit()
+		transaction.commit()
 
-		const data = await store.scan()
+		const data = store.scan()
 		assert.deepEqual(data, items)
 
 		let hoist: Writes | undefined
@@ -72,7 +77,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 			hoist = writes
 		})
 
-		await store.transact().remove(["a", "b", "a"]).commit()
+		store.transact().remove(["a", "b", "a"]).commit()
 
 		assert.deepStrictEqual(hoist, {
 			set: [],
@@ -80,7 +85,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		} as Writes)
 	})
 
-	it("works when overwriting a value to an existing key", async () => {
+	it("works when overwriting a value to an existing key", () => {
 		const store = createStorage()
 		const items: TupleValuePair[] = [
 			[["a", "a", "a"], 1],
@@ -97,9 +102,9 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		for (const [key, value] of _.shuffle(items)) {
 			transaction.set(key, value)
 		}
-		await transaction.commit()
+		transaction.commit()
 
-		const data = await store.scan()
+		const data = store.scan()
 		assert.deepEqual(data, items)
 
 		let hoist: Writes | undefined
@@ -107,7 +112,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 			hoist = writes
 		})
 
-		await store.transact().set(["a", "b", "a"], 99).commit()
+		store.transact().set(["a", "b", "a"], 99).commit()
 
 		assert.deepStrictEqual(hoist, {
 			set: [[["a", "b", "a"], 99]],
@@ -115,7 +120,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		} as Writes)
 	})
 
-	it("should use prefix correctly and filter bounds", async () => {
+	it("should use prefix correctly and filter bounds", () => {
 		const store = createStorage()
 		const items: TupleValuePair[] = [
 			[["a", "a", "a"], 1],
@@ -132,9 +137,9 @@ describe("ReactiveAsyncTupleDatabase", () => {
 		for (const [key, value] of _.shuffle(items)) {
 			transaction.set(key, value)
 		}
-		await transaction.commit()
+		transaction.commit()
 
-		const data = await store.scan()
+		const data = store.scan()
 		assert.deepEqual(data, items)
 
 		// Note that these queries are *basically* the same.
@@ -157,7 +162,7 @@ describe("ReactiveAsyncTupleDatabase", () => {
 			hoist3 = writes
 		})
 
-		await store.transact().set(["a", "c", 1], 1).commit()
+		store.transact().set(["a", "c", 1], 1).commit()
 
 		assert.deepStrictEqual(hoist1, undefined)
 

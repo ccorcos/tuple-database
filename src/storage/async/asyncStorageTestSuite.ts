@@ -1,25 +1,20 @@
-/*
-
-This file is generated from asyncStorageTestSuite.ts
-
-*/
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
-import { randomId } from "../helpers/randomId"
-import { transactional } from "../helpers/transactional"
-import { TupleDatabase, TupleTransaction } from "../storage/TupleDatabase"
-import { MAX, MIN, Tuple, TupleValuePair } from "../storage/types"
+import { randomId } from "../../helpers/randomId"
+import { transactionalAsync } from "../../helpers/transactional"
+import { MAX, MIN, Tuple, TupleValuePair } from "../types"
+import { AsyncTupleDatabase, AsyncTupleTransaction } from "./AsyncTupleDatabase"
 
-export function storageTestSuite(
+export function asyncStorageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => TupleDatabase,
+	createStorage: (id: string) => AsyncTupleDatabase,
 	durable = true
 ) {
 	describe(name, () => {
-		it("inserts in correct order", () => {
+		it("inserts in correct order", async () => {
 			const store = createStorage(randomId())
 			const items: TupleValuePair[] = [
 				[["a", "a", "a"], 1],
@@ -36,140 +31,140 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 		})
 
-		it("inserts the same thing gets deduplicated", () => {
+		it("inserts the same thing gets deduplicated", async () => {
 			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
 			transaction.set(["a", "a"], 0)
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, [[["a", "a"], 0]])
 		})
 
-		it("updates will overwrite the value", () => {
+		it("updates will overwrite the value", async () => {
 			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
 			transaction.set(["a", "a"], 1)
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, [[["a", "a"], 1]])
 		})
 
-		it("transaction value overwrites works", () => {
+		it("transaction value overwrites works", async () => {
 			const store = createStorage(randomId())
 			const transaction = store.transact()
 			transaction.set(["a", "a"], 0)
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, [[["a", "a"], 0]])
 
 			const transaction2 = store.transact()
 			transaction2.set(["a", "a"], 1)
-			const data2 = transaction2.scan()
+			const data2 = await transaction2.scan()
 			assert.deepEqual(data2, [[["a", "a"], 1]])
 
-			transaction2.commit()
-			const data3 = store.scan()
+			await transaction2.commit()
+			const data3 = await store.scan()
 			assert.deepEqual(data3, [[["a", "a"], 1]])
 		})
 
-		it("inserts the same thing gets deduplicated with ids", () => {
+		it("inserts the same thing gets deduplicated with ids", async () => {
 			const store = createStorage(randomId())
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
-		it("inserts get deduplicated in separate transactions", () => {
+		it("inserts get deduplicated in separate transactions", async () => {
 			const store = createStorage(randomId())
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
-		it("inserts get deduplicated set/remove in same transaction", () => {
+		it("inserts get deduplicated set/remove in same transaction", async () => {
 			const store = createStorage(randomId())
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.remove(["a", { uuid: "a" }])
 				.commit()
 
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 0, `data: ${JSON.stringify(data)}`)
 		})
 
-		it("inserts get deduplicated remove/set in same transaction", () => {
+		it("inserts get deduplicated remove/set in same transaction", async () => {
 			const store = createStorage(randomId())
 
-			store
+			await store
 				.transact()
 				.remove(["a", { uuid: "a" }])
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
-		it("inserts get deduplicated set/remove in same transaction with initial tuple", () => {
+		it("inserts get deduplicated set/remove in same transaction with initial tuple", async () => {
 			const store = createStorage(randomId())
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 1)
 				.remove(["a", { uuid: "a" }])
 				.commit()
 
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 0)
 		})
 
-		it("inserts get deduplicated remove/set in same transaction with initial tuple", () => {
+		it("inserts get deduplicated remove/set in same transaction with initial tuple", async () => {
 			const store = createStorage(randomId())
 
-			store
+			await store
 				.transact()
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 
-			store
+			await store
 				.transact()
 				.remove(["a", { uuid: "a" }])
 				.set(["a", { uuid: "a" }], 1)
 				.commit()
 
-			const data = store.scan()
+			const data = await store.scan()
 			assert.deepEqual(data.length, 1)
 		})
 
-		it("removes items correctly", () => {
+		it("removes items correctly", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -187,13 +182,13 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			assert.deepEqual(transaction.scan(), items)
+			assert.deepEqual(await transaction.scan(), items)
 
 			transaction.remove(["a", "a", "c"])
 			transaction.remove(["a", "c", "a"])
 			transaction.remove(["a", "b", "b"])
 
-			const data = transaction.scan()
+			const data = await transaction.scan()
 			assert.deepEqual(data, [
 				[["a", "a", "a"], 1],
 				[["a", "a", "b"], 2],
@@ -202,11 +197,11 @@ export function storageTestSuite(
 				[["a", "c", "b"], 8],
 				[["a", "c", "c"], 9],
 			])
-			transaction.commit()
-			assert.deepEqual(store.scan(), data)
+			await transaction.commit()
+			assert.deepEqual(await store.scan(), data)
 		})
 
-		it("transaction.write()", () => {
+		it("transaction.write()", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -221,11 +216,11 @@ export function storageTestSuite(
 				[["a", "c", "c"], 9],
 			]
 
-			store.transact().write({ set: items }).commit()
-			let data = store.scan()
+			await store.transact().write({ set: items }).commit()
+			let data = await store.scan()
 			assert.deepEqual(data, items)
 
-			store
+			await store
 				.transact()
 				.write({
 					remove: [
@@ -236,7 +231,7 @@ export function storageTestSuite(
 				})
 				.commit()
 
-			data = store.scan()
+			data = await store.scan()
 			assert.deepEqual(data, [
 				[["a", "a", "a"], 1],
 				[["a", "a", "b"], 2],
@@ -247,7 +242,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan gt", () => {
+		it("scan gt", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -265,11 +260,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gt: ["a", "a", MAX],
 			})
 
@@ -283,7 +278,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan gt/lt", () => {
+		it("scan gt/lt", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -301,11 +296,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "c", MIN],
 			})
@@ -316,7 +311,7 @@ export function storageTestSuite(
 				[["a", "b", "c"], 6],
 			])
 
-			const result2 = store.scan({
+			const result2 = await store.scan({
 				gt: ["a", "b", MIN],
 				lt: ["a", "b", MAX],
 			})
@@ -328,7 +323,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan prefix", () => {
+		it("scan prefix", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -346,11 +341,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				prefix: ["a", "b"],
 			})
 
@@ -361,7 +356,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan prefix gte/lte", () => {
+		it("scan prefix gte/lte", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -381,11 +376,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				prefix: ["a", "b"],
 				gte: ["b"],
 				lte: ["d"],
@@ -398,7 +393,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan gte", () => {
+		it("scan gte", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -416,11 +411,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gte: ["a", "b", "a"],
 			})
 
@@ -434,7 +429,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan gte/lte", () => {
+		it("scan gte/lte", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -452,11 +447,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "c", MAX],
 			})
@@ -472,7 +467,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan sorted gt", () => {
+		it("scan sorted gt", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -490,11 +485,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gt: ["a", "b", MAX],
 			})
 
@@ -505,7 +500,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan sorted gt/lt", () => {
+		it("scan sorted gt/lt", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -523,11 +518,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "b", MAX],
 			})
@@ -539,7 +534,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan sorted gte", () => {
+		it("scan sorted gte", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -557,11 +552,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gte: ["a", "b", MIN],
 			})
 
@@ -575,7 +570,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan sorted gte/lte", () => {
+		it("scan sorted gte/lte", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -593,11 +588,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({
+			const result = await store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "b", MAX],
 			})
@@ -610,7 +605,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("scan invalid bounds", () => {
+		it("scan invalid bounds", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -628,12 +623,12 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
 			try {
-				store.scan({
+				await store.scan({
 					gte: ["a", "c"],
 					lte: ["a", "a"],
 				})
@@ -643,7 +638,7 @@ export function storageTestSuite(
 			}
 		})
 
-		it("stores all types of values", () => {
+		it("stores all types of values", async () => {
 			const store = createStorage(randomId())
 			const items: TupleValuePair[] = sortedValues.map(
 				(item, i) => [[item], i] as TupleValuePair
@@ -652,12 +647,12 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 		})
 
-		it("transaction overwrites when scanning data out", () => {
+		it("transaction overwrites when scanning data out", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -675,11 +670,11 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
-			const data = store.scan()
+			await transaction.commit()
+			const data = await store.scan()
 			assert.deepEqual(data, items)
 
-			const result = store.scan({ prefix: ["a", "b"] })
+			const result = await store.scan({ prefix: ["a", "b"] })
 
 			assert.deepEqual(result, [
 				[["a", "b", "a"], 4],
@@ -689,7 +684,7 @@ export function storageTestSuite(
 
 			const transaction2 = store.transact()
 			transaction2.set(["a", "b", "b"], 99)
-			const result2 = transaction2.scan({ prefix: ["a", "b"] })
+			const result2 = await transaction2.scan({ prefix: ["a", "b"] })
 			assert.deepEqual(result2, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 99],
@@ -697,7 +692,7 @@ export function storageTestSuite(
 			])
 		})
 
-		it("get", () => {
+		it("get", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -715,33 +710,33 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
+			await transaction.commit()
 
-			assert.deepEqual(store.get(["a", "a", "c"]), 3)
-			assert.deepEqual(store.get(["a", "c", "c"]), 9)
-			assert.deepEqual(store.get(["a", "c", "d"]), undefined)
+			assert.deepEqual(await store.get(["a", "a", "c"]), 3)
+			assert.deepEqual(await store.get(["a", "c", "c"]), 9)
+			assert.deepEqual(await store.get(["a", "c", "d"]), undefined)
 		})
 
-		it("transaction overwrites get", () => {
+		it("transaction overwrites get", async () => {
 			const store = createStorage(randomId())
 
-			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
+			await store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
 
 			const tr = store.transact()
 			tr.set(["a"], 2)
-			assert.deepEqual(store.get(["a"]), 1)
-			assert.deepEqual(tr.get(["a"]), 2)
+			assert.deepEqual(await store.get(["a"]), 1)
+			assert.deepEqual(await tr.get(["a"]), 2)
 
 			tr.remove(["b"])
-			assert.deepEqual(store.get(["b"]), 2)
-			assert.deepEqual(tr.get(["b"]), undefined)
+			assert.deepEqual(await store.get(["b"]), 2)
+			assert.deepEqual(await tr.get(["b"]), undefined)
 
 			tr.set(["d"], 99)
-			assert.deepEqual(store.get(["d"]), undefined)
-			assert.deepEqual(tr.get(["d"]), 99)
+			assert.deepEqual(await store.get(["d"]), undefined)
+			assert.deepEqual(await tr.get(["d"]), 99)
 		})
 
-		it("exists", () => {
+		it("exists", async () => {
 			const store = createStorage(randomId())
 
 			const items: TupleValuePair[] = [
@@ -759,39 +754,39 @@ export function storageTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			transaction.commit()
+			await transaction.commit()
 
-			assert.deepEqual(store.exists(["a", "a", "c"]), true)
-			assert.deepEqual(store.exists(["a", "c", "c"]), true)
-			assert.deepEqual(store.exists(["a", "c", "d"]), false)
+			assert.deepEqual(await store.exists(["a", "a", "c"]), true)
+			assert.deepEqual(await store.exists(["a", "c", "c"]), true)
+			assert.deepEqual(await store.exists(["a", "c", "d"]), false)
 		})
 
-		it("transaction overwrites exists", () => {
+		it("transaction overwrites exists", async () => {
 			const store = createStorage(randomId())
 
-			store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
+			await store.transact().set(["a"], 1).set(["b"], 2).set(["c"], 3).commit()
 
 			const tr = store.transact()
 			tr.set(["a"], 2)
-			assert.deepEqual(store.exists(["a"]), true)
-			assert.deepEqual(tr.exists(["a"]), true)
+			assert.deepEqual(await store.exists(["a"]), true)
+			assert.deepEqual(await tr.exists(["a"]), true)
 
 			tr.remove(["b"])
-			assert.deepEqual(store.exists(["b"]), true)
-			assert.deepEqual(tr.exists(["b"]), false)
+			assert.deepEqual(await store.exists(["b"]), true)
+			assert.deepEqual(await tr.exists(["b"]), false)
 
 			tr.set(["d"], 99)
-			assert.deepEqual(store.exists(["d"]), false)
-			assert.deepEqual(tr.exists(["d"]), true)
+			assert.deepEqual(await store.exists(["d"]), false)
+			assert.deepEqual(await tr.exists(["d"]), true)
 		})
 
 		describe("indexing happens at the application-level", () => {
-			it("bidirectional friends stored as keys", () => {
+			it("bidirectional friends stored as keys", async () => {
 				const store = createStorage(randomId())
 
 				function setAEV(
 					[a, e, v]: [string, string, string],
-					tx: TupleTransaction
+					tx: AsyncTupleTransaction
 				) {
 					tx.set([a, e, v], null)
 					if (a === "friend") tx.set([a, v, e], null)
@@ -799,7 +794,7 @@ export function storageTestSuite(
 
 				function removeAEV(
 					[a, e, v]: [string, string, string],
-					tx: TupleTransaction
+					tx: AsyncTupleTransaction
 				) {
 					tx.remove([a, e, v])
 					if (a === "friend") tx.remove([a, v, e])
@@ -817,9 +812,9 @@ export function storageTestSuite(
 				for (const key of _.shuffle(items)) {
 					setAEV(key, transaction)
 				}
-				transaction.commit()
+				await transaction.commit()
 
-				let result = store.scan().map(([tuple]) => tuple)
+				let result = (await store.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["friend", "a", "b"],
@@ -835,7 +830,7 @@ export function storageTestSuite(
 
 				const tx = store.transact()
 				removeAEV(["friend", "a", "b"], tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				result = (await tx.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["friend", "a", "c"],
@@ -848,7 +843,7 @@ export function storageTestSuite(
 				])
 
 				setAEV(["friend", "d", "a"], tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				result = (await tx.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["friend", "a", "c"],
@@ -863,13 +858,13 @@ export function storageTestSuite(
 				])
 			})
 
-			it("indexing objects stored as values", () => {
+			it("indexing objects stored as values", async () => {
 				const store = createStorage(randomId())
 
 				type Person = { id: number; first: string; last: string; age: number }
 
-				function setPerson(person: Person, tx: TupleTransaction) {
-					const prev = tx.get(["personById", person.id])
+				async function setPerson(person: Person, tx: AsyncTupleTransaction) {
+					const prev = await tx.get(["personById", person.id])
 					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])
 					}
@@ -878,8 +873,11 @@ export function storageTestSuite(
 					tx.set(["personByAge", person.age, person.id], person)
 				}
 
-				function removePerson(personId: number, tx: TupleTransaction) {
-					const prev = tx.get(["personById", personId])
+				async function removePerson(
+					personId: number,
+					tx: AsyncTupleTransaction
+				) {
+					const prev = await tx.get(["personById", personId])
 					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])
 						tx.remove(["personById", prev.id])
@@ -895,11 +893,11 @@ export function storageTestSuite(
 
 				const transaction = store.transact()
 				for (const person of _.shuffle(people)) {
-					setPerson(person, transaction)
+					await setPerson(person, transaction)
 				}
-				transaction.commit()
+				await transaction.commit()
 
-				let result = store.scan().map(([tuple]) => tuple)
+				let result = (await store.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["personByAge", 26, 2],
@@ -913,8 +911,8 @@ export function storageTestSuite(
 				])
 
 				const tx = store.transact()
-				removePerson(3, tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				await removePerson(3, tx)
+				result = (await tx.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["personByAge", 26, 2],
@@ -925,7 +923,7 @@ export function storageTestSuite(
 					["personById", 4],
 				])
 
-				setPerson(
+				await setPerson(
 					{
 						id: 1,
 						first: "Chet",
@@ -935,7 +933,7 @@ export function storageTestSuite(
 					tx
 				)
 
-				result = tx.scan().map(([tuple]) => tuple)
+				result = (await tx.scan()).map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["personByAge", 26, 2],
@@ -951,7 +949,7 @@ export function storageTestSuite(
 		describe("MVCC - Multi-version Concurrency Control", () => {
 			// Basically, concurrent transactional read-writes.
 
-			it("works", () => {
+			it("works", async () => {
 				const id = randomId()
 				const store = createStorage(id)
 
@@ -963,29 +961,29 @@ export function storageTestSuite(
 				const meghan = store.transact()
 
 				// Chet turns it on if its off.
-				if (!chet.get(["lamp"])) chet.set(["lamp"], true)
+				if (!(await chet.get(["lamp"]))) chet.set(["lamp"], true)
 
 				// Meghan turns it off if its on.
-				if (meghan.get(["lamp"])) meghan.set(["lamp"], false)
+				if (await meghan.get(["lamp"])) meghan.set(["lamp"], false)
 
 				// Someone has to lose. Whoever commits first wins.
-				chet.commit()
-				assert.throws(() => meghan.commit())
-				assert.equal(store.get(["lamp"]), true)
+				await chet.commit()
+				await assert.rejects(() => meghan.commit())
+				assert.equal(await store.get(["lamp"]), true)
 
 				// Meghan will have to try again.
 				const meghan2 = store.transact()
-				if (meghan2.get(["lamp"])) meghan2.set(["lamp"], false)
-				meghan2.commit()
+				if (await meghan2.get(["lamp"])) meghan2.set(["lamp"], false)
+				await meghan2.commit()
 
 				// And she has her way.
-				assert.equal(store.get(["lamp"]), false)
+				assert.equal(await store.get(["lamp"]), false)
 			})
 
-			it("should probably generalize to scans as well", () => {
+			it("should probably generalize to scans as well", async () => {
 				const id = randomId()
 				const store = createStorage(id)
-				store.commit({
+				await store.commit({
 					set: [
 						// TODO: add test using value as well.
 						[["player", "chet", 0], null],
@@ -995,81 +993,83 @@ export function storageTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactional((tx, player: string, inc: number) => {
-					// It has this miserable api, lol.
-					const getPlayerScore = (player: string) => {
-						const pairs = tx.scan({ prefix: ["player", player] })
-						if (pairs.length !== 1) throw new Error("Missing player.")
-						const [[tuple, _value]] = pairs
-						return tuple[2] as number
+				const addScore = transactionalAsync(
+					async (tx, player: string, inc: number) => {
+						// It has this miserable api, lol.
+						const getPlayerScore = async (player: string) => {
+							const pairs = await tx.scan({ prefix: ["player", player] })
+							if (pairs.length !== 1) throw new Error("Missing player.")
+							const [[tuple, _value]] = pairs
+							return tuple[2] as number
+						}
+
+						const getCurrentTotal = async () => {
+							const totals = await tx.scan({ prefix: ["total"] })
+							if (totals.length !== 1) throw new Error("Too many totals.")
+							const [[tuple, _value]] = totals
+							return tuple[1] as number
+						}
+
+						const resetTotal = async () => {
+							const pairs = await tx.scan({ prefix: ["player"] })
+							const total = sum(
+								pairs.map(([tuple, _value]) => tuple[2] as number)
+							)
+							tx.remove(["total", await getCurrentTotal()])
+							tx.set(["total", total], null)
+						}
+
+						// But crucially, we reset the whole total whenever someone scores.
+						const playerScore = await getPlayerScore(player)
+						tx.remove(["player", player, playerScore])
+						tx.set(["player", player, playerScore + inc], null)
+
+						await resetTotal()
 					}
-
-					const getCurrentTotal = () => {
-						const totals = tx.scan({ prefix: ["total"] })
-						if (totals.length !== 1) throw new Error("Too many totals.")
-						const [[tuple, _value]] = totals
-						return tuple[1] as number
-					}
-
-					const resetTotal = () => {
-						const pairs = tx.scan({ prefix: ["player"] })
-						const total = sum(
-							pairs.map(([tuple, _value]) => tuple[2] as number)
-						)
-						tx.remove(["total", getCurrentTotal()])
-						tx.set(["total", total], null)
-					}
-
-					// But crucially, we reset the whole total whenever someone scores.
-					const playerScore = getPlayerScore(player)
-					tx.remove(["player", player, playerScore])
-					tx.set(["player", player, playerScore + inc], null)
-
-					resetTotal()
-				})
+				)
 
 				// Chet an meghan are playing a game.
 				const chet = store.transact()
 				const meghan = store.transact()
 
 				// Chet
-				addScore(chet, "chet", 1)
-				addScore(meghan, "meghan", 1)
+				await addScore(chet, "chet", 1)
+				await addScore(meghan, "meghan", 1)
 
 				// Whoever commits first will win.
-				meghan.commit()
-				assert.throws(() => chet.commit())
+				await meghan.commit()
+				await assert.rejects(() => chet.commit())
 
 				// Most importantly, the total will never be incorrect.
-				assert.deepEqual(store.scan({ prefix: [] }), [
+				assert.deepEqual(await store.scan({ prefix: [] }), [
 					[["player", "chet", 0], null],
 					[["player", "meghan", 1], null],
 					[["total", 1], null],
 				])
 			})
 
-			it("computes granular conflict based on tuple bounds, not prefix", () => {
+			it("computes granular conflict based on tuple bounds, not prefix", async () => {
 				const id = randomId()
 				const store = createStorage(id)
 
 				const a = store.transact()
 				const b = store.transact()
 
-				a.scan({ gte: [1], lt: [10] })
-				b.scan({ gte: [10] })
+				await a.scan({ gte: [1], lt: [10] })
+				await b.scan({ gte: [10] })
 
 				const c = store.transact()
 				c.set([10], null)
-				c.commit()
+				await c.commit()
 
-				a.commit() // ok
-				assert.throws(() => b.commit())
+				await a.commit() // ok
+				await assert.rejects(() => b.commit())
 			})
 		})
 
 		if (durable) {
 			describe("Persistence", () => {
-				it("persists properly", () => {
+				it("persists properly", async () => {
 					const id = randomId()
 					const store = createStorage(id)
 
@@ -1088,15 +1088,15 @@ export function storageTestSuite(
 					for (const [key, value] of _.shuffle(items)) {
 						transaction.set(key, value)
 					}
-					transaction.commit()
+					await transaction.commit()
 
-					const data = store.scan()
+					const data = await store.scan()
 					assert.deepEqual(data, items)
 
-					store.close()
+					await store.close()
 
 					const store2 = createStorage(id)
-					const data2 = store2.scan()
+					const data2 = await store2.scan()
 					assert.deepEqual(data2, items)
 				})
 			})

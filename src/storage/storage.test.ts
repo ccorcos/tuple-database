@@ -1,11 +1,19 @@
 import sqlite from "better-sqlite3"
+import level from "level"
+import * as path from "path"
 import { sortedValues } from "../test/fixtures"
-import { storageTestSuite } from "../test/storageTestSuite"
+import { asyncStorageTestSuite } from "./async/asyncStorageTestSuite"
+import { AsyncTupleDatabase } from "./async/AsyncTupleDatabase"
+import { ReactiveAsyncTupleDatabase } from "./async/ReactiveAsyncTupleDatabase"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
+import { LevelTupleStorage } from "./LevelTupleStorage"
 import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
-import { TupleDatabase } from "./TupleDatabase"
+import { ReactiveTupleDatabase } from "./sync/ReactiveTupleDatabase"
+import { storageTestSuite } from "./sync/storageTestSuite"
+import { TupleDatabase } from "./sync/TupleDatabase"
+
+const tmpDir = path.resolve(__dirname, "/../../tmp")
 
 storageTestSuite(
 	"TupleDatabase(InMemoryTupleStorage)",
@@ -21,18 +29,19 @@ storageTestSuite(
 	false
 )
 
-const tmpDir = __dirname + "/../../tmp/"
-
 storageTestSuite(
 	"TupleDatabase(FileTupleStorage)",
 	sortedValues,
-	(id) => new TupleDatabase(new FileTupleStorage(tmpDir + id))
+	(id) => new TupleDatabase(new FileTupleStorage(path.join(tmpDir, id)))
 )
 
 storageTestSuite(
 	"TupleDatabase(SQLiteTupleStorage)",
 	sortedValues,
-	(id) => new TupleDatabase(new SQLiteTupleStorage(sqlite(tmpDir + id + ".db")))
+	(id) =>
+		new TupleDatabase(
+			new SQLiteTupleStorage(sqlite(path.join(tmpDir, id + ".db")))
+		)
 )
 
 storageTestSuite(
@@ -40,6 +49,38 @@ storageTestSuite(
 	sortedValues,
 	(id) =>
 		new ReactiveTupleDatabase(
-			new SQLiteTupleStorage(sqlite(tmpDir + id + ".db"))
+			new SQLiteTupleStorage(sqlite(path.join(tmpDir, id + ".db")))
+		)
+)
+
+asyncStorageTestSuite(
+	"AsyncTupleDatabase(InMemoryTupleStorage)",
+	sortedValues,
+	() => new AsyncTupleDatabase(new InMemoryTupleStorage()),
+	false
+)
+
+asyncStorageTestSuite(
+	"ReactiveAsyncTupleDatabase(InMemoryTupleStorage)",
+	sortedValues,
+	() => new ReactiveAsyncTupleDatabase(new InMemoryTupleStorage()),
+	false
+)
+
+asyncStorageTestSuite(
+	"AsyncTupleDatabase(LevelTupleStorage)",
+	sortedValues,
+	(id) =>
+		new AsyncTupleDatabase(
+			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
+		)
+)
+
+asyncStorageTestSuite(
+	"ReactiveAsyncTupleDatabase(LevelTupleStorage)",
+	sortedValues,
+	(id) =>
+		new ReactiveAsyncTupleDatabase(
+			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
 		)
 )

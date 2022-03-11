@@ -1,7 +1,7 @@
 import { describe, it } from "mocha"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { TupleDatabase } from "../storage/TupleDatabase"
+import { TupleDatabase } from "../storage/sync/TupleDatabase"
 
 describe("Triplestore", () => {
 	it("works", () => {

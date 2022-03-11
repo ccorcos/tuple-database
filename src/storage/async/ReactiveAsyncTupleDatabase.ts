@@ -1,33 +1,37 @@
-/*
-
-This file is generated from ReactiveAsyncTupleDatabase.ts
-
-*/
-import { randomId } from "../helpers/randomId"
+import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
 	isTupleWithinBounds,
 	normalizeTupleBounds,
 	prefixTupleBounds,
-} from "../helpers/sortedTupleArray"
-import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { TupleDatabase } from "./TupleDatabase"
-import { MIN, ScanArgs, Tuple, TupleStorage, TxId, Writes } from "./types"
+} from "../../helpers/sortedTupleArray"
+import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
+import { TupleDatabase } from "../sync/TupleDatabase"
+import {
+	AsyncTupleStorage,
+	MIN,
+	ScanArgs,
+	Tuple,
+	TupleStorage,
+	TxId,
+	Writes,
+} from "../types"
+import { AsyncTupleDatabase } from "./AsyncTupleDatabase"
 
 export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
-export class ReactiveTupleDatabase extends TupleDatabase {
+export class ReactiveAsyncTupleDatabase extends AsyncTupleDatabase {
 	debug = false
 
-	constructor(storage: TupleStorage) {
+	constructor(storage: TupleStorage | AsyncTupleStorage) {
 		super(storage)
 	}
 
-	commit(writes: Writes, txId?: TxId) {
+	async commit(writes: Writes, txId?: TxId) {
 		const updates = this.getEmits(writes)
-		super.commit(writes, txId)
+		await super.commit(writes, txId)
 		for (const [callback, writes] of updates.entries()) {
 			callback(writes)
 		}
