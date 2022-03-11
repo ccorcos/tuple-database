@@ -1,3 +1,7 @@
+import {
+	AsyncTupleDatabase,
+	AsyncTupleTransaction,
+} from "../storage/AsyncTupleDatabase"
 import { TupleDatabase, TupleTransaction } from "../storage/TupleDatabase"
 
 // Accepts a transaction or a database and allows you to compose transactions together.
@@ -10,6 +14,17 @@ export function transactional<I extends any[], O>(
 	}
 }
 
+export function transactionalAsync<I extends any[], O>(
+	fn: (tx: AsyncTupleTransaction, ...args: I) => Promise<O>
+) {
+	return async function (
+		dbOrTx: AsyncTupleDatabase | AsyncTupleTransaction,
+		...args: I
+	): Promise<O> {
+		return composeTxAsync(dbOrTx, (tx) => fn(tx, ...args))
+	}
+}
+
 export function composeTx<T>(
 	dbOrTx: TupleDatabase | TupleTransaction,
 	fn: (tx: TupleTransaction) => T
@@ -18,5 +33,16 @@ export function composeTx<T>(
 	const tx = dbOrTx.transact()
 	const result = fn(tx)
 	tx.commit()
+	return result
+}
+
+export async function composeTxAsync<T>(
+	dbOrTx: AsyncTupleDatabase | AsyncTupleTransaction,
+	fn: (tx: AsyncTupleTransaction) => Promise<T>
+) {
+	if ("set" in dbOrTx) return fn(dbOrTx)
+	const tx = dbOrTx.transact()
+	const result = await fn(tx)
+	await tx.commit()
 	return result
 }

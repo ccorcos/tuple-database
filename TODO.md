@@ -3,15 +3,20 @@
 - async leveldb interface
 	- async storage tests.
 
+
+	assert.rejects -> assert.throws
+
+
+- typed subspace
+- minimal triplestore example
+- benchmarks
+
+
 - README
 	- notes about async database compilation.
 	- new names and apis.
 
 
-- typed subspace
-
-- minimal triplestore example
-- benchmarks
 
 - how to use this in a UI with some kind of async backend.
 	- how to cache in-process, or not?

@@ -8,6 +8,7 @@ import {
 	AsyncTupleStorage,
 	ScanArgs,
 	Tuple,
+	TupleStorage,
 	TupleValuePair,
 	TxId,
 	Writes,
@@ -20,7 +21,7 @@ export interface ReadOnlyAsyncTupleDatabase {
 }
 
 export class AsyncTupleDatabase {
-	constructor(private storage: AsyncTupleStorage) {}
+	constructor(private storage: TupleStorage | AsyncTupleStorage) {}
 
 	log = new ConcurrencyLog()
 
