@@ -1,3 +1,8 @@
+/*
+
+This file is generated from ReactiveAsyncTupleDatabase.test.ts
+
+*/
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
@@ -9,7 +14,7 @@ function createStorage() {
 	return new ReactiveTupleDatabase(new InMemoryTupleStorage())
 }
 
-describe("ReactiveStorage", () => {
+describe("ReactiveTupleDatabase", () => {
 	it("works with set", () => {
 		const store = createStorage()
 		const items: TupleValuePair[] = [

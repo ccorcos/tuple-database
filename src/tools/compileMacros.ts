@@ -11,6 +11,12 @@ import * as path from "path"
 const rootPath = path.resolve(__dirname, "../..")
 
 function convertAsyncToSync(inputPath: string, outputPath: string) {
+	console.log(
+		path.relative(rootPath, inputPath),
+		"->",
+		path.relative(rootPath, outputPath)
+	)
+
 	let contents = fs.readFileSync(inputPath, "utf8")
 
 	// Collapse union types.
@@ -62,4 +68,14 @@ convertAsyncToSync(
 convertAsyncToSync(
 	path.join(rootPath, "src/test/asyncStorageTestSuite.ts"),
 	path.join(rootPath, "src/test/storageTestSuite.ts")
+)
+
+convertAsyncToSync(
+	path.join(rootPath, "src/storage/ReactiveAsyncTupleDatabase.ts"),
+	path.join(rootPath, "src/storage/ReactiveTupleDatabase.ts")
+)
+
+convertAsyncToSync(
+	path.join(rootPath, "src/storage/ReactiveAsyncTupleDatabase.test.ts"),
+	path.join(rootPath, "src/storage/ReactiveTupleDatabase.test.ts")
 )
