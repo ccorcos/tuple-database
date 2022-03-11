@@ -10,7 +10,6 @@ import { Bounds, normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "./ConcurrencyLog"
 import {
-	Operation,
 	ScanArgs,
 	Tuple,
 	TupleStorage,
@@ -18,8 +17,6 @@ import {
 	TxId,
 	Writes,
 } from "./types"
-
-export type Indexer = (tx: TupleTransaction, op: Operation) => void
 
 export interface ReadOnlyTupleDatabase {
 	get(tuple: Tuple, txId?: TxId): any
@@ -56,13 +53,6 @@ export class TupleDatabase {
 		const bounds = normalizeTupleBounds(args || {})
 		if (txId) this.log.read(txId, bounds)
 		return this.storage.scan({ ...bounds, reverse, limit })
-	}
-
-	indexers: Indexer[] = []
-
-	index(indexer: Indexer) {
-		this.indexers.push(indexer)
-		return this
 	}
 
 	transact(txId?: TxId) {
@@ -114,24 +104,14 @@ export class TupleTransaction {
 	}
 
 	set(tuple: Tuple, value: any) {
-		// Don't fetch this if we don't need it for the indexers.
-		const prev = this.storage.indexers.length ? this.get(tuple) : null
 		t.remove(this.writes.remove, tuple)
 		tv.set(this.writes.set, tuple, value)
-		for (const indexer of this.storage.indexers) {
-			indexer(this, { type: "set", tuple, value, prev })
-		}
 		return this
 	}
 
 	remove(tuple: Tuple) {
-		// Don't fetch this if we don't need it for the indexers.
-		const prev = this.storage.indexers.length ? this.get(tuple) : null
 		tv.remove(this.writes.set, tuple)
 		t.set(this.writes.remove, tuple)
-		for (const indexer of this.storage.indexers) {
-			indexer(this, { type: "remove", tuple, prev })
-		}
 		return this
 	}
 

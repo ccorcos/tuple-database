@@ -17,7 +17,7 @@ import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
 import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
-import { TupleDatabase } from "./TupleDatabase"
+import { TupleDatabase, TupleTransaction } from "./TupleDatabase"
 import { MAX, MIN, Tuple, TupleValuePair } from "./types"
 
 function storageTestSuite(
@@ -793,35 +793,37 @@ function storageTestSuite(
 			assert.deepEqual(tr.exists(["d"]), true)
 		})
 
-		describe("indexing", () => {
-			it("bidirectional friends", () => {
+		describe("indexing happens at the application-level", () => {
+			it("bidirectional friends stored as keys", () => {
 				const store = createStorage(randomId())
 
-				store.index((tx, op) => {
-					if (op.type === "set") {
-						const [a, e, v] = op.tuple
-						if (a !== "friend") return
-						if (tx.exists([a, v, e])) return
-						tx.set([a, v, e], op.value)
-					} else {
-						const [a, e, v] = op.tuple
-						if (a !== "friend") return
-						if (!tx.exists([a, v, e])) return
-						tx.remove([a, v, e])
-					}
-				})
+				function setAEV(
+					[a, e, v]: [string, string, string],
+					tx: TupleTransaction
+				) {
+					tx.set([a, e, v], null)
+					if (a === "friend") tx.set([a, v, e], null)
+				}
 
-				const items: TupleValuePair[] = [
-					[["friend", "a", "b"], null],
-					[["friend", "a", "c"], null],
-					[["friend", "b", "c"], null],
-					[["name", "a", "Chet"], null],
-					[["name", "b", "Meghan"], null],
-					[["name", "c", "Andrew"], null],
+				function removeAEV(
+					[a, e, v]: [string, string, string],
+					tx: TupleTransaction
+				) {
+					tx.remove([a, e, v])
+					if (a === "friend") tx.remove([a, v, e])
+				}
+
+				const items: [string, string, string][] = [
+					["friend", "a", "b"],
+					["friend", "a", "c"],
+					["friend", "b", "c"],
+					["name", "a", "Chet"],
+					["name", "b", "Meghan"],
+					["name", "c", "Andrew"],
 				]
 				const transaction = store.transact()
-				for (const [key, value] of _.shuffle(items)) {
-					transaction.set(key, value)
+				for (const key of _.shuffle(items)) {
+					setAEV(key, transaction)
 				}
 				transaction.commit()
 
@@ -840,10 +842,8 @@ function storageTestSuite(
 				])
 
 				const tx = store.transact()
-				result = tx
-					.remove(["friend", "a", "b"])
-					.scan()
-					.map(([tuple]) => tuple)
+				removeAEV(["friend", "a", "b"], tx)
+				result = tx.scan().map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["friend", "a", "c"],
@@ -855,10 +855,8 @@ function storageTestSuite(
 					["name", "c", "Andrew"],
 				])
 
-				result = tx
-					.set(["friend", "d", "a"], null)
-					.scan()
-					.map(([tuple]) => tuple)
+				setAEV(["friend", "d", "a"], tx)
+				result = tx.scan().map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["friend", "a", "c"],
@@ -873,24 +871,28 @@ function storageTestSuite(
 				])
 			})
 
-			it("calls indexer before writing to tx so we can read if we need to", () => {
+			it("indexing objects stored as values", () => {
 				const store = createStorage(randomId())
 
 				type Person = { id: number; first: string; last: string; age: number }
 
-				store.index((tx, op) => {
-					if (op.tuple[0] !== "personById") return
-
-					if (op.prev) {
-						const prev = op.prev as Person
+				function setPerson(person: Person, tx: TupleTransaction) {
+					const prev = tx.get(["personById", person.id])
+					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])
 					}
 
-					if (op.type === "set") {
-						const person = op.value as Person
-						tx.set(["personByAge", person.age, person.id], person)
+					tx.set(["personById", person.id], person)
+					tx.set(["personByAge", person.age, person.id], person)
+				}
+
+				function removePerson(personId: number, tx: TupleTransaction) {
+					const prev = tx.get(["personById", personId])
+					if (prev) {
+						tx.remove(["personByAge", prev.age, prev.id])
+						tx.remove(["personById", prev.id])
 					}
-				})
+				}
 
 				const people: Person[] = [
 					{ id: 1, first: "Chet", last: "Corcos", age: 29 },
@@ -901,7 +903,7 @@ function storageTestSuite(
 
 				const transaction = store.transact()
 				for (const person of _.shuffle(people)) {
-					transaction.set(["personById", person.id], person)
+					setPerson(person, transaction)
 				}
 				transaction.commit()
 
@@ -919,10 +921,8 @@ function storageTestSuite(
 				])
 
 				const tx = store.transact()
-				result = tx
-					.remove(["personById", 3])
-					.scan()
-					.map(([tuple]) => tuple)
+				removePerson(3, tx)
+				result = tx.scan().map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["personByAge", 26, 2],
@@ -933,15 +933,17 @@ function storageTestSuite(
 					["personById", 4],
 				])
 
-				result = tx
-					.set(["personById", 1], {
+				setPerson(
+					{
 						id: 1,
 						first: "Chet",
 						last: "Corcos",
 						age: 30,
-					})
-					.scan()
-					.map(([tuple]) => tuple)
+					},
+					tx
+				)
+
+				result = tx.scan().map(([tuple]) => tuple)
 
 				assert.deepEqual(result, [
 					["personByAge", 26, 2],

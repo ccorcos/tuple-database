@@ -6,18 +6,12 @@ import * as tv from "../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "./ConcurrencyLog"
 import {
 	AsyncTupleStorage,
-	Operation,
 	ScanArgs,
 	Tuple,
 	TupleValuePair,
 	TxId,
 	Writes,
 } from "./types"
-
-export type AsyncIndexer = (
-	tx: AsyncTupleTransaction,
-	op: Operation
-) => Promise<void>
 
 export interface ReadOnlyAsyncTupleDatabase {
 	get(tuple: Tuple, txId?: TxId): Promise<any>
@@ -54,13 +48,6 @@ export class AsyncTupleDatabase {
 		const bounds = normalizeTupleBounds(args || {})
 		if (txId) this.log.read(txId, bounds)
 		return this.storage.scan({ ...bounds, reverse, limit })
-	}
-
-	indexers: AsyncIndexer[] = []
-
-	index(indexer: AsyncIndexer) {
-		this.indexers.push(indexer)
-		return this
 	}
 
 	transact(txId?: TxId) {
@@ -111,25 +98,15 @@ export class AsyncTupleTransaction {
 		return this.storage.exists(tuple, this.id)
 	}
 
-	async set(tuple: Tuple, value: any) {
-		// Don't fetch this if we don't need it for the indexers.
-		const prev = this.storage.indexers.length ? await this.get(tuple) : null
+	set(tuple: Tuple, value: any) {
 		t.remove(this.writes.remove, tuple)
 		tv.set(this.writes.set, tuple, value)
-		for (const indexer of this.storage.indexers) {
-			await indexer(this, { type: "set", tuple, value, prev })
-		}
 		return this
 	}
 
 	async remove(tuple: Tuple) {
-		// Don't fetch this if we don't need it for the indexers.
-		const prev = this.storage.indexers.length ? await this.get(tuple) : null
 		tv.remove(this.writes.set, tuple)
 		t.set(this.writes.remove, tuple)
-		for (const indexer of this.storage.indexers) {
-			await indexer(this, { type: "remove", tuple, prev })
-		}
 		return this
 	}
 
