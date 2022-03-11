@@ -1,12 +1,12 @@
 import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
-import { InMemoryStorage } from "./InMemoryStorage"
-import { ReactiveStorage } from "./ReactiveStorage"
+import { InMemoryTupleDatabase } from "./InMemoryTupleDatabase"
+import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
 import { MAX, MIN, TupleValuePair, Writes } from "./types"
 
 function createStorage() {
-	return new ReactiveStorage(new InMemoryStorage())
+	return new ReactiveTupleDatabase(new InMemoryTupleDatabase())
 }
 
 describe("ReactiveStorage", () => {
@@ -171,7 +171,7 @@ describe("ReactiveStorage", () => {
 	})
 
 	it("indexers work", () => {
-		const store = new ReactiveStorage(new InMemoryStorage())
+		const store = new ReactiveTupleDatabase(new InMemoryTupleDatabase())
 
 		// A triplestore-like indexing setup.
 		store.index((tx, op) => {

@@ -1,6 +1,7 @@
 import * as fs from "fs-extra"
-import { InMemoryStorage } from "./InMemoryStorage"
-import { TupleValuePair, TxId, Writes } from "./types"
+import { InMemoryTupleStorage } from "./InMemoryTupleDatabase"
+import { TupleDatabase } from "./TupleDatabase"
+import { TupleValuePair, Writes } from "./types"
 
 function parseFile(str: string): TupleValuePair[] {
 	if (str === "") {
@@ -13,20 +14,26 @@ function serializeFile(data: TupleValuePair[]) {
 	return data.map((pair) => JSON.stringify(pair)).join("\n")
 }
 
-export class FileStorage extends InMemoryStorage {
+class FileTupleStorage extends InMemoryTupleStorage {
 	cache: FileCache
 
 	// This is pretty bonkers: https://github.com/Microsoft/TypeScript/issues/8277
 	// @ts-ignore
-	constructor(private dbPath: string) {
+	constructor(public dbPath: string) {
 		const cache = new FileCache(dbPath)
 		super(cache.get())
 		this.cache = cache
 	}
 
-	commit(writes: Writes, txId?: TxId) {
-		super.commit(writes, txId)
+	commit(writes: Writes) {
+		super.commit(writes)
 		this.cache.set(this.data)
+	}
+}
+
+export class FileTupleDatabase extends TupleDatabase {
+	constructor(private dbPath: string) {
+		super(new FileTupleStorage(dbPath))
 	}
 }
 

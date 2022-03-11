@@ -7,24 +7,23 @@
 
 import { strict as assert } from "assert"
 import sqlite from "better-sqlite3"
-// import sqlite from "better-sqlite3"
 import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
-import { ReactiveStorage, transactional } from "../main"
+import { transactional } from "../helpers/transactional"
 import { sortedValues } from "../test/fixtures"
-import { FileStorage } from "./FileStorage"
-import { InMemoryStorage } from "./InMemoryStorage"
-import { InMemoryStorage2 } from "./InMemoryStorage2"
-import { SQLiteStorage } from "./SQLiteStorage"
-// import { SQLiteStorage } from "./SQLiteStorage"
-import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
+import { FileTupleDatabase } from "./FileTupleDatabase"
+import { InMemoryTupleDatabase } from "./InMemoryTupleDatabase"
+import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
+import { SQLiteTupleDatabase } from "./SQLiteTupleDatabase"
+import { TupleDatabase } from "./TupleDatabase"
+import { MAX, MIN, Tuple, TupleValuePair } from "./types"
 
 function storageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => TupleStorage,
+	createStorage: (id: string) => TupleDatabase,
 	durable = true
 ) {
 	describe(name, () => {
@@ -1111,42 +1110,38 @@ function storageTestSuite(
 }
 
 storageTestSuite(
-	"InMemoryStorage2",
+	"InMemoryTupleDatabase",
 	sortedValues,
-	() => new InMemoryStorage2(),
+	() => new InMemoryTupleDatabase(),
 	false
 )
 
 storageTestSuite(
-	"InMemoryStorage",
+	"ReactiveTupleDatabase(InMemoryTupleDatabase)",
 	sortedValues,
-	() => new InMemoryStorage(),
-	false
-)
-
-storageTestSuite(
-	"ReactiveStorage(InMemoryStorage)",
-	sortedValues,
-	() => new ReactiveStorage(new InMemoryStorage()),
+	() => new ReactiveTupleDatabase(new InMemoryTupleDatabase()),
 	false
 )
 
 const tmpDir = __dirname + "/../../tmp/"
 
 storageTestSuite(
-	"FileStorage",
+	"FileTupleDatabase",
 	sortedValues,
-	(id) => new FileStorage(tmpDir + id)
+	(id) => new FileTupleDatabase(tmpDir + id)
 )
 
 storageTestSuite(
-	"SQLiteStorage",
+	"SQLiteTupleDatabase",
 	sortedValues,
-	(id) => new SQLiteStorage(sqlite(tmpDir + id + ".db"))
+	(id) => new SQLiteTupleDatabase(sqlite(tmpDir + id + ".db"))
 )
 
 storageTestSuite(
-	"ReactiveStorage(SQLiteStorage)",
+	"ReactiveTupleDatabase(SQLiteTupleDatabase)",
 	sortedValues,
-	(id) => new ReactiveStorage(new SQLiteStorage(sqlite(tmpDir + id + ".db")))
+	(id) =>
+		new ReactiveTupleDatabase(
+			new SQLiteTupleDatabase(sqlite(tmpDir + id + ".db"))
+		)
 )

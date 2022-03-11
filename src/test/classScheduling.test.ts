@@ -5,8 +5,8 @@ import { flatten, range } from "lodash"
 import { describe, it } from "mocha"
 import { Subspace } from "../helpers/Subspace"
 import { transactional } from "../helpers/transactional"
-import { InMemoryStorage } from "../storage/InMemoryStorage"
-import { ReadOnlyTupleStorage } from "../storage/types"
+import { InMemoryTupleDatabase } from "../storage/InMemoryTupleDatabase"
+import { ReadOnlyTupleDatabase } from "../storage/TupleDatabase"
 
 const scheduling = new Subspace("scheduling")
 const course = scheduling.subspace("class")
@@ -65,7 +65,7 @@ const init = transactional((tr) => {
 	}
 })
 
-function availableClasses(db: ReadOnlyTupleStorage) {
+function availableClasses(db: ReadOnlyTupleDatabase) {
 	return db
 		.scan(course.range())
 		.filter(([tuple, value]) => value > 0)
@@ -106,7 +106,7 @@ const switchClasses = transactional(
 	}
 )
 
-function getClasses(db: ReadOnlyTupleStorage, student: string) {
+function getClasses(db: ReadOnlyTupleDatabase, student: string) {
 	const classes = db
 		.scan(attends.range([student]))
 		.map(([tuple, value]) => attends.unpack(tuple)[1] as string)
@@ -120,7 +120,7 @@ describe("Class Scheduling Example", () => {
 	)
 
 	it("signup", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -129,7 +129,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - already signed up", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -140,7 +140,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup more than one", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -165,7 +165,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -176,7 +176,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop - not taking this class", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -187,7 +187,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - max attendance", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		signup(db, student1, class1)
@@ -201,7 +201,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - too many classes", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		signup(db, student1, class1)
@@ -216,7 +216,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("switchClasses", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		signup(db, student1, class1)
@@ -235,7 +235,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("availableClasses", () => {
-		const db = new InMemoryStorage()
+		const db = new InMemoryTupleDatabase()
 		init(db)
 
 		assert.ok(availableClasses(db).includes(class1))

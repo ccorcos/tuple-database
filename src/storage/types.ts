@@ -45,12 +45,6 @@ export type ScanArgs = {
 	reverse?: boolean
 }
 
-export interface ReadOnlyTupleStorage {
-	get(tuple: Tuple, txId?: TxId): any
-	exists(tuple: Tuple, txId?: TxId): boolean
-	scan(args?: ScanArgs, txId?: TxId): TupleValuePair[]
-}
-
 // TODO: call this a "Write" or a "Commit"
 export type Writes = { set?: TupleValuePair[]; remove?: Tuple[] }
 
@@ -58,22 +52,19 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
 	| { type: "remove"; tuple: Tuple; prev: any }
 
-export type Indexer = (tx: Transaction, op: Operation) => void
-
 export type TxId = string
 
-export interface TupleStorage extends ReadOnlyTupleStorage {
-	index(indexer: Indexer): this
-	transact(txId?: TxId): Transaction
-	commit(writes: Writes, txId?: TxId): void
-	close(): void
+export type ScanStorageArgs = {
+	gt?: Tuple
+	gte?: Tuple
+	lt?: Tuple
+	lte?: Tuple
+	limit?: number
+	reverse?: boolean
 }
 
-export interface Transaction extends ReadOnlyTupleStorage {
-	id: TxId
-	readonly writes: Writes
-	set(tuple: Tuple, value: any): this
-	remove(tuple: Tuple): this
-	write(writes: Writes): this
-	commit(): void
+export type TupleStorage = {
+	scan(args: ScanStorageArgs): TupleValuePair[]
+	commit(writes: Writes): void
+	close(): void
 }

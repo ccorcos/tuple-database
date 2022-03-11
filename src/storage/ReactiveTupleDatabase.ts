@@ -5,81 +5,33 @@ import {
 	normalizeTupleBounds,
 	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
-import { InMemoryStorage, InMemoryTransaction } from "./InMemoryStorage"
-import {
-	Indexer,
-	MIN,
-	ScanArgs,
-	Tuple,
-	TupleStorage,
-	TxId,
-	Writes,
-} from "./types"
+import { InMemoryTupleDatabase } from "./InMemoryTupleDatabase"
+import { TupleDatabase } from "./TupleDatabase"
+import { MIN, ScanArgs, Tuple, TupleStorage, TxId, Writes } from "./types"
 
 export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
-export class ReactiveStorage implements TupleStorage {
+export class ReactiveTupleDatabase extends TupleDatabase {
 	debug = false
 
-	constructor(private storage: TupleStorage) {}
-
-	private log(...args: any[]) {
-		if (this.debug) {
-			console.log(...args)
-		}
-	}
-
-	get(tuple: Tuple, txId?: TxId) {
-		return this.storage.get(tuple, txId)
-	}
-
-	exists(tuple: Tuple, txId?: TxId) {
-		return this.storage.exists(tuple, txId)
-	}
-
-	scan(args?: ScanArgs, txId?: TxId) {
-		return this.storage.scan(args, txId)
-	}
-
-	indexers: Indexer[] = []
-
-	index(indexer: Indexer) {
-		this.indexers.push(indexer)
-		return this
-	}
-
-	transact() {
-		// NOTE: we're bypassing the storage transaction.
-		return new InMemoryTransaction(
-			{
-				indexers: this.indexers,
-				get: this.get.bind(this),
-				exists: this.exists.bind(this),
-				scan: this.scan.bind(this),
-				commit: this.commit.bind(this),
-			},
-			this.storage.transact().id
-		)
+	constructor(storage: TupleStorage) {
+		super(storage)
 	}
 
 	commit(writes: Writes, txId?: TxId) {
 		const updates = this.getEmits(writes)
-		this.storage.commit(writes, txId)
+		super.commit(writes, txId)
 		for (const [callback, writes] of updates.entries()) {
 			callback(writes)
 		}
 	}
 
-	close() {
-		return this.storage.close()
-	}
-
-	private listeners = new InMemoryStorage()
+	private listeners = new InMemoryTupleDatabase()
 
 	subscribe = (args: ScanArgs, callback: Callback) => {
-		this.log("db/subscribe", args)
+		// this.log("db/subscribe", args)
 
 		const bounds = normalizeTupleBounds(args)
 		const prefix = prefixTupleBounds(bounds)
@@ -90,7 +42,7 @@ export class ReactiveStorage implements TupleStorage {
 		this.listeners.transact().set([prefix, id], value).commit()
 
 		const unsubscribe = () => {
-			this.log("db/unsubscribe", args)
+			// this.log("db/unsubscribe", args)
 			this.listeners.transact().remove([prefix, id]).commit()
 		}
 

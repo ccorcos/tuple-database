@@ -4,26 +4,26 @@ import * as t from "../helpers/sortedTupleArray"
 import { Bounds, normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "./ConcurrencyLog"
-import { Indexer, ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "./types"
+import {
+	Operation,
+	ScanArgs,
+	Tuple,
+	TupleStorage,
+	TupleValuePair,
+	TxId,
+	Writes,
+} from "./types"
 
-export type ScanArgs2 = {
-	prefix?: never
-	gt?: Tuple
-	gte?: Tuple
-	lt?: Tuple
-	lte?: Tuple
-	limit?: number
-	reverse?: boolean
+export type Indexer = (tx: TupleTransaction, op: Operation) => void
+
+export interface ReadOnlyTupleDatabase {
+	get(tuple: Tuple, txId?: TxId): any
+	exists(tuple: Tuple, txId?: TxId): boolean
+	scan(args?: ScanArgs, txId?: TxId): TupleValuePair[]
 }
 
-export interface TupleStorage2 {
-	scan(args: ScanArgs2): TupleValuePair[]
-	commit(writes: Writes): void
-	close(): void
-}
-
-export class AbstractStorage {
-	constructor(private storage: TupleStorage2) {}
+export class TupleDatabase {
+	constructor(private storage: TupleStorage) {}
 
 	log = new ConcurrencyLog()
 
@@ -62,7 +62,7 @@ export class AbstractStorage {
 
 	transact(txId?: TxId) {
 		const id = txId || randomId()
-		return new AbstractTransaction(this, id)
+		return new TupleTransaction(this, id)
 	}
 
 	commit(writes: Writes, txId?: string) {
@@ -78,8 +78,8 @@ export class AbstractStorage {
 	}
 }
 
-export class AbstractTransaction {
-	constructor(private storage: AbstractStorage, public id: TxId) {}
+export class TupleTransaction {
+	constructor(private storage: TupleDatabase, public id: TxId) {}
 
 	writes: Required<Writes> = { set: [], remove: [] }
 
