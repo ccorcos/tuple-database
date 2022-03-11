@@ -84,6 +84,7 @@ export type ReadOnlyAsyncTupleDatabaseApi = {
 export type AsyncTupleDatabaseApi = ReadOnlyAsyncTupleDatabaseApi & {
 	commit(writes: Writes, txId?: string): Promise<void>
 	cancel(txId: string): Promise<void>
+	// transact(txId?: string): AsyncTupleTransactionApi
 }
 
 export type AsyncTupleTransactionApi = ReadOnlyAsyncTupleDatabaseApi & {
@@ -103,6 +104,7 @@ export type ReadOnlyTupleDatabaseApi = {
 export type TupleDatabaseApi = ReadOnlyTupleDatabaseApi & {
 	commit(writes: Writes, txId?: string): void
 	cancel(txId: string): void
+	// transact(txId?: string): TupleTransactionApi
 }
 
 export type TupleTransactionApi = ReadOnlyTupleDatabaseApi & {
