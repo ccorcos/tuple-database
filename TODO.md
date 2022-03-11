@@ -1,6 +1,13 @@
 ## TODO
 
-- async storage interface as well.
+- async leveldb interface
+	- async storage tests.
+
+- README
+	- notes about async database compilation.
+	- new names and apis.
+
+
 - typed subspace
 
 - minimal triplestore example
