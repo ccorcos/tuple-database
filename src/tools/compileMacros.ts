@@ -10,15 +10,7 @@ import * as path from "path"
 
 const rootPath = path.resolve(__dirname, "../..")
 
-function convertAsyncToSync(inputPath: string, outputPath: string) {
-	console.log(
-		path.relative(rootPath, inputPath),
-		"->",
-		path.relative(rootPath, outputPath)
-	)
-
-	let contents = fs.readFileSync(inputPath, "utf8")
-
+function convertAsyncToSync(contents: string) {
 	// Collapse union types.
 	contents = contents.replace(
 		/AsyncTupleStorage \| TupleStorage/g,
@@ -40,6 +32,19 @@ function convertAsyncToSync(inputPath: string, outputPath: string) {
 	// Sync test assertions.
 	contents = contents.replace(/assert\.rejects/g, "assert.throws")
 
+	return contents
+}
+
+function convertAsyncToSyncFile(inputPath: string, outputPath: string) {
+	console.log(
+		path.relative(rootPath, inputPath),
+		"->",
+		path.relative(rootPath, outputPath)
+	)
+
+	let contents = fs.readFileSync(inputPath, "utf8")
+	contents = convertAsyncToSync(contents)
+
 	contents = `
 /*
 
@@ -60,22 +65,15 @@ ${contents}
 	)
 }
 
-convertAsyncToSync(
-	path.join(rootPath, "src/storage/AsyncTupleDatabase.ts"),
-	path.join(rootPath, "src/storage/TupleDatabase.ts")
+const fileNames: string[] = fs.readdirSync(
+	path.join(rootPath, "src/storage/async")
 )
 
-convertAsyncToSync(
-	path.join(rootPath, "src/test/asyncStorageTestSuite.ts"),
-	path.join(rootPath, "src/test/storageTestSuite.ts")
-)
+for (const fileName of fileNames) {
+	if (!fileName.endsWith(".ts")) continue
 
-convertAsyncToSync(
-	path.join(rootPath, "src/storage/ReactiveAsyncTupleDatabase.ts"),
-	path.join(rootPath, "src/storage/ReactiveTupleDatabase.ts")
-)
-
-convertAsyncToSync(
-	path.join(rootPath, "src/storage/ReactiveAsyncTupleDatabase.test.ts"),
-	path.join(rootPath, "src/storage/ReactiveTupleDatabase.test.ts")
-)
+	convertAsyncToSyncFile(
+		path.join(rootPath, `src/storage/async/${fileName}`),
+		path.join(rootPath, `src/storage/sync/${convertAsyncToSync(fileName)}`)
+	)
+}

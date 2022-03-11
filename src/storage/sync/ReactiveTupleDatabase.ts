@@ -11,8 +11,8 @@ import {
 	prefixTupleBounds,
 } from "../../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
+import { TupleDatabase } from "../sync/TupleDatabase"
 import { MIN, ScanArgs, Tuple, TupleStorage, TxId, Writes } from "../types"
-import { TupleDatabase } from "./TupleDatabase"
 
 export type Callback = (write: Writes) => void
 
