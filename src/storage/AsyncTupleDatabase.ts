@@ -104,21 +104,21 @@ export class AsyncTupleTransaction {
 		return this
 	}
 
-	async remove(tuple: Tuple) {
+	remove(tuple: Tuple) {
 		tv.remove(this.writes.set, tuple)
 		t.set(this.writes.remove, tuple)
 		return this
 	}
 
-	async write(writes: Writes) {
+	write(writes: Writes) {
 		// If you're calling this function, then the order of these opertions
 		// shouldn't matter.
 		const { set, remove } = writes
 		for (const tuple of remove || []) {
-			await this.remove(tuple)
+			this.remove(tuple)
 		}
 		for (const [tuple, value] of set || []) {
-			await this.set(tuple, value)
+			this.set(tuple, value)
 		}
 		return this
 	}
@@ -136,7 +136,7 @@ export class AsyncTupleTransaction {
 		return result
 	}
 
-	commit() {
+	async commit() {
 		return this.storage.commit(this.writes, this.id)
 	}
 
