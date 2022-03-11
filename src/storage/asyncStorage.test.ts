@@ -10,6 +10,7 @@ import { sortedValues } from "../test/fixtures"
 import { AsyncTupleDatabase, AsyncTupleTransaction } from "./AsyncTupleDatabase"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
+import { ReactiveAsyncTupleDatabase } from "./ReactiveAsyncTupleDatabase"
 import { MAX, MIN, Tuple, TupleValuePair } from "./types"
 
 function asyncStorageTestSuite(
@@ -1116,12 +1117,12 @@ asyncStorageTestSuite(
 	false
 )
 
-// asyncStorageTestSuite(
-// 	"ReactiveTupleDatabase(InMemoryTupleStorage)",
-// 	sortedValues,
-// 	() => new ReactiveTupleDatabase(new InMemoryTupleStorage()),
-// 	false
-// )
+asyncStorageTestSuite(
+	"ReactiveAsyncTupleDatabase(InMemoryTupleStorage)",
+	sortedValues,
+	() => new ReactiveAsyncTupleDatabase(new InMemoryTupleStorage()),
+	false
+)
 
 const tmpDir = path.resolve(__dirname, "/../../tmp")
 
@@ -1134,11 +1135,11 @@ asyncStorageTestSuite(
 		)
 )
 
-// asyncStorageTestSuite(
-// 	"ReactiveTupleDatabase(SQLiteTupleStorage)",
-// 	sortedValues,
-// 	(id) =>
-// 		new ReactiveTupleDatabase(
-// 			new SQLiteTupleStorage(sqlite(tmpDir + id + ".db"))
-// 		)
-// )
+asyncStorageTestSuite(
+	"ReactiveAsyncTupleDatabase(LevelTupleStorage)",
+	sortedValues,
+	(id) =>
+		new ReactiveAsyncTupleDatabase(
+			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
+		)
+)

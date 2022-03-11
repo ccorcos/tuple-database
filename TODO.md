@@ -1,5 +1,10 @@
 ## TODO
 
+- generate sync storage test
+- reactive async storage
+	- subscribe should be async over wire somehow..
+- async transactional
+
 - async leveldb interface
 	- async storage tests.
 
