@@ -16,6 +16,7 @@ import { ReactiveStorage, transactional } from "../main"
 import { sortedValues } from "../test/fixtures"
 import { FileStorage } from "./FileStorage"
 import { InMemoryStorage } from "./InMemoryStorage"
+import { InMemoryStorage2 } from "./InMemoryStorage2"
 import { SQLiteStorage } from "./SQLiteStorage"
 // import { SQLiteStorage } from "./SQLiteStorage"
 import { MAX, MIN, Tuple, TupleStorage, TupleValuePair } from "./types"
@@ -1108,6 +1109,13 @@ function storageTestSuite(
 		}
 	})
 }
+
+storageTestSuite(
+	"InMemoryStorage2",
+	sortedValues,
+	() => new InMemoryStorage2(),
+	false
+)
 
 storageTestSuite(
 	"InMemoryStorage",

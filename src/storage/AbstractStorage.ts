@@ -1,51 +1,68 @@
 import { iterateWrittenTuples } from "../helpers/iterateTuples"
 import { randomId } from "../helpers/randomId"
 import * as t from "../helpers/sortedTupleArray"
+import { Bounds, normalizeTupleBounds } from "../helpers/sortedTupleArray"
 import * as tv from "../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "./ConcurrencyLog"
-import {
-	Indexer,
-	ScanArgs,
-	Transaction,
-	Tuple,
-	TupleStorage,
-	TupleValuePair,
-	TxId,
-	Writes,
-} from "./types"
+import { Indexer, ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "./types"
 
-export class InMemoryStorage implements TupleStorage {
-	data: TupleValuePair[]
-	indexers: Indexer[] = []
+export type ScanArgs2 = {
+	prefix?: never
+	gt?: Tuple
+	gte?: Tuple
+	lt?: Tuple
+	lte?: Tuple
+	limit?: number
+	reverse?: boolean
+}
+
+export interface TupleStorage2 {
+	scan(args: ScanArgs2): TupleValuePair[]
+	commit(writes: Writes): void
+	close(): void
+}
+
+export class AbstractStorage {
+	constructor(private storage: TupleStorage2) {}
+
 	log = new ConcurrencyLog()
 
-	constructor(data?: TupleValuePair[]) {
-		this.data = data || []
+	get(tuple: Tuple, txId?: TxId): any {
+		const bounds: Bounds = { gte: tuple, lte: tuple }
+		if (txId) this.log.read(txId, bounds)
+
+		const items = this.storage.scan(bounds)
+		if (items.length === 0) return
+		if (items.length > 1) throw new Error("Get expects only one value.")
+		const pair = items[0]
+		return pair[1]
 	}
+
+	exists(tuple: Tuple, txId?: TxId): boolean {
+		const bounds: Bounds = { gte: tuple, lte: tuple }
+		if (txId) this.log.read(txId, bounds)
+
+		const items = this.storage.scan(bounds)
+		return items.length > 0
+	}
+
+	scan(args: ScanArgs = {}, txId?: TxId): TupleValuePair[] {
+		const { reverse, limit } = args
+		const bounds = normalizeTupleBounds(args || {})
+		if (txId) this.log.read(txId, bounds)
+		return this.storage.scan({ ...bounds, reverse, limit })
+	}
+
+	indexers: Indexer[] = []
 
 	index(indexer: Indexer) {
 		this.indexers.push(indexer)
 		return this
 	}
 
-	get(tuple: Tuple, txId?: TxId) {
-		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
-		return tv.get(this.data, tuple)
-	}
-
-	exists(tuple: Tuple, txId?: TxId) {
-		if (txId) this.log.read(txId, { gte: tuple, lte: tuple })
-		return tv.exists(this.data, tuple)
-	}
-
-	scan(args: ScanArgs = {}, txId?: TxId) {
-		if (txId) this.log.read(txId, t.normalizeTupleBounds(args))
-		return tv.scan(this.data, args)
-	}
-
 	transact(txId?: TxId) {
 		const id = txId || randomId()
-		return new InMemoryTransaction(this, id)
+		return new AbstractTransaction(this, id)
 	}
 
 	commit(writes: Writes, txId?: string) {
@@ -53,34 +70,16 @@ export class InMemoryStorage implements TupleStorage {
 		for (const tuple of iterateWrittenTuples(writes)) {
 			this.log.write(txId, tuple)
 		}
-
-		// Indexers run inside the tx so we don't need to do that here.
-		// And because of that, the order here should not matter.
-		const { set, remove } = writes
-		for (const tuple of remove || []) {
-			tv.remove(this.data, tuple)
-		}
-		for (const [tuple, value] of set || []) {
-			tv.set(this.data, tuple, value)
-		}
+		this.storage.commit(writes)
 	}
 
 	close() {
-		// Nothing happens really. This is more important for SQLite.
-		return
+		this.storage.close()
 	}
 }
 
-export type TransactionArgs = {
-	indexers: Indexer[]
-	get(tuple: Tuple, txId: TxId): any
-	exists(tuple: Tuple, txId: TxId): boolean
-	scan(args: ScanArgs, txId: TxId): TupleValuePair[]
-	commit(writes: Writes, txId: TxId): void
-}
-
-export class InMemoryTransaction implements Transaction {
-	constructor(private storage: TransactionArgs, public id: TxId) {}
+export class AbstractTransaction {
+	constructor(private storage: AbstractStorage, public id: TxId) {}
 
 	writes: Required<Writes> = { set: [], remove: [] }
 
