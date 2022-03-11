@@ -5,8 +5,8 @@ import { flatten, range } from "lodash"
 import { describe, it } from "mocha"
 import { Subspace } from "../helpers/Subspace"
 import { transactional } from "../helpers/transactional"
-import { InMemoryTupleDatabase } from "../storage/InMemoryTupleDatabase"
-import { ReadOnlyTupleDatabase } from "../storage/TupleDatabase"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { ReadOnlyTupleDatabase, TupleDatabase } from "../storage/TupleDatabase"
 
 const scheduling = new Subspace("scheduling")
 const course = scheduling.subspace("class")
@@ -120,7 +120,7 @@ describe("Class Scheduling Example", () => {
 	)
 
 	it("signup", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -129,7 +129,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - already signed up", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -140,7 +140,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup more than one", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -165,7 +165,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -176,7 +176,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop - not taking this class", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -187,7 +187,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - max attendance", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		signup(db, student1, class1)
@@ -201,7 +201,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - too many classes", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		signup(db, student1, class1)
@@ -216,7 +216,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("switchClasses", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		signup(db, student1, class1)
@@ -235,7 +235,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("availableClasses", () => {
-		const db = new InMemoryTupleDatabase()
+		const db = new TupleDatabase(new InMemoryTupleStorage())
 		init(db)
 
 		assert.ok(availableClasses(db).includes(class1))

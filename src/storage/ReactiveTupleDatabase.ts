@@ -5,7 +5,7 @@ import {
 	normalizeTupleBounds,
 	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
-import { InMemoryTupleDatabase } from "./InMemoryTupleDatabase"
+import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { TupleDatabase } from "./TupleDatabase"
 import { MIN, ScanArgs, Tuple, TupleStorage, TxId, Writes } from "./types"
 
@@ -28,7 +28,7 @@ export class ReactiveTupleDatabase extends TupleDatabase {
 		}
 	}
 
-	private listeners = new InMemoryTupleDatabase()
+	private listeners = new TupleDatabase(new InMemoryTupleStorage())
 
 	subscribe = (args: ScanArgs, callback: Callback) => {
 		// this.log("db/subscribe", args)

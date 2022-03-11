@@ -1,6 +1,5 @@
 import * as fs from "fs-extra"
-import { InMemoryTupleStorage } from "./InMemoryTupleDatabase"
-import { TupleDatabase } from "./TupleDatabase"
+import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { TupleValuePair, Writes } from "./types"
 
 function parseFile(str: string): TupleValuePair[] {
@@ -14,7 +13,7 @@ function serializeFile(data: TupleValuePair[]) {
 	return data.map((pair) => JSON.stringify(pair)).join("\n")
 }
 
-class FileTupleStorage extends InMemoryTupleStorage {
+export class FileTupleStorage extends InMemoryTupleStorage {
 	cache: FileCache
 
 	// This is pretty bonkers: https://github.com/Microsoft/TypeScript/issues/8277
@@ -28,12 +27,6 @@ class FileTupleStorage extends InMemoryTupleStorage {
 	commit(writes: Writes) {
 		super.commit(writes)
 		this.cache.set(this.data)
-	}
-}
-
-export class FileTupleDatabase extends TupleDatabase {
-	constructor(private dbPath: string) {
-		super(new FileTupleStorage(dbPath))
 	}
 }
 

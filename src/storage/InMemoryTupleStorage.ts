@@ -1,5 +1,4 @@
 import * as tv from "../helpers/sortedTupleValuePairs"
-import { TupleDatabase } from "./TupleDatabase"
 import { ScanStorageArgs, TupleStorage, TupleValuePair, Writes } from "./types"
 
 export class InMemoryTupleStorage implements TupleStorage {
@@ -26,10 +25,4 @@ export class InMemoryTupleStorage implements TupleStorage {
 	}
 
 	close() {}
-}
-
-export class InMemoryTupleDatabase extends TupleDatabase {
-	constructor(data?: TupleValuePair[]) {
-		super(new InMemoryTupleStorage(data))
-	}
 }

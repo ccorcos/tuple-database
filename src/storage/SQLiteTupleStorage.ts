@@ -1,6 +1,5 @@
 import { Database, Transaction } from "better-sqlite3"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { TupleDatabase } from "./TupleDatabase"
 import {
 	ScanStorageArgs,
 	Tuple,
@@ -9,10 +8,10 @@ import {
 	Writes,
 } from "./types"
 
-export class SQLiteStorage implements TupleStorage {
+export class SQLiteTupleStorage implements TupleStorage {
 	/**
 	 * import sqlite from "better-sqlite3"
-	 * new SQLiteStorage(sqlite("path/to.db"))
+	 * new SQLiteTupleStorage(sqlite("path/to.db"))
 	 */
 	constructor(private db: Database) {
 		const createTableQuery = db.prepare(
@@ -103,15 +102,5 @@ export class SQLiteStorage implements TupleStorage {
 
 	close() {
 		this.db.close()
-	}
-}
-
-export class SQLiteTupleDatabase extends TupleDatabase {
-	/**
-	 * import sqlite from "better-sqlite3"
-	 * new SQLiteStorage(sqlite("path/to.db"))
-	 */
-	constructor(private db: Database) {
-		super(new SQLiteStorage(db))
 	}
 }

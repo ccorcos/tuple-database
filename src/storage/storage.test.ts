@@ -13,10 +13,10 @@ import { describe, it } from "mocha"
 import { randomId } from "../helpers/randomId"
 import { transactional } from "../helpers/transactional"
 import { sortedValues } from "../test/fixtures"
-import { FileTupleDatabase } from "./FileTupleDatabase"
-import { InMemoryTupleDatabase } from "./InMemoryTupleDatabase"
+import { FileTupleStorage } from "./FileTupleStorage"
+import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { ReactiveTupleDatabase } from "./ReactiveTupleDatabase"
-import { SQLiteTupleDatabase } from "./SQLiteTupleDatabase"
+import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
 import { TupleDatabase } from "./TupleDatabase"
 import { MAX, MIN, Tuple, TupleValuePair } from "./types"
 
@@ -1110,38 +1110,38 @@ function storageTestSuite(
 }
 
 storageTestSuite(
-	"InMemoryTupleDatabase",
+	"InMemoryTupleStorage",
 	sortedValues,
-	() => new InMemoryTupleDatabase(),
+	() => new TupleDatabase(new InMemoryTupleStorage()),
 	false
 )
 
 storageTestSuite(
-	"ReactiveTupleDatabase(InMemoryTupleDatabase)",
+	"ReactiveTupleDatabase(InMemoryTupleStorage)",
 	sortedValues,
-	() => new ReactiveTupleDatabase(new InMemoryTupleDatabase()),
+	() => new ReactiveTupleDatabase(new InMemoryTupleStorage()),
 	false
 )
 
 const tmpDir = __dirname + "/../../tmp/"
 
 storageTestSuite(
-	"FileTupleDatabase",
+	"FileTupleStorage",
 	sortedValues,
-	(id) => new FileTupleDatabase(tmpDir + id)
+	(id) => new TupleDatabase(new FileTupleStorage(tmpDir + id))
 )
 
 storageTestSuite(
-	"SQLiteTupleDatabase",
+	"SQLiteTupleStorage",
 	sortedValues,
-	(id) => new SQLiteTupleDatabase(sqlite(tmpDir + id + ".db"))
+	(id) => new TupleDatabase(new SQLiteTupleStorage(sqlite(tmpDir + id + ".db")))
 )
 
 storageTestSuite(
-	"ReactiveTupleDatabase(SQLiteTupleDatabase)",
+	"ReactiveTupleDatabase(SQLiteTupleStorage)",
 	sortedValues,
 	(id) =>
 		new ReactiveTupleDatabase(
-			new SQLiteTupleDatabase(sqlite(tmpDir + id + ".db"))
+			new SQLiteTupleStorage(sqlite(tmpDir + id + ".db"))
 		)
 )

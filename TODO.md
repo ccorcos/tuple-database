@@ -1,11 +1,9 @@
 ## TODO
 
-- run indexers in transaction?
-	- we need to register conflict read here too...
+
 
 - cancel a transaction to cleanup...
 
-- generic storage interface that we can wrap with our concurrency control.
 - async storage interface as well.
 
 
