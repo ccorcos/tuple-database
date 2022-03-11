@@ -8,7 +8,7 @@ import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
 import { TupleDatabase } from "./TupleDatabase"
 
 storageTestSuite(
-	"InMemoryTupleStorage",
+	"TupleDatabase(InMemoryTupleStorage)",
 	sortedValues,
 	() => new TupleDatabase(new InMemoryTupleStorage()),
 	false
@@ -24,13 +24,13 @@ storageTestSuite(
 const tmpDir = __dirname + "/../../tmp/"
 
 storageTestSuite(
-	"FileTupleStorage",
+	"TupleDatabase(FileTupleStorage)",
 	sortedValues,
 	(id) => new TupleDatabase(new FileTupleStorage(tmpDir + id))
 )
 
 storageTestSuite(
-	"SQLiteTupleStorage",
+	"TupleDatabase(SQLiteTupleStorage)",
 	sortedValues,
 	(id) => new TupleDatabase(new SQLiteTupleStorage(sqlite(tmpDir + id + ".db")))
 )
