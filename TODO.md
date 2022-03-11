@@ -1,14 +1,10 @@
 ## TODO
 
-
-
 - cancel a transaction to cleanup...
-
 - async storage interface as well.
-
+- typed subspace
 
 - minimal triplestore example
-- typed subspace
 - benchmarks
 
 - how to use this in a UI with some kind of async backend.

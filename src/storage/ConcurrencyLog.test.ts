@@ -30,4 +30,6 @@ describe("ConcurrencyLog", () => {
 	})
 
 	it.skip("Keeps writes that conflict with reads of other transactions.")
+
+	it.skip("Can cancel a transaction to clean up the log.")
 })

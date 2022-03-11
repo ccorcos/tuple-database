@@ -50,6 +50,11 @@ export class ConcurrencyLog {
 		}
 	}
 
+	cancel(txId: TxId) {
+		this.cleanupReads(txId)
+		this.cleanupWrites()
+	}
+
 	/** Cleanup any reads for this transaction. */
 	cleanupReads(txId: string) {
 		mutableFilter(this.log, (item) => {

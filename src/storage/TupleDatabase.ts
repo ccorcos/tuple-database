@@ -73,6 +73,10 @@ export class TupleDatabase {
 		this.storage.commit(writes)
 	}
 
+	cancel(txId: string) {
+		this.log.cancel(txId)
+	}
+
 	close() {
 		this.storage.close()
 	}
@@ -154,5 +158,9 @@ export class TupleTransaction {
 
 	commit() {
 		return this.storage.commit(this.writes, this.id)
+	}
+
+	cancel() {
+		return this.storage.cancel(this.id)
 	}
 }
