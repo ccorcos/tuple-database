@@ -68,3 +68,9 @@ export type TupleStorage = {
 	commit(writes: Writes): void
 	close(): void
 }
+
+export type AsyncTupleStorage = {
+	scan(args: ScanStorageArgs): Promise<TupleValuePair[]>
+	commit(writes: Writes): Promise<void>
+	close(): Promise<void>
+}
