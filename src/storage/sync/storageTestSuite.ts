@@ -9,13 +9,19 @@ import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { transactional } from "../../helpers/transactional"
-import { MAX, MIN, Tuple, TupleValuePair } from "../types"
-import { TupleDatabase, TupleTransaction } from "./TupleDatabase"
+import {
+	MAX,
+	MIN,
+	Tuple,
+	TupleDatabaseApi,
+	TupleTransactionApi,
+	TupleValuePair,
+} from "../types"
 
 export function storageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => TupleDatabase,
+	createStorage: (id: string) => TupleDatabaseApi,
 	durable = true
 ) {
 	describe(name, () => {
@@ -791,7 +797,7 @@ export function storageTestSuite(
 
 				function setAEV(
 					[a, e, v]: [string, string, string],
-					tx: TupleTransaction
+					tx: TupleTransactionApi
 				) {
 					tx.set([a, e, v], null)
 					if (a === "friend") tx.set([a, v, e], null)
@@ -799,7 +805,7 @@ export function storageTestSuite(
 
 				function removeAEV(
 					[a, e, v]: [string, string, string],
-					tx: TupleTransaction
+					tx: TupleTransactionApi
 				) {
 					tx.remove([a, e, v])
 					if (a === "friend") tx.remove([a, v, e])
@@ -868,7 +874,7 @@ export function storageTestSuite(
 
 				type Person = { id: number; first: string; last: string; age: number }
 
-				function setPerson(person: Person, tx: TupleTransaction) {
+				function setPerson(person: Person, tx: TupleTransactionApi) {
 					const prev = tx.get(["personById", person.id])
 					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])
@@ -878,7 +884,7 @@ export function storageTestSuite(
 					tx.set(["personByAge", person.age, person.id], person)
 				}
 
-				function removePerson(personId: number, tx: TupleTransaction) {
+				function removePerson(personId: number, tx: TupleTransactionApi) {
 					const prev = tx.get(["personById", personId])
 					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])

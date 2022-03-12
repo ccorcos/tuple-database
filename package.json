@@ -5,7 +5,9 @@
   "repository": "github:ccorcos/tuple-database",
   "main": "./main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "run-s build:macros build:tsc",
+    "build:tsc": "tsc",
+    "build:macros": "ts-node src/tools/compileMacros.ts",
     "watch": "tsc -w",
     "test": "npm run test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
     "test:clean": "rm -rf tmp",
@@ -24,6 +26,7 @@
     "@types/react": "^17.0.2",
     "better-sqlite3": "^7.1.2",
     "mocha": "^8.3.0",
+    "npm-run-all": "^4.1.5",
     "organize-imports-cli": "^0.9.0",
     "prettier": "^2.2.1",
     "react": "^17.0.1",

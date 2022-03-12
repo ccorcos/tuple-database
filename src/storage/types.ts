@@ -63,11 +63,9 @@ export type ScanStorageArgs = {
 	reverse?: boolean
 }
 
-export type TupleStorageApi = {
-	scan(args: ScanStorageArgs): TupleValuePair[]
-	commit(writes: Writes): void
-	close(): void
-}
+// ============================================================================
+// Async
+// ============================================================================
 
 export type AsyncTupleStorageApi = {
 	scan(args: ScanStorageArgs): Promise<TupleValuePair[]>
@@ -84,7 +82,8 @@ export type ReadOnlyAsyncTupleDatabaseApi = {
 export type AsyncTupleDatabaseApi = ReadOnlyAsyncTupleDatabaseApi & {
 	commit(writes: Writes, txId?: string): Promise<void>
 	cancel(txId: string): Promise<void>
-	// transact(txId?: string): AsyncTupleTransactionApi
+	transact(txId?: string): AsyncTupleTransactionApi
+	close(): Promise<void>
 }
 
 export type AsyncTupleTransactionApi = ReadOnlyAsyncTupleDatabaseApi & {
@@ -93,6 +92,22 @@ export type AsyncTupleTransactionApi = ReadOnlyAsyncTupleDatabaseApi & {
 	write(writes: Writes): AsyncTupleTransactionApi
 	commit(): Promise<void>
 	cancel(): Promise<void>
+}
+
+export type AsyncTupleClientArgs = ReadOnlyAsyncTupleDatabaseApi & {
+	commit(writes: Writes, txId?: string): Promise<void>
+	cancel(txId: string): Promise<void>
+	close(): Promise<void>
+}
+
+// ============================================================================
+// Sync
+// ============================================================================
+
+export type TupleStorageApi = {
+	scan(args: ScanStorageArgs): TupleValuePair[]
+	commit(writes: Writes): void
+	close(): void
 }
 
 export type ReadOnlyTupleDatabaseApi = {
@@ -104,7 +119,8 @@ export type ReadOnlyTupleDatabaseApi = {
 export type TupleDatabaseApi = ReadOnlyTupleDatabaseApi & {
 	commit(writes: Writes, txId?: string): void
 	cancel(txId: string): void
-	// transact(txId?: string): TupleTransactionApi
+	transact(txId?: string): TupleTransactionApi
+	close(): void
 }
 
 export type TupleTransactionApi = ReadOnlyTupleDatabaseApi & {
@@ -113,4 +129,10 @@ export type TupleTransactionApi = ReadOnlyTupleDatabaseApi & {
 	write(writes: Writes): TupleTransactionApi
 	commit(): void
 	cancel(): void
+}
+
+export type TupleClientArgs = ReadOnlyTupleDatabaseApi & {
+	commit(writes: Writes, txId?: string): void
+	cancel(txId: string): void
+	close(): void
 }

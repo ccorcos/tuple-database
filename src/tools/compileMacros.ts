@@ -17,8 +17,8 @@ function convertAsyncToSync(contents: string) {
 		"TupleStorageApi"
 	)
 	contents = contents.replace(
-		/TupleStorage \| AsyncTupleStorageApi/g,
-		"TupleStorage"
+		/TupleStorageApi \| AsyncTupleStorageApi/g,
+		"TupleStorageApi"
 	)
 
 	// Maintain camelcase

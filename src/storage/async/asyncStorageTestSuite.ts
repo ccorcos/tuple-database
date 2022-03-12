@@ -4,13 +4,19 @@ import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { transactionalAsync } from "../../helpers/transactional"
-import { MAX, MIN, Tuple, TupleValuePair } from "../types"
-import { AsyncTupleDatabase, AsyncTupleTransaction } from "./AsyncTupleDatabase"
+import {
+	AsyncTupleDatabaseApi,
+	AsyncTupleTransactionApi,
+	MAX,
+	MIN,
+	Tuple,
+	TupleValuePair,
+} from "../types"
 
 export function asyncStorageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => AsyncTupleDatabase,
+	createStorage: (id: string) => AsyncTupleDatabaseApi,
 	durable = true
 ) {
 	describe(name, () => {
@@ -786,7 +792,7 @@ export function asyncStorageTestSuite(
 
 				function setAEV(
 					[a, e, v]: [string, string, string],
-					tx: AsyncTupleTransaction
+					tx: AsyncTupleTransactionApi
 				) {
 					tx.set([a, e, v], null)
 					if (a === "friend") tx.set([a, v, e], null)
@@ -794,7 +800,7 @@ export function asyncStorageTestSuite(
 
 				function removeAEV(
 					[a, e, v]: [string, string, string],
-					tx: AsyncTupleTransaction
+					tx: AsyncTupleTransactionApi
 				) {
 					tx.remove([a, e, v])
 					if (a === "friend") tx.remove([a, v, e])
@@ -863,7 +869,7 @@ export function asyncStorageTestSuite(
 
 				type Person = { id: number; first: string; last: string; age: number }
 
-				async function setPerson(person: Person, tx: AsyncTupleTransaction) {
+				async function setPerson(person: Person, tx: AsyncTupleTransactionApi) {
 					const prev = await tx.get(["personById", person.id])
 					if (prev) {
 						tx.remove(["personByAge", prev.age, prev.id])
@@ -875,7 +881,7 @@ export function asyncStorageTestSuite(
 
 				async function removePerson(
 					personId: number,
-					tx: AsyncTupleTransaction
+					tx: AsyncTupleTransactionApi
 				) {
 					const prev = await tx.get(["personById", personId])
 					if (prev) {

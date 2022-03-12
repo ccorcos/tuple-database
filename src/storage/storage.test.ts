@@ -5,6 +5,7 @@ import { sortedValues } from "../test/fixtures"
 import { asyncStorageTestSuite } from "./async/asyncStorageTestSuite"
 import { AsyncTupleDatabase } from "./async/AsyncTupleDatabase"
 import { ReactiveAsyncTupleDatabase } from "./async/ReactiveAsyncTupleDatabase"
+import { TupleDatabaseAsyncClient } from "./async/TupleDatabaseAsyncClient"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
@@ -12,6 +13,7 @@ import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
 import { ReactiveTupleDatabase } from "./sync/ReactiveTupleDatabase"
 import { storageTestSuite } from "./sync/storageTestSuite"
 import { TupleDatabase } from "./sync/TupleDatabase"
+import { TupleDatabaseClient } from "./sync/TupleDatabaseClient"
 
 const tmpDir = path.resolve(__dirname, "/../../tmp")
 
@@ -53,6 +55,13 @@ storageTestSuite(
 		)
 )
 
+storageTestSuite(
+	"TupleDatabaseClient(TupleDatabase(InMemoryTupleStorage))",
+	sortedValues,
+	() => new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage())),
+	false
+)
+
 asyncStorageTestSuite(
 	"AsyncTupleDatabase(InMemoryTupleStorage)",
 	sortedValues,
@@ -83,4 +92,14 @@ asyncStorageTestSuite(
 		new ReactiveAsyncTupleDatabase(
 			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
 		)
+)
+
+asyncStorageTestSuite(
+	"TupleDatabaseAsyncClient(AsyncTupleDatabase(InMemoryTupleStorage))",
+	sortedValues,
+	() =>
+		new TupleDatabaseAsyncClient(
+			new AsyncTupleDatabase(new InMemoryTupleStorage())
+		),
+	false
 )

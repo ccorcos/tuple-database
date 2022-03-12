@@ -1,24 +1,29 @@
-import {
-	AsyncTupleDatabase,
-	AsyncTupleTransaction,
-} from "../storage/async/AsyncTupleDatabase"
-import { TupleDatabase, TupleTransaction } from "../storage/sync/TupleDatabase"
-
 // Accepts a transaction or a database and allows you to compose transactions together.
+
+import {
+	AsyncTupleDatabaseApi,
+	AsyncTupleTransactionApi,
+	TupleDatabaseApi,
+	TupleTransactionApi,
+} from "../storage/types"
+
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
 export function transactional<I extends any[], O>(
-	fn: (tx: TupleTransaction, ...args: I) => O
+	fn: (tx: TupleTransactionApi, ...args: I) => O
 ) {
-	return function (dbOrTx: TupleDatabase | TupleTransaction, ...args: I): O {
+	return function (
+		dbOrTx: TupleDatabaseApi | TupleTransactionApi,
+		...args: I
+	): O {
 		return composeTx(dbOrTx, (tx) => fn(tx, ...args))
 	}
 }
 
 export function transactionalAsync<I extends any[], O>(
-	fn: (tx: AsyncTupleTransaction, ...args: I) => Promise<O>
+	fn: (tx: AsyncTupleTransactionApi, ...args: I) => Promise<O>
 ) {
 	return async function (
-		dbOrTx: AsyncTupleDatabase | AsyncTupleTransaction,
+		dbOrTx: AsyncTupleDatabaseApi | AsyncTupleTransactionApi,
 		...args: I
 	): Promise<O> {
 		return composeTxAsync(dbOrTx, (tx) => fn(tx, ...args))
@@ -26,8 +31,8 @@ export function transactionalAsync<I extends any[], O>(
 }
 
 function composeTx<T>(
-	dbOrTx: TupleDatabase | TupleTransaction,
-	fn: (tx: TupleTransaction) => T
+	dbOrTx: TupleDatabaseApi | TupleTransactionApi,
+	fn: (tx: TupleTransactionApi) => T
 ) {
 	if ("set" in dbOrTx) return fn(dbOrTx)
 	const tx = dbOrTx.transact()
@@ -37,8 +42,8 @@ function composeTx<T>(
 }
 
 async function composeTxAsync<T>(
-	dbOrTx: AsyncTupleDatabase | AsyncTupleTransaction,
-	fn: (tx: AsyncTupleTransaction) => Promise<T>
+	dbOrTx: AsyncTupleDatabaseApi | AsyncTupleTransactionApi,
+	fn: (tx: AsyncTupleTransactionApi) => Promise<T>
 ) {
 	if ("set" in dbOrTx) return fn(dbOrTx)
 	const tx = dbOrTx.transact()
