@@ -1,6 +1,6 @@
 set -e
 
-npm version patch
+# npm version patch
 
 rm -rf build
 npm run build
