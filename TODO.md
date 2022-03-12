@@ -1,6 +1,5 @@
 ## TODO
 
-- minimal triplestore example
 - benchmarks
 
 - use reactive-magic strategy for composing queries more naturally.
