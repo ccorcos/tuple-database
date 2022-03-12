@@ -1,5 +1,7 @@
 export * from "./helpers/Subspace"
 export * from "./helpers/transactional"
+export * from "./storage/async/AsyncTupleDatabase"
+export * from "./storage/async/ReactiveAsyncTupleDatabase"
 export * from "./storage/InMemoryTupleStorage"
 export * from "./storage/sync/ReactiveTupleDatabase"
 export * from "./storage/sync/TupleDatabase"
