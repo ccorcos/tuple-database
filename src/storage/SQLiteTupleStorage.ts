@@ -44,7 +44,7 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 
 	private writeFactsQuery: Transaction
 
-	scan = (args: ScanStorageArgs = {}, txId?: string) => {
+	scan = (args: ScanStorageArgs = {}) => {
 		// Bounds.
 		let start = args.gte ? encodeTuple(args.gte) : undefined
 		let startAfter: string | undefined = args.gt
@@ -77,10 +77,10 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 			sqlQuery += " where "
 			sqlQuery += where
 		}
+		sqlQuery += " order by key"
 		if (args.limit) {
 			sqlQuery += ` limit $limit`
 		}
-		sqlQuery += " order by key"
 
 		const results = this.db.prepare(sqlQuery).all(sqlArgs)
 
@@ -90,7 +90,7 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 		)
 	}
 
-	commit = (writes: Writes, txId?: string) => {
+	commit = (writes: Writes) => {
 		const { set: inserts, remove: deletes } = writes
 		this.writeFactsQuery({ inserts, deletes })
 	}

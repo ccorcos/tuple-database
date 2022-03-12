@@ -8,11 +8,9 @@ import {
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
 import { TupleDatabase } from "../sync/TupleDatabase"
 import { TupleStorageApi } from "../sync/types"
-import { MIN, ScanArgs, Tuple, TxId, Writes } from "../types"
+import { Callback, MIN, ScanArgs, Tuple, TxId, Writes } from "../types"
 import { AsyncTupleDatabase } from "./AsyncTupleDatabase"
 import { AsyncTupleStorageApi, ReactiveAsyncTupleDatabaseApi } from "./types"
-
-export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
