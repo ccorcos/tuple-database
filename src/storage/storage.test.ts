@@ -4,8 +4,8 @@ import * as path from "path"
 import { sortedValues } from "../test/fixtures"
 import { asyncStorageTestSuite } from "./async/asyncStorageTestSuite"
 import { AsyncTupleDatabase } from "./async/AsyncTupleDatabase"
+import { AsyncTupleDatabaseClient } from "./async/AsyncTupleDatabaseClient"
 import { ReactiveAsyncTupleDatabase } from "./async/ReactiveAsyncTupleDatabase"
-import { TupleDatabaseAsyncClient } from "./async/TupleDatabaseAsyncClient"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
@@ -95,10 +95,10 @@ asyncStorageTestSuite(
 )
 
 asyncStorageTestSuite(
-	"TupleDatabaseAsyncClient(AsyncTupleDatabase(InMemoryTupleStorage))",
+	"AsyncTupleDatabaseClient(AsyncTupleDatabase(InMemoryTupleStorage))",
 	sortedValues,
 	() =>
-		new TupleDatabaseAsyncClient(
+		new AsyncTupleDatabaseClient(
 			new AsyncTupleDatabase(new InMemoryTupleStorage())
 		),
 	false

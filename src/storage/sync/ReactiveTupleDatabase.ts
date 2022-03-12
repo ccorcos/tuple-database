@@ -1,6 +1,6 @@
 /*
 
-This file is generated from ReactiveAsyncTupleDatabase.ts
+This file is generated from async/ReactiveAsyncTupleDatabase.ts
 
 */
 import { randomId } from "../../helpers/randomId"
@@ -12,13 +12,18 @@ import {
 } from "../../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
 import { TupleDatabase } from "../sync/TupleDatabase"
-import { MIN, ScanArgs, Tuple, TupleStorageApi, TxId, Writes } from "../types"
+import { TupleStorageApi } from "../sync/types"
+import { MIN, ScanArgs, Tuple, TxId, Writes } from "../types"
+import { ReactiveTupleDatabaseApi } from "./types"
 
 export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
-export class ReactiveTupleDatabase extends TupleDatabase {
+export class ReactiveTupleDatabase
+	extends TupleDatabase
+	implements ReactiveTupleDatabaseApi
+{
 	debug = false
 
 	constructor(storage: TupleStorageApi) {

@@ -48,7 +48,7 @@ function convertAsyncToSyncFile(inputPath: string, outputPath: string) {
 	contents = `
 /*
 
-This file is generated from ${path.parse(inputPath).base}
+This file is generated from async/${path.parse(inputPath).base}
 
 */
 ${contents}

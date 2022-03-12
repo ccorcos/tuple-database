@@ -1,6 +1,6 @@
 /*
 
-This file is generated from asyncStorageTestSuite.ts
+This file is generated from async/asyncStorageTestSuite.ts
 
 */
 import { strict as assert } from "assert"
@@ -9,14 +9,8 @@ import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { transactional } from "../../helpers/transactional"
-import {
-	MAX,
-	MIN,
-	Tuple,
-	TupleDatabaseApi,
-	TupleTransactionApi,
-	TupleValuePair,
-} from "../types"
+import { MAX, MIN, Tuple, TupleValuePair } from "../types"
+import { TupleDatabaseApi, TupleTransactionApi } from "./types"
 
 export function storageTestSuite(
 	name: string,

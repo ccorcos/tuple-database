@@ -1,6 +1,6 @@
 /*
 
-This file is generated from AsyncTupleDatabase.ts
+This file is generated from async/AsyncTupleDatabase.ts
 
 */
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
@@ -9,16 +9,9 @@ import * as t from "../../helpers/sortedTupleArray"
 import { Bounds, normalizeTupleBounds } from "../../helpers/sortedTupleArray"
 import * as tv from "../../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "../ConcurrencyLog"
-import {
-	ScanArgs,
-	Tuple,
-	TupleDatabaseApi,
-	TupleStorageApi,
-	TupleTransactionApi,
-	TupleValuePair,
-	TxId,
-	Writes,
-} from "../types"
+import { TupleStorageApi } from "../sync/types"
+import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
+import { TupleDatabaseApi, TupleTransactionApi } from "./types"
 
 export class TupleDatabase implements TupleDatabaseApi {
 	constructor(private storage: TupleStorageApi) {}

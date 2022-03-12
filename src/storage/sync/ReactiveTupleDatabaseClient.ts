@@ -1,15 +1,26 @@
 /*
 
-This file is generated from async/AsyncTupleDatabaseClient.ts
+This file is generated from async/ReactiveAsyncTupleDatabaseClient.ts
 
 */
 import { randomId } from "../../helpers/randomId"
-import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
+import {
+	Callback,
+	ScanArgs,
+	Tuple,
+	TupleValuePair,
+	TxId,
+	Unsubscribe,
+	Writes,
+} from "../types"
 import { TupleTransaction } from "./TupleDatabase"
-import { TupleDatabaseApi, TupleDatabaseClientArgs } from "./types"
+import {
+	ReactiveTupleDatabaseApi,
+	ReactiveTupleDatabaseClientArgs,
+} from "./types"
 
-export class TupleDatabaseClient implements TupleDatabaseApi {
-	constructor(public api: TupleDatabaseClientArgs) {}
+export class ReactiveTupleDatabaseClient implements ReactiveTupleDatabaseApi {
+	constructor(public api: ReactiveTupleDatabaseClientArgs) {}
 
 	get(tuple: Tuple, txId?: TxId): any {
 		return this.api.get(tuple, txId)
@@ -25,6 +36,10 @@ export class TupleDatabaseClient implements TupleDatabaseApi {
 	}
 	cancel(txId: string): void {
 		return this.api.cancel(txId)
+	}
+
+	subscribe(args: ScanArgs, callback: Callback): Unsubscribe {
+		return this.api.subscribe(args, callback)
 	}
 
 	transact(txId?: TxId) {

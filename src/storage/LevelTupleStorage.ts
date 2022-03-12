@@ -6,12 +6,8 @@ import {
 	encodeTuple,
 	encodeValue,
 } from "../helpers/codec"
-import {
-	AsyncTupleStorageApi,
-	ScanStorageArgs,
-	TupleValuePair,
-	Writes,
-} from "./types"
+import { AsyncTupleStorageApi } from "./async/types"
+import { ScanStorageArgs, TupleValuePair, Writes } from "./types"
 
 export class LevelTupleStorage implements AsyncTupleStorageApi {
 	/**

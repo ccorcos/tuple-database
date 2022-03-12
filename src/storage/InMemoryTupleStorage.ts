@@ -1,10 +1,6 @@
 import * as tv from "../helpers/sortedTupleValuePairs"
-import {
-	ScanStorageArgs,
-	TupleStorageApi,
-	TupleValuePair,
-	Writes,
-} from "./types"
+import { TupleStorageApi } from "./sync/types"
+import { ScanStorageArgs, TupleValuePair, Writes } from "./types"
 
 export class InMemoryTupleStorage implements TupleStorageApi {
 	data: TupleValuePair[]

@@ -1,17 +1,10 @@
 import { randomId } from "../../helpers/randomId"
-import {
-	AsyncTupleClientArgs,
-	AsyncTupleDatabaseApi,
-	ScanArgs,
-	Tuple,
-	TupleValuePair,
-	TxId,
-	Writes,
-} from "../types"
+import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
 import { AsyncTupleTransaction } from "./AsyncTupleDatabase"
+import { AsyncTupleDatabaseApi, AsyncTupleDatabaseClientArgs } from "./types"
 
-export class TupleDatabaseAsyncClient implements AsyncTupleDatabaseApi {
-	constructor(public api: AsyncTupleClientArgs) {}
+export class AsyncTupleDatabaseClient implements AsyncTupleDatabaseApi {
+	constructor(public api: AsyncTupleDatabaseClientArgs) {}
 
 	async get(tuple: Tuple, txId?: TxId): Promise<any> {
 		return this.api.get(tuple, txId)

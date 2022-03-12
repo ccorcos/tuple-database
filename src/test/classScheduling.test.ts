@@ -7,7 +7,7 @@ import { Subspace } from "../helpers/Subspace"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { TupleDatabase } from "../storage/sync/TupleDatabase"
-import { ReadOnlyTupleDatabaseApi } from "../storage/types"
+import { ReadOnlyTupleDatabaseApi } from "../storage/sync/types"
 
 const scheduling = new Subspace("scheduling")
 const course = scheduling.subspace("class")

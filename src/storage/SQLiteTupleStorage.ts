@@ -1,12 +1,7 @@
 import { Database, Transaction } from "better-sqlite3"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import {
-	ScanStorageArgs,
-	Tuple,
-	TupleStorageApi,
-	TupleValuePair,
-	Writes,
-} from "./types"
+import { TupleStorageApi } from "./sync/types"
+import { ScanStorageArgs, Tuple, TupleValuePair, Writes } from "./types"
 
 export class SQLiteTupleStorage implements TupleStorageApi {
 	/**

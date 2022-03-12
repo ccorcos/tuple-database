@@ -7,22 +7,18 @@ import {
 } from "../../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../InMemoryTupleStorage"
 import { TupleDatabase } from "../sync/TupleDatabase"
-import {
-	AsyncTupleStorageApi,
-	MIN,
-	ScanArgs,
-	Tuple,
-	TupleStorageApi,
-	TxId,
-	Writes,
-} from "../types"
+import { TupleStorageApi } from "../sync/types"
+import { MIN, ScanArgs, Tuple, TxId, Writes } from "../types"
 import { AsyncTupleDatabase } from "./AsyncTupleDatabase"
+import { AsyncTupleStorageApi, ReactiveAsyncTupleDatabaseApi } from "./types"
 
 export type Callback = (write: Writes) => void
 
 type Listener = { callback: Callback; bounds: Bounds }
 
-export class ReactiveAsyncTupleDatabase extends AsyncTupleDatabase {
+export class ReactiveAsyncTupleDatabase
+	extends AsyncTupleDatabase
+	implements ReactiveAsyncTupleDatabaseApi {
 	debug = false
 
 	constructor(storage: TupleStorageApi | AsyncTupleStorageApi) {
@@ -39,7 +35,7 @@ export class ReactiveAsyncTupleDatabase extends AsyncTupleDatabase {
 
 	private listeners = new TupleDatabase(new InMemoryTupleStorage())
 
-	subscribe = (args: ScanArgs, callback: Callback) => {
+	subscribe = async (args: ScanArgs, callback: Callback) => {
 		// this.log("db/subscribe", args)
 
 		const bounds = normalizeTupleBounds(args)

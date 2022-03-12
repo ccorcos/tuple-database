@@ -4,17 +4,13 @@ import * as t from "../../helpers/sortedTupleArray"
 import { Bounds, normalizeTupleBounds } from "../../helpers/sortedTupleArray"
 import * as tv from "../../helpers/sortedTupleValuePairs"
 import { ConcurrencyLog } from "../ConcurrencyLog"
+import { TupleStorageApi } from "../sync/types"
+import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
 import {
 	AsyncTupleDatabaseApi,
 	AsyncTupleStorageApi,
 	AsyncTupleTransactionApi,
-	ScanArgs,
-	Tuple,
-	TupleStorageApi,
-	TupleValuePair,
-	TxId,
-	Writes,
-} from "../types"
+} from "./types"
 
 export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 	constructor(private storage: TupleStorageApi | AsyncTupleStorageApi) {}

@@ -4,14 +4,8 @@ import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { transactionalAsync } from "../../helpers/transactional"
-import {
-	AsyncTupleDatabaseApi,
-	AsyncTupleTransactionApi,
-	MAX,
-	MIN,
-	Tuple,
-	TupleValuePair,
-} from "../types"
+import { MAX, MIN, Tuple, TupleValuePair } from "../types"
+import { AsyncTupleDatabaseApi, AsyncTupleTransactionApi } from "./types"
 
 export function asyncStorageTestSuite(
 	name: string,
