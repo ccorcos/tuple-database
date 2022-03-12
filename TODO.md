@@ -1,9 +1,5 @@
 ## TODO
 
-
-- database over wire abstraction...
-	- subscribe should be async over wire somehow..
-
 - typed subspace
 - minimal triplestore example
 - benchmarks
