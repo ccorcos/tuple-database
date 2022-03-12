@@ -13,9 +13,12 @@ Creating a SQLite-backed database, writing and querying.
 
 ```ts
 import sqlite from "better-sqlite3"
-import { SQLiteStorage } from "tuple-database/storage/SQLiteStorage"
+import {TupleDatabase} from "tuple-database"
+import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
 
-const db = new SQLiteStorage(sqlite("./app.db"))
+const db = new TupleDatabase(
+	new SQLiteTupleStorage(sqlite("./app.db"))
+)
 
 const people = [
 	{ id: 1, first: "Chet", last: "Corcos", age: 29 },
@@ -53,28 +56,18 @@ for (const person of people) {
 tx.commit()
 ```
 
-It can get tricky to remember and tedious to write to all of these different indexes when updating a single person record, so you can define indexer functions to do this automatically.
+We also have read-write transactional guarantees:
 
 ```ts
-db.index((tx, op) => {
-	if (op.tuple[0] !== "personById") return
+const tx1 = db.transact()
+const score = tx1.get(["score"])
+tx1.set(["score"], score + 1)
 
-	// Delete the index rows for the previous value.
-	if (op.prev) {
-		const preson = op.prev
-		tx.remove(["personByLastFirst", person.last, person.first, person.id], person)
-		tx.remove(["personByFirstLast", person.first, person.last, person.id], person)
-		tx.remove(["personByAge", person.age, person.id], person)
-	}
+const tx2 = db.transact()
+tx2.set(["score"], 10)
+tx2.commit()
 
-	// Create the new index rows.
-	if (op.type === "set") {
-		const person = op.value
-		tx.remove(["personByLastFirst", person.last, person.first, person.id], person)
-		tx.remove(["personByFirstLast", person.first, person.last, person.id], person)
-		tx.remove(["personByAge", person.age, person.id], person)
-	}
-})
+tx1.commit() // Throws an error.
 ```
 
 There are also some nice abstractions inspired by FoundationDb such as `Subspace` and `transactional`.
@@ -136,9 +129,6 @@ const setPerson = transactional((tx, person) => {
 setPerson(db, { id: 1, first: 'Chet', last: 'Corcos', age: 29 })
 ```
 
-This `transactional` abstraction is a more explicit alternative to the `.index()` API. I'm not entirely sure which I like more just yet, but I'm learning towards `transactional` as a better way to go.
-
-
 Last but not least, queries are also reactive based on the prefix for the `gt/lt` arguments.
 
 ```ts
@@ -193,3 +183,20 @@ This database pushes all of the data modeling and indexing details down to you, 
 
 Last but not least, this database is designed to be embedded in [local-first](https://www.inkandswitch.com/local-first.html) applications.
 
+
+## Development
+
+One thing that's been pretty annoying is building async and sync storage abstractions in parallel. That's why `npm run build:macros` will compile async code into sync code for us.
+
+## Brenchmark
+
+We have a simple benchmark that read and writes a bunch. Mostly so we can compare between storage engines. This benchmark currenly does 11000 operations. 10000 reads and 1000 writes. So we're looking at fractions of a millisecond per operation.
+
+```
+AsyncTupleDatabase(InMemoryTupleStorage)):initialize 24.359458923339844
+AsyncTupleDatabase(InMemoryTupleStorage)):readRemoveWrite 1289.2781257629395
+AsyncTupleDatabase(SQLiteTupleStorage)):initialize 198.56974983215332
+AsyncTupleDatabase(SQLiteTupleStorage)):readRemoveWrite 9325.776041984558
+AsyncTupleDatabase(LevelTupleStorage)):initialize 61.02045822143555
+AsyncTupleDatabase(LevelTupleStorage)):readRemoveWrite 2224.8067083358765
+```
