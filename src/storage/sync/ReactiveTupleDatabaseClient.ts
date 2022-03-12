@@ -17,6 +17,7 @@ import { TupleTransaction } from "./TupleDatabase"
 import {
 	ReactiveTupleDatabaseApi,
 	ReactiveTupleDatabaseClientArgs,
+	TupleTransactionApi,
 } from "./types"
 
 export class ReactiveTupleDatabaseClient implements ReactiveTupleDatabaseApi {
@@ -42,7 +43,7 @@ export class ReactiveTupleDatabaseClient implements ReactiveTupleDatabaseApi {
 		return this.api.subscribe(args, callback)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): TupleTransactionApi {
 		const id = txId || randomId()
 		return new TupleTransaction(this, id)
 	}

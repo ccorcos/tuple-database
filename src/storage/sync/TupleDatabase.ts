@@ -56,7 +56,7 @@ export class TupleDatabase implements TupleDatabaseApi {
 		this.log.cancel(txId)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): TupleTransactionApi {
 		const id = txId || randomId()
 		return new TupleTransaction(this, id)
 	}

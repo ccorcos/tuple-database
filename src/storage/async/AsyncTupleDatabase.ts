@@ -55,7 +55,7 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		this.log.cancel(txId)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): AsyncTupleTransactionApi {
 		const id = txId || randomId()
 		return new AsyncTupleTransaction(this, id)
 	}

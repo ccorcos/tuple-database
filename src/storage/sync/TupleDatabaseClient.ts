@@ -6,7 +6,11 @@ This file is generated from async/AsyncTupleDatabaseClient.ts
 import { randomId } from "../../helpers/randomId"
 import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
 import { TupleTransaction } from "./TupleDatabase"
-import { TupleDatabaseApi, TupleDatabaseClientArgs } from "./types"
+import {
+	TupleDatabaseApi,
+	TupleDatabaseClientArgs,
+	TupleTransactionApi,
+} from "./types"
 
 export class TupleDatabaseClient implements TupleDatabaseApi {
 	constructor(public api: TupleDatabaseClientArgs) {}
@@ -27,7 +31,7 @@ export class TupleDatabaseClient implements TupleDatabaseApi {
 		return this.api.cancel(txId)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): TupleTransactionApi {
 		const id = txId || randomId()
 		return new TupleTransaction(this, id)
 	}

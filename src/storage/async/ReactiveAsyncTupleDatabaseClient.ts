@@ -10,12 +10,14 @@ import {
 } from "../types"
 import { AsyncTupleTransaction } from "./AsyncTupleDatabase"
 import {
+	AsyncTupleTransactionApi,
 	ReactiveAsyncTupleDatabaseApi,
 	ReactiveAsyncTupleDatabaseClientArgs,
 } from "./types"
 
 export class ReactiveAsyncTupleDatabaseClient
-	implements ReactiveAsyncTupleDatabaseApi {
+	implements ReactiveAsyncTupleDatabaseApi
+{
 	constructor(public api: ReactiveAsyncTupleDatabaseClientArgs) {}
 
 	async get(tuple: Tuple, txId?: TxId): Promise<any> {
@@ -38,7 +40,7 @@ export class ReactiveAsyncTupleDatabaseClient
 		return this.api.subscribe(args, callback)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): AsyncTupleTransactionApi {
 		const id = txId || randomId()
 		return new AsyncTupleTransaction(this, id)
 	}

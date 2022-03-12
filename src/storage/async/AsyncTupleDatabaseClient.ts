@@ -1,7 +1,11 @@
 import { randomId } from "../../helpers/randomId"
 import { ScanArgs, Tuple, TupleValuePair, TxId, Writes } from "../types"
 import { AsyncTupleTransaction } from "./AsyncTupleDatabase"
-import { AsyncTupleDatabaseApi, AsyncTupleDatabaseClientArgs } from "./types"
+import {
+	AsyncTupleDatabaseApi,
+	AsyncTupleDatabaseClientArgs,
+	AsyncTupleTransactionApi,
+} from "./types"
 
 export class AsyncTupleDatabaseClient implements AsyncTupleDatabaseApi {
 	constructor(public api: AsyncTupleDatabaseClientArgs) {}
@@ -22,7 +26,7 @@ export class AsyncTupleDatabaseClient implements AsyncTupleDatabaseApi {
 		return this.api.cancel(txId)
 	}
 
-	transact(txId?: TxId) {
+	transact(txId?: TxId): AsyncTupleTransactionApi {
 		const id = txId || randomId()
 		return new AsyncTupleTransaction(this, id)
 	}
