@@ -1,13 +1,5 @@
 ## TODO
 
-- Different layers.
-	- Main process with the concurrencylog
-	- Renderer process with async apis
-	- Storage layer
-	- Transaction args api.
-	- Reactivity subscribe.
-
-
 
 - database over wire abstraction...
 	- subscribe should be async over wire somehow..
