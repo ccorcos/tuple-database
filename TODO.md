@@ -1,22 +1,22 @@
 ## TODO
 
-- typed subspace
 - minimal triplestore example
 - benchmarks
 
+- use reactive-magic strategy for composing queries more naturally.
+	- get reactivity?
+
+- typed subspace
+	- maybe its better to use proxies around types?
+	- how does firebase do this?
 
 - README
 	- notes about async database compilation.
 	- new names and apis.
 
 
-
 - how to use this in a UI with some kind of async backend.
 	- how to cache in-process, or not?
-
-- use reactive-magic strategy for composing queries more naturally.
-	- get reactivity?
-
 
 - tuple database improvements
 	- {key, value} object so that it isnt a valid tuple for the key.
