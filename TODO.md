@@ -1,5 +1,8 @@
 ## TODO
 
+- schema types so its more ergonomic.
+- {key, value} object so that it isnt a valid tuple for the key.
+
 - use reactive-magic strategy for composing queries more naturally.
 	- get reactivity?
 
@@ -11,9 +14,6 @@
 - how to use this in a UI with some kind of async backend.
 	- how to cache in-process, or not?
 
-- tuple database improvements
-	- {key, value} object so that it isnt a valid tuple for the key.
-		- Lets skip this for now... its gross when using write(), but we could fix that I suppose
 
 
 - Game counter using this abstraction
