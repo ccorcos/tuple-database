@@ -10,13 +10,16 @@ type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }
 type LogItem = ReadItem | WriteItem
 
 export class ConcurrencyLog {
+	// O(n) refers to this.log.length
 	log: LogItem[] = []
 
+	// O(1)
 	/** Record a read. */
 	read(txId: TxId, bounds: Bounds) {
 		this.log.push({ type: "read", txId, bounds })
 	}
 
+	// O(n)
 	/** Add writes to the log only if there is a conflict with a read. */
 	write(txId: TxId | undefined, tuple: Tuple) {
 		for (const item of this.log) {
@@ -27,6 +30,7 @@ export class ConcurrencyLog {
 		}
 	}
 
+	// O(n^2/4)
 	/** Determine if any reads conflict with writes. */
 	commit(txId: TxId) {
 		try {
@@ -55,6 +59,7 @@ export class ConcurrencyLog {
 		this.cleanupWrites()
 	}
 
+	// O(n)
 	/** Cleanup any reads for this transaction. */
 	cleanupReads(txId: string) {
 		mutableFilter(this.log, (item) => {
@@ -63,6 +68,7 @@ export class ConcurrencyLog {
 		})
 	}
 
+	// O(n)
 	/** Cleanup any writes that don't have conflicting reads. */
 	cleanupWrites() {
 		const reads: Bounds[] = []
