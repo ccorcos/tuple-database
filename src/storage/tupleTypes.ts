@@ -19,6 +19,15 @@ type TuplePrefix<T extends unknown[]> = T extends IsTuple
 		: []
 	: T
 
+type TupleRest<T extends unknown[]> = T extends [any, ...infer U] ? U : never
+
+type RemovePrefix<T, P extends any[]> = T extends {
+	0: [...P, ...infer U]
+	1: infer V
+}
+	? [U, V]
+	: never
+
 class SchemaDialect<S extends TupleValuePair = TupleValuePair> {
 	constructor(private db: TupleDatabase, private prefix: any[] = []) {}
 
@@ -38,8 +47,8 @@ class SchemaDialect<S extends TupleValuePair = TupleValuePair> {
 
 	subspace<P extends TuplePrefix<S[0]>>(
 		prefix: P
-	): SchemaDialect<FilterByPrefix<S, P>> {
-		return new SchemaDialect(this.db, [...this.prefix, ...prefix])
+	): SchemaDialect<RemovePrefix<S, P>> {
+		return new SchemaDialect(this.db, [...this.prefix, ...prefix]) as any
 	}
 }
 
