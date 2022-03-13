@@ -7,10 +7,10 @@ export type TxId = string
 type ReadItem = { type: "read"; bounds: Bounds; txId: TxId }
 type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }
 
-type WriteLogItem = ReadItem | WriteItem
+type LogItem = ReadItem | WriteItem
 
 export class ConcurrencyLog {
-	log: WriteLogItem[] = []
+	log: LogItem[] = []
 
 	/** Record a read. */
 	read(txId: TxId, bounds: Bounds) {
