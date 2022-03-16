@@ -22,15 +22,16 @@ export type AsyncTupleStorageApi = {
 }
 
 // Storage + Reactivity + MVCC
-export type AsyncTupleDatabaseClientArgs1 = {
+export type AsyncTupleDatabaseApi2 = {
+	scan(args: ScanStorageArgs, txId?: TxId): Promise<TupleValuePair[]>
 	commit(writes: Writes, txId?: TxId): Promise<void>
 	cancel(txId: string)
-	scan(args: ScanStorageArgs, txId?: TxId): Promise<TupleValuePair[]>
 	subscribe(args: ScanStorageArgs, callback: Callback): Promise<Unsubscribe>
+	close(): Promise<void>
 }
 
 // Types + ReadApis + Subspace + Transaction
-export type AsyncTupleDatabaseDialect<S extends TupleValuePair> = {
+export type AsyncTupleDatabaseDialectApi<S extends TupleValuePair> = {
 	// Types
 	commit(writes: Writes<S>, txId?: TxId): Promise<void>
 	cancel(txId: string)
@@ -53,16 +54,20 @@ export type AsyncTupleDatabaseDialect<S extends TupleValuePair> = {
 	// Subspace
 	subspace<P extends TuplePrefix<S[0]>>(
 		prefix: P
-	): AsyncTupleDatabaseDialect<RemoveTupleValuePairPrefix<S, P>>
+	): AsyncTupleDatabaseDialectApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// Transaction
-	transact(): AsyncTupleTransactionApi2<S>
+	transact(txId?: TxId): AsyncTupleTransactionApi2<S>
 }
 
-export type AsyncTupleTransactionApi2<S extends TupleValuePair> = Pick<
-	AsyncTupleDatabaseDialect<S>,
-	"get" | "exists" | "scan"
-> & {
+export type AsyncTupleTransactionApi2<S extends TupleValuePair> = {
+	// Same as AsyncTupleDatabaseDialectApi without the txId argument.
+	scan<P extends TuplePrefix<S[0]>>(
+		args: ScanArgs<P>
+	): Promise<FilterTupleValuePairByPrefix<S, P>[]>
+	get<T extends S[0]>(tuple: T): Promise<FilterTupleValuePairByPrefix<S, T>[1]>
+	exists<T extends S[0]>(tuple: T): Promise<boolean>
+
 	// WriteApis
 	set<T extends S>(tuple: T[0], value: T[1]): AsyncTupleTransactionApi2<S>
 	remove(tuple: S[0]): AsyncTupleTransactionApi2<S>

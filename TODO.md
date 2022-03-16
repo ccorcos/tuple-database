@@ -1,5 +1,7 @@
 ## TODO
 
+- types with min/max for scanning..
+
 How to organize these different layers?
 - storage
 	- with mvcc
