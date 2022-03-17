@@ -1,4 +1,4 @@
-import { Tuple, TupleValuePair } from "../storage/types"
+import { KeyValuePair, Tuple } from "../storage/types"
 
 export type Assert<Actual extends Expected, Expected> = Actual
 
@@ -22,40 +22,49 @@ type A2 = Assert<
 type A22 = Assert<FilterTupleByPrefix<[1, 2] | [1, 3] | [2, 1], [1]>, [1, 2]>
 
 export type FilterTupleValuePairByPrefix<
-	S extends TupleValuePair,
+	S extends KeyValuePair,
 	P extends Tuple
-> = Extract<S, { 0: TupleToObject<P> }>
+> = Extract<S, { key: TupleToObject<P> }>
 
 type A3 = Assert<
 	FilterTupleValuePairByPrefix<
-		[[1, 2], number] | [[1, 3], string] | [[2, 1], null],
+		| { key: [1, 2]; value: number }
+		| { key: [1, 3]; value: string }
+		| { key: [2, 1]; value: null },
 		[1]
 	>,
-	[[1, 2], number] | [[1, 3], string]
+	{ key: [1, 2]; value: number } | { key: [1, 3]; value: string }
 >
 
 export type FilterTupleValuePair<
-	S extends TupleValuePair,
+	S extends KeyValuePair,
 	P extends Tuple
-> = Extract<S, { 0: P }>
+> = Extract<S, { key: P }>
 
 type F1 = Assert<
 	FilterTupleValuePair<
-		[[1, 2], number] | [[1, 3], string] | [[2, 1], null],
+		| { key: [1, 2]; value: number }
+		| { key: [1, 3]; value: string }
+		| { key: [2, 1]; value: null },
 		[1, 2]
 	>,
-	[[1, 2], number]
+	{ key: [1, 2]; value: number }
 >
 
 type DistributiveProp<T, K extends keyof T> = T extends unknown ? T[K] : never
 
 export type ValueForTuple<
-	S extends TupleValuePair,
+	S extends KeyValuePair,
 	P extends Tuple
-> = DistributiveProp<FilterTupleValuePairByPrefix<S, P>, 1>
+> = DistributiveProp<FilterTupleValuePairByPrefix<S, P>, "value">
 
 type F2 = Assert<
-	ValueForTuple<[[1, 2], number] | [[1, 3], string] | [[2, 1], null], [1, 2]>,
+	ValueForTuple<
+		| { key: [1, 2]; value: number }
+		| { key: [1, 3]; value: string }
+		| { key: [2, 1]; value: null },
+		[1, 2]
+	>,
 	number
 >
 
@@ -89,30 +98,41 @@ type A9 = Assert<RemoveTuplePrefix<[1, 2, 3], [1, 2]>, [3]>
 type A10 = Assert<RemoveTuplePrefix<[1, 2, 3], [1]>, [2, 3]>
 type A11 = Assert<RemoveTuplePrefix<[1, 2, 3], [2]>, never>
 
-export type RemoveTupleValuePairPrefix<T, P extends any[]> = T extends {
-	0: [...P, ...infer U]
-	1: infer V
+export type RemoveTupleValuePairPrefix<
+	T extends KeyValuePair,
+	P extends any[]
+> = T extends {
+	key: [...P, ...infer U]
+	value: infer V
 }
-	? [U, V]
+	? { key: U; value: V }
 	: never
 
 type A12 = Assert<
-	RemoveTupleValuePairPrefix<[[1, 2, 3], null], [1, 2]>,
-	[[3], null]
+	RemoveTupleValuePairPrefix<{ key: [1, 2, 3]; value: null }, [1, 2]>,
+	{ key: [3]; value: null }
 >
 type A13 = Assert<
-	RemoveTupleValuePairPrefix<[[1, 2, 3], string], [1]>,
-	[[2, 3], string]
+	RemoveTupleValuePairPrefix<{ key: [1, 2, 3]; value: string }, [1]>,
+	{ key: [2, 3]; value: string }
 >
-type A14 = Assert<RemoveTupleValuePairPrefix<[[1, 2, 3], string], [2]>, never>
+type A14 = Assert<
+	RemoveTupleValuePairPrefix<{ key: [1, 2, 3]; value: string }, [2]>,
+	never
+>
 
 // Using the DistributiveProp trick here too.
 export type SchemaSubspace<
-	T extends TupleValuePair,
+	T extends KeyValuePair,
 	P extends Tuple
-> = T extends unknown ? [[...P, ...T[0]], T[1]] : never
+> = T extends unknown
+	? {
+			key: [...P, ...T["key"]]
+			value: T["value"]
+	  }
+	: never
 
 type A15 = Assert<
-	SchemaSubspace<[[1], 1] | [[2], 2], ["int"]>,
-	[["int", 1], 1] | [["int", 2], 2]
+	SchemaSubspace<{ key: [1]; value: 1 } | { key: [2]; value: 2 }, ["int"]>,
+	{ key: ["int", 1]; value: 1 } | { key: ["int", 2]; value: 2 }
 >

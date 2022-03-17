@@ -1,11 +1,11 @@
 import { TupleStorageApi } from "../database/sync/types"
 import * as tv from "../helpers/sortedTupleValuePairs"
-import { ScanStorageArgs, TupleValuePair, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, Writes } from "./types"
 
 export class InMemoryTupleStorage implements TupleStorageApi {
-	data: TupleValuePair[]
+	data: KeyValuePair[]
 
-	constructor(data?: TupleValuePair[]) {
+	constructor(data?: KeyValuePair[]) {
 		this.data = data || []
 	}
 
@@ -20,8 +20,8 @@ export class InMemoryTupleStorage implements TupleStorageApi {
 		for (const tuple of remove || []) {
 			tv.remove(this.data, tuple)
 		}
-		for (const [tuple, value] of set || []) {
-			tv.set(this.data, tuple, value)
+		for (const { key, value } of set || []) {
+			tv.set(this.data, key, value)
 		}
 	}
 

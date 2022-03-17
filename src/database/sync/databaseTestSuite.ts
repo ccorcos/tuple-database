@@ -11,7 +11,7 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
-import { MAX, MIN, TupleValuePair, Writes } from "../../storage/types"
+import { KeyValuePair, MAX, MIN, Writes } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { transactionalQuery } from "./transactionalQuery"
@@ -19,7 +19,7 @@ import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export function databaseTestSuite(
 	name: string,
-	createStorage: <S extends TupleValuePair = TupleValuePair>(
+	createStorage: <S extends KeyValuePair = KeyValuePair>(
 		id: string
 	) => TupleDatabaseClientApi<S>,
 	durable = true
@@ -27,19 +27,19 @@ export function databaseTestSuite(
 	describe(name, () => {
 		it("inserts in correct order", () => {
 			const store = createStorage(randomId())
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -54,7 +54,7 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 0)
 			transaction.commit()
 			const data = store.scan()
-			assertEqual(data, [[["a", "a"], 0]])
+			assertEqual(data, [{ key: ["a", "a"], value: 0 }])
 		})
 
 		it("updates will overwrite the value", () => {
@@ -64,7 +64,7 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 1)
 			transaction.commit()
 			const data = store.scan()
-			assertEqual(data, [[["a", "a"], 1]])
+			assertEqual(data, [{ key: ["a", "a"], value: 1 }])
 		})
 
 		it("transaction value overwrites works", () => {
@@ -73,16 +73,16 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 0)
 			transaction.commit()
 			const data = store.scan()
-			assertEqual(data, [[["a", "a"], 0]])
+			assertEqual(data, [{ key: ["a", "a"], value: 0 }])
 
 			const transaction2 = store.transact()
 			transaction2.set(["a", "a"], 1)
 			const data2 = transaction2.scan()
-			assertEqual(data2, [[["a", "a"], 1]])
+			assertEqual(data2, [{ key: ["a", "a"], value: 1 }])
 
 			transaction2.commit()
 			const data3 = store.scan()
-			assertEqual(data3, [[["a", "a"], 1]])
+			assertEqual(data3, [{ key: ["a", "a"], value: 1 }])
 		})
 
 		it("inserts the same thing gets deduplicated with ids", () => {
@@ -178,19 +178,19 @@ export function databaseTestSuite(
 		it("removes items correctly", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			assertEqual(transaction.scan(), items)
@@ -201,12 +201,12 @@ export function databaseTestSuite(
 
 			const data = transaction.scan()
 			assertEqual(data, [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "b", "a"], 4],
-				[["a", "b", "c"], 6],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 			transaction.commit()
 			assertEqual(store.scan(), data)
@@ -215,16 +215,16 @@ export function databaseTestSuite(
 		it("transaction.write()", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 
 			store.transact().write({ set: items }).commit()
@@ -244,31 +244,31 @@ export function databaseTestSuite(
 
 			data = store.scan()
 			assertEqual(data, [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan gt", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -280,31 +280,31 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan gt/lt", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -317,9 +317,9 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 
 			const result2 = store.scan({
@@ -328,28 +328,28 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result2, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 		})
 
 		it("scan prefix", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -361,30 +361,30 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 		})
 
 		it("scan prefix gte/lte", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "b", "d"], 6.5],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -398,28 +398,28 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "b", "d"], 6.5],
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
 			])
 		})
 
 		it("scan gte", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -431,31 +431,31 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan gte/lte", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -468,32 +468,32 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan sorted gt", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -505,28 +505,28 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan sorted gt/lt", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -539,28 +539,28 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 		})
 
 		it("scan sorted gte", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -572,31 +572,31 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			])
 		})
 
 		it("scan sorted gte/lte", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -609,29 +609,29 @@ export function databaseTestSuite(
 			})
 
 			assertEqual(result, [
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 		})
 
 		it("scan invalid bounds", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -651,11 +651,11 @@ export function databaseTestSuite(
 
 		it("stores all types of values", () => {
 			const store = createStorage(randomId())
-			const items: TupleValuePair[] = sortedValues.map(
-				(item, i) => [[item], i] as TupleValuePair
+			const items: KeyValuePair[] = sortedValues.map(
+				(item, i) => ({ key: [item], value: i } as KeyValuePair)
 			)
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -666,19 +666,19 @@ export function databaseTestSuite(
 		it("transaction overwrites when scanning data out", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -688,37 +688,37 @@ export function databaseTestSuite(
 			const result = store.scan({ prefix: ["a", "b"] })
 
 			assertEqual(result, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 
 			const transaction2 = store.transact()
 			transaction2.set(["a", "b", "b"], 99)
 			const result2 = transaction2.scan({ prefix: ["a", "b"] })
 			assertEqual(result2, [
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 99],
-				[["a", "b", "c"], 6],
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 99 },
+				{ key: ["a", "b", "c"], value: 6 },
 			])
 		})
 
 		it("get", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -750,19 +750,19 @@ export function databaseTestSuite(
 		it("exists", () => {
 			const store = createStorage(randomId())
 
-			const items: TupleValuePair[] = [
-				[["a", "a", "a"], 1],
-				[["a", "a", "b"], 2],
-				[["a", "a", "c"], 3],
-				[["a", "b", "a"], 4],
-				[["a", "b", "b"], 5],
-				[["a", "b", "c"], 6],
-				[["a", "c", "a"], 7],
-				[["a", "c", "b"], 8],
-				[["a", "c", "c"], 9],
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const [key, value] of _.shuffle(items)) {
+			for (const { key, value } of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
 			transaction.commit()
@@ -867,7 +867,7 @@ export function databaseTestSuite(
 				}
 				transaction.commit()
 
-				let result = store.scan().map(([tuple]) => tuple)
+				let result = store.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["friend", "a", "b"],
@@ -883,7 +883,7 @@ export function databaseTestSuite(
 
 				const tx = store.transact()
 				removeAEV(["friend", "a", "b"], tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				result = tx.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["friend", "a", "c"],
@@ -896,7 +896,7 @@ export function databaseTestSuite(
 				])
 
 				setAEV(["friend", "d", "a"], tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				result = tx.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["friend", "a", "c"],
@@ -947,7 +947,7 @@ export function databaseTestSuite(
 				}
 				transaction.commit()
 
-				let result = store.scan().map(([tuple]) => tuple)
+				let result = store.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["personByAge", 26, 2],
@@ -962,7 +962,7 @@ export function databaseTestSuite(
 
 				const tx = store.transact()
 				removePerson(3, tx)
-				result = tx.scan().map(([tuple]) => tuple)
+				result = tx.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["personByAge", 26, 2],
@@ -983,7 +983,7 @@ export function databaseTestSuite(
 					tx
 				)
 
-				result = tx.scan().map(([tuple]) => tuple)
+				result = tx.scan().map(({ key }) => key)
 
 				assertEqual(result, [
 					["personByAge", 26, 2],
@@ -1004,7 +1004,7 @@ export function databaseTestSuite(
 				const store = createStorage(id)
 
 				// The lamp is off
-				store.commit({ set: [[["lamp"], false]] })
+				store.commit({ set: [{ key: ["lamp"], value: false }] })
 
 				// Chet wants the lamp on, Meghan wants the lamp off.
 				const chet = store.transact()
@@ -1033,10 +1033,10 @@ export function databaseTestSuite(
 			// NOTE: this test doesn't really make sense for the sync version...
 			it("transactionalQuery will retry on those errors", () => {
 				const id = randomId()
-				type Schema = [["score"], number]
+				type Schema = { key: ["score"]; value: number }
 				const store = createStorage<Schema>(id)
 
-				store.commit({ set: [[["score"], 0]] })
+				store.commit({ set: [{ key: ["score"], value: 0 }] })
 
 				const sleep = (timeMs) =>
 					new Promise((resolve) => setTimeout(resolve, timeMs))
@@ -1076,15 +1076,15 @@ export function databaseTestSuite(
 			it("should probably generalize to scans as well", () => {
 				const id = randomId()
 				type Schema =
-					| [["player", string, number], null]
-					| [["total", number], null]
+					| { key: ["player", string, number]; value: null }
+					| { key: ["total", number]; value: null }
 				const store = createStorage<Schema>(id)
 				store.commit({
 					set: [
 						// TODO: add test using value as well.
-						[["player", "chet", 0], null],
-						[["player", "meghan", 0], null],
-						[["total", 0], null],
+						{ key: ["player", "chet", 0], value: null },
+						{ key: ["player", "meghan", 0], value: null },
+						{ key: ["total", 0], value: null },
 					],
 				})
 
@@ -1095,20 +1095,20 @@ export function databaseTestSuite(
 						const getPlayerScore = (player: string) => {
 							const pairs = tx.scan({ prefix: ["player", player] })
 							if (pairs.length !== 1) throw new Error("Missing player.")
-							const [[tuple, _value]] = pairs
-							return tuple[2]
+							const [{ key }] = pairs
+							return key[2]
 						}
 
 						const getCurrentTotal = () => {
 							const totals = tx.scan({ prefix: ["total"] })
 							if (totals.length !== 1) throw new Error("Too many totals.")
-							const [[tuple, _value]] = totals
-							return tuple[1]
+							const [{ key }] = totals
+							return key[1]
 						}
 
 						const resetTotal = () => {
 							const pairs = tx.scan({ prefix: ["player"] })
-							const total = sum(pairs.map(([tuple, _value]) => tuple[2]))
+							const total = sum(pairs.map(({ key }) => key[2]))
 							tx.remove(["total", getCurrentTotal()])
 							tx.set(["total", total], null)
 						}
@@ -1136,9 +1136,9 @@ export function databaseTestSuite(
 
 				// Most importantly, the total will never be incorrect.
 				assertEqual(store.scan({ prefix: [] }), [
-					[["player", "chet", 0], null],
-					[["player", "meghan", 1], null],
-					[["total", 1], null],
+					{ key: ["player", "chet", 0], value: null },
+					{ key: ["player", "meghan", 1], value: null },
+					{ key: ["total", 1], value: null },
 				])
 			})
 
@@ -1166,19 +1166,19 @@ export function databaseTestSuite(
 		describe("Reactivity", () => {
 			it("works with set", () => {
 				const store = createStorage(randomId())
-				const items: TupleValuePair[] = [
-					[["a", "a", "a"], 1],
-					[["a", "a", "b"], 2],
-					[["a", "a", "c"], 3],
-					[["a", "b", "a"], 4],
-					[["a", "b", "b"], 5],
-					[["a", "b", "c"], 6],
-					[["a", "c", "a"], 7],
-					[["a", "c", "b"], 8],
-					[["a", "c", "c"], 9],
+				const items: KeyValuePair[] = [
+					{ key: ["a", "a", "a"], value: 1 },
+					{ key: ["a", "a", "b"], value: 2 },
+					{ key: ["a", "a", "c"], value: 3 },
+					{ key: ["a", "b", "a"], value: 4 },
+					{ key: ["a", "b", "b"], value: 5 },
+					{ key: ["a", "b", "c"], value: 6 },
+					{ key: ["a", "c", "a"], value: 7 },
+					{ key: ["a", "c", "b"], value: 8 },
+					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const [key, value] of _.shuffle(items)) {
+				for (const { key, value } of _.shuffle(items)) {
 					transaction.set(key, value)
 				}
 				transaction.commit()
@@ -1197,26 +1197,26 @@ export function databaseTestSuite(
 				store.transact().set(["a", "b", 1], 1).commit()
 
 				assert.deepStrictEqual(hoist, {
-					set: [[["a", "b", 1], 1]],
+					set: [{ key: ["a", "b", 1], value: 1 }],
 					remove: [],
 				} as Writes)
 			})
 
 			it("works with remove", () => {
 				const store = createStorage(randomId())
-				const items: TupleValuePair[] = [
-					[["a", "a", "a"], 1],
-					[["a", "a", "b"], 2],
-					[["a", "a", "c"], 3],
-					[["a", "b", "a"], 4],
-					[["a", "b", "b"], 5],
-					[["a", "b", "c"], 6],
-					[["a", "c", "a"], 7],
-					[["a", "c", "b"], 8],
-					[["a", "c", "c"], 9],
+				const items: KeyValuePair[] = [
+					{ key: ["a", "a", "a"], value: 1 },
+					{ key: ["a", "a", "b"], value: 2 },
+					{ key: ["a", "a", "c"], value: 3 },
+					{ key: ["a", "b", "a"], value: 4 },
+					{ key: ["a", "b", "b"], value: 5 },
+					{ key: ["a", "b", "c"], value: 6 },
+					{ key: ["a", "c", "a"], value: 7 },
+					{ key: ["a", "c", "b"], value: 8 },
+					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const [key, value] of _.shuffle(items)) {
+				for (const { key, value } of _.shuffle(items)) {
 					transaction.set(key, value)
 				}
 				transaction.commit()
@@ -1239,19 +1239,19 @@ export function databaseTestSuite(
 
 			it("works when overwriting a value to an existing key", () => {
 				const store = createStorage(randomId())
-				const items: TupleValuePair[] = [
-					[["a", "a", "a"], 1],
-					[["a", "a", "b"], 2],
-					[["a", "a", "c"], 3],
-					[["a", "b", "a"], 4],
-					[["a", "b", "b"], 5],
-					[["a", "b", "c"], 6],
-					[["a", "c", "a"], 7],
-					[["a", "c", "b"], 8],
-					[["a", "c", "c"], 9],
+				const items: KeyValuePair[] = [
+					{ key: ["a", "a", "a"], value: 1 },
+					{ key: ["a", "a", "b"], value: 2 },
+					{ key: ["a", "a", "c"], value: 3 },
+					{ key: ["a", "b", "a"], value: 4 },
+					{ key: ["a", "b", "b"], value: 5 },
+					{ key: ["a", "b", "c"], value: 6 },
+					{ key: ["a", "c", "a"], value: 7 },
+					{ key: ["a", "c", "b"], value: 8 },
+					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const [key, value] of _.shuffle(items)) {
+				for (const { key, value } of _.shuffle(items)) {
 					transaction.set(key, value)
 				}
 				transaction.commit()
@@ -1267,26 +1267,26 @@ export function databaseTestSuite(
 				store.transact().set(["a", "b", "a"], 99).commit()
 
 				assert.deepStrictEqual(hoist, {
-					set: [[["a", "b", "a"], 99]],
+					set: [{ key: ["a", "b", "a"], value: 99 }],
 					remove: [],
 				} as Writes)
 			})
 
 			it("should use prefix correctly and filter bounds", () => {
 				const store = createStorage(randomId())
-				const items: TupleValuePair[] = [
-					[["a", "a", "a"], 1],
-					[["a", "a", "b"], 2],
-					[["a", "a", "c"], 3],
-					[["a", "b", "a"], 4],
-					[["a", "b", "b"], 5],
-					[["a", "b", "c"], 6],
-					[["a", "c", "a"], 7],
-					[["a", "c", "b"], 8],
-					[["a", "c", "c"], 9],
+				const items: KeyValuePair[] = [
+					{ key: ["a", "a", "a"], value: 1 },
+					{ key: ["a", "a", "b"], value: 2 },
+					{ key: ["a", "a", "c"], value: 3 },
+					{ key: ["a", "b", "a"], value: 4 },
+					{ key: ["a", "b", "b"], value: 5 },
+					{ key: ["a", "b", "c"], value: 6 },
+					{ key: ["a", "c", "a"], value: 7 },
+					{ key: ["a", "c", "b"], value: 8 },
+					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const [key, value] of _.shuffle(items)) {
+				for (const { key, value } of _.shuffle(items)) {
 					transaction.set(key, value)
 				}
 				transaction.commit()
@@ -1331,7 +1331,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist2, undefined)
 
 				assert.deepStrictEqual(hoist3, {
-					set: [[["a", "c", 1], 1]],
+					set: [{ key: ["a", "c", 1], value: 1 }],
 					remove: [],
 				} as Writes)
 			})
@@ -1341,9 +1341,9 @@ export function databaseTestSuite(
 			it("get/exists/scan works", () => {
 				type Person = { id: string; name: string; age: number }
 				type Schema =
-					| [["person", string], Person]
-					| [["personByName", string, string], Person]
-					| [["personByAge", number, string], Person]
+					| { key: ["person", string]; value: Person }
+					| { key: ["personByName", string, string]; value: Person }
+					| { key: ["personByAge", number, string]; value: Person }
 
 				const store = createStorage<Schema>(randomId())
 
@@ -1361,7 +1361,7 @@ export function databaseTestSuite(
 
 				const personByAge = store.subspace(["personByAge"])
 				assertEqual(
-					personByAge.scan().map(([tuple, value]) => tuple[0]),
+					personByAge.scan().map(({ key }) => key[0]),
 					[22, 30, 31]
 				)
 				assertEqual(personByAge.get([22, "3"])!.name, "Tanishq")
@@ -1370,13 +1370,13 @@ export function databaseTestSuite(
 			})
 
 			it("writes work", () => {
-				type Schema = [["a", number], number]
+				type Schema = { key: ["a", number]; value: number }
 				const store = createStorage<Schema>(randomId())
 
 				store.commit({
 					set: [
-						[["a", 1], 1],
-						[["a", 2], 2],
+						{ key: ["a", 1], value: 1 },
+						{ key: ["a", 2], value: 2 },
 					],
 				})
 
@@ -1387,20 +1387,20 @@ export function databaseTestSuite(
 				tx.commit()
 
 				assertEqual(a.scan(), [
-					[[1], 1],
-					[[2], 2],
-					[[3], 3],
+					{ key: [1], value: 1 },
+					{ key: [2], value: 2 },
+					{ key: [3], value: 3 },
 				])
 			})
 
 			it("writes work in a nested subspace", () => {
-				type Schema = [["a", "a", number], number]
+				type Schema = { key: ["a", "a", number]; value: number }
 				const store = createStorage<Schema>(randomId())
 
 				store.commit({
 					set: [
-						[["a", "a", 1], 1],
-						[["a", "a", 2], 2],
+						{ key: ["a", "a", 1], value: 1 },
+						{ key: ["a", "a", 2], value: 2 },
 					],
 				})
 
@@ -1412,20 +1412,20 @@ export function databaseTestSuite(
 				tx.commit()
 
 				assertEqual(aa.scan(), [
-					[[1], 1],
-					[[2], 2],
-					[[3], 3],
+					{ key: [1], value: 1 },
+					{ key: [2], value: 2 },
+					{ key: [3], value: 3 },
 				])
 			})
 
 			it("can create nested subspace inside a transaction", () => {
-				type Schema = [["a", "a", number], number]
+				type Schema = { key: ["a", "a", number]; value: number }
 				const store = createStorage<Schema>(randomId())
 
 				store.commit({
 					set: [
-						[["a", "a", 1], 1],
-						[["a", "a", 2], 2],
+						{ key: ["a", "a", 1], value: 1 },
+						{ key: ["a", "a", 2], value: 2 },
 					],
 				})
 
@@ -1437,27 +1437,27 @@ export function databaseTestSuite(
 				aa.commit()
 
 				assertEqual(a.scan(), [
-					[["a", 1], 1],
-					[["a", 2], 2],
-					[["a", 3], 3],
-					[["a", 4], 4],
+					{ key: ["a", 1], value: 1 },
+					{ key: ["a", 2], value: 2 },
+					{ key: ["a", 3], value: 3 },
+					{ key: ["a", 4], value: 4 },
 				])
 			})
 
 			it("scan args types work", () => {
-				type Schema = [["a", number], number]
+				type Schema = { key: ["a", number]; value: number }
 				const store = createStorage<Schema>(randomId())
 
 				store.commit({
 					set: [
-						[["a", 1], 1],
-						[["a", 2], 2],
+						{ key: ["a", 1], value: 1 },
+						{ key: ["a", 2], value: 2 },
 					],
 				})
 
 				const a = store.subspace(["a"])
 
-				assertEqual(a.scan({ gt: [1] }), [[[2], 2]])
+				assertEqual(a.scan({ gt: [1] }), [{ key: [2], value: 2 }])
 			})
 		})
 
@@ -1467,19 +1467,19 @@ export function databaseTestSuite(
 					const id = randomId()
 					const store = createStorage(id)
 
-					const items: TupleValuePair[] = [
-						[["a", "a", "a"], 1],
-						[["a", "a", "b"], 2],
-						[["a", "a", "c"], 3],
-						[["a", "b", "a"], 4],
-						[["a", "b", "b"], 5],
-						[["a", "b", "c"], 6],
-						[["a", "c", "a"], 7],
-						[["a", "c", "b"], 8],
-						[["a", "c", "c"], 9],
+					const items: KeyValuePair[] = [
+						{ key: ["a", "a", "a"], value: 1 },
+						{ key: ["a", "a", "b"], value: 2 },
+						{ key: ["a", "a", "c"], value: 3 },
+						{ key: ["a", "b", "a"], value: 4 },
+						{ key: ["a", "b", "b"], value: 5 },
+						{ key: ["a", "b", "c"], value: 6 },
+						{ key: ["a", "c", "a"], value: 7 },
+						{ key: ["a", "c", "b"], value: 8 },
+						{ key: ["a", "c", "c"], value: 9 },
 					]
 					const transaction = store.transact()
-					for (const [key, value] of _.shuffle(items)) {
+					for (const { key, value } of _.shuffle(items)) {
 						transaction.set(key, value)
 					}
 					transaction.commit()

@@ -7,7 +7,7 @@ import {
 	encodeTuple,
 	encodeValue,
 } from "../helpers/codec"
-import { ScanStorageArgs, TupleValuePair, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, Writes } from "./types"
 
 export class LevelTupleStorage implements AsyncTupleStorageApi {
 	/**
@@ -16,7 +16,7 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 	 */
 	constructor(public db: level.LevelDB) {}
 
-	async scan(args: ScanStorageArgs = {}): Promise<TupleValuePair[]> {
+	async scan(args: ScanStorageArgs = {}): Promise<KeyValuePair[]> {
 		return new Promise((resolve, reject) => {
 			const dbArgs: any = {}
 			if (args.gt !== undefined) dbArgs.gt = encodeTuple(args.gt)
@@ -28,10 +28,13 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 
 			const stream = this.db.createReadStream(dbArgs)
 
-			const results: TupleValuePair[] = []
+			const results: KeyValuePair[] = []
 			stream
 				.on("data", function (data) {
-					results.push([decodeTuple(data.key), decodeValue(data.value)])
+					results.push({
+						key: decodeTuple(data.key),
+						value: decodeValue(data.value),
+					})
 				})
 				.on("error", reject)
 				.on("close", function () {
@@ -50,10 +53,10 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 					} as AbstractBatch)
 			),
 			...(writes.set || []).map(
-				([tuple, value]) =>
+				({ key, value }) =>
 					({
 						type: "put",
-						key: encodeTuple(tuple),
+						key: encodeTuple(key),
 						value: encodeValue(value),
 					} as AbstractBatch)
 			),

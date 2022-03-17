@@ -13,8 +13,8 @@ import {
 } from "../main"
 
 type SchoolSchema =
-	| [["class", string], number]
-	| [["attends", string, string], null]
+	| { key: ["class", string]; value: number }
+	| { key: ["attends", string, string]; value: null }
 
 const addClass = transactionalQuery<SchoolSchema>()(
 	(tr, className: string, remainingSeats: number) => {
@@ -61,8 +61,8 @@ const classNames = flatten(
 
 const init = transactionalQuery<SchoolSchema>()((tr) => {
 	// Clear the directory.
-	for (const [tuple] of tr.scan()) {
-		tr.remove(tuple)
+	for (const { key } of tr.scan()) {
+		tr.remove(key)
 	}
 
 	for (const className of classNames) {
@@ -74,9 +74,9 @@ function availableClasses(db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>) {
 	return db
 		.subspace(["class"])
 		.scan()
-		.filter(([tuple, value]) => value > 0)
-		.map(([tuple, value]) => {
-			const className = tuple[0]
+		.filter(({ value }) => value > 0)
+		.map(({ key }) => {
+			const className = key[0]
 			return className
 		})
 }
@@ -124,9 +124,7 @@ function getClasses(
 	student: string
 ) {
 	const attends = db.subspace(["attends"])
-	const classes = attends
-		.scan({ prefix: [student] })
-		.map(([tuple, value]) => tuple[1])
+	const classes = attends.scan({ prefix: [student] }).map(({ key }) => key[1])
 	return classes
 }
 

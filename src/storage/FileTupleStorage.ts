@@ -1,15 +1,15 @@
 import * as fs from "fs-extra"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { TupleValuePair, Writes } from "./types"
+import { KeyValuePair, Writes } from "./types"
 
-function parseFile(str: string): TupleValuePair[] {
+function parseFile(str: string): KeyValuePair[] {
 	if (str === "") {
 		return []
 	}
 	return str.split("\n").map((line) => JSON.parse(line))
 }
 
-function serializeFile(data: TupleValuePair[]) {
+function serializeFile(data: KeyValuePair[]) {
 	return data.map((pair) => JSON.stringify(pair)).join("\n")
 }
 
@@ -59,7 +59,7 @@ class FileCache {
 	}
 
 	// TODO: throttle this call if it makes sense.
-	set(data: TupleValuePair[]) {
+	set(data: KeyValuePair[]) {
 		const filePath = this.getFilePath()
 		const fileContents = serializeFile(data)
 		fs.mkdirpSync(this.dbPath)

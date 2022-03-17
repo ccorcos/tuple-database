@@ -17,7 +17,7 @@ import {
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWrites,
 } from "../../helpers/subspaceHelpers"
-import { Tuple, TupleValuePair, Writes } from "../../storage/types"
+import { KeyValuePair, Tuple, Writes } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
 import {
 	FilterTupleValuePairByPrefix,
@@ -28,7 +28,7 @@ import {
 import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
-export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
+export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	implements TupleDatabaseClientApi<S>
 {
 	constructor(
@@ -36,7 +36,7 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 		public subspacePrefix: Tuple = []
 	) {}
 
-	scan<P extends TuplePrefix<S[0]>>(
+	scan<P extends TuplePrefix<S["key"]>>(
 		args: ScanArgs<P> = {},
 		txId?: TxId
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
@@ -46,7 +46,7 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	subscribe<P extends TuplePrefix<S[0]>>(
+	subscribe<P extends TuplePrefix<S["key"]>>(
 		args: ScanArgs<P>,
 		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
 	): Identity<Unsubscribe> {
@@ -69,7 +69,7 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 		return this.db.cancel(txId)
 	}
 
-	get<T extends S[0]>(
+	get<T extends S["key"]>(
 		tuple: T,
 		txId?: TxId
 	): Identity<ValueForTuple<S, T> | undefined> {
@@ -78,10 +78,10 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 		if (items.length === 0) return
 		if (items.length > 1) throw new Error("Get expects only one value.")
 		const pair = items[0]
-		return pair[1]
+		return pair.value
 	}
 
-	exists<T extends S[0]>(tuple: T, txId?: TxId): Identity<boolean> {
+	exists<T extends S["key"]>(tuple: T, txId?: TxId): Identity<boolean> {
 		// Not sure why these types aren't happy
 		const items = this.scan({ gte: tuple, lte: tuple as any }, txId)
 		if (items.length === 0) return false
@@ -89,7 +89,7 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 	}
 
 	// Subspace
-	subspace<P extends TuplePrefix<S[0]>>(
+	subspace<P extends TuplePrefix<S["key"]>>(
 		prefix: P
 	): TupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
@@ -107,7 +107,7 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 	}
 }
 
-export class TupleTransaction<S extends TupleValuePair>
+export class TupleTransaction<S extends KeyValuePair>
 	implements TupleTransactionApi<S>
 {
 	constructor(
@@ -125,7 +125,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		if (this.canceled) throw new Error("Transaction already canceled")
 	}
 
-	scan<P extends TuplePrefix<S[0]>>(
+	scan<P extends TuplePrefix<S["key"]>>(
 		args: ScanArgs<P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
@@ -135,7 +135,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 
 		const sets = tv.scan(this.writes.set, storageScanArgs)
-		for (const [fullTuple, value] of sets) {
+		for (const { key: fullTuple, value } of sets) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
 			tv.set(result, tuple, value)
 		}
@@ -147,7 +147,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	get<T extends S[0]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
+	get<T extends S["key"]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -162,10 +162,10 @@ export class TupleTransaction<S extends TupleValuePair>
 		if (items.length === 0) return
 		if (items.length > 1) throw new Error("Get expects only one value.")
 		const pair = items[0]
-		return pair[1]
+		return pair.value
 	}
 
-	exists<T extends S[0]>(tuple: T): Identity<boolean> {
+	exists<T extends S["key"]>(tuple: T): Identity<boolean> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -181,7 +181,7 @@ export class TupleTransaction<S extends TupleValuePair>
 	}
 
 	// ReadApis
-	set<T extends S>(tuple: T[0], value: T[1]): TupleTransactionApi<S> {
+	set<T extends S>(tuple: T["key"], value: T["value"]): TupleTransactionApi<S> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		t.remove(this.writes.remove, fullTuple)
@@ -189,7 +189,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		return this
 	}
 
-	remove(tuple: S[0]): TupleTransactionApi<S> {
+	remove(tuple: S["key"]): TupleTransactionApi<S> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		tv.remove(this.writes.set, fullTuple)
@@ -206,8 +206,8 @@ export class TupleTransaction<S extends TupleValuePair>
 		for (const tuple of remove || []) {
 			this.remove(tuple)
 		}
-		for (const [tuple, value] of set || []) {
-			this.set(tuple, value)
+		for (const { key, value } of set || []) {
+			this.set(key, value)
 		}
 		return this
 	}
@@ -224,7 +224,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		return this.db.cancel(this.id)
 	}
 
-	subspace<P extends TuplePrefix<S[0]>>(
+	subspace<P extends TuplePrefix<S["key"]>>(
 		prefix: P
 	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
 		this.checkActive()
@@ -233,7 +233,7 @@ export class TupleTransaction<S extends TupleValuePair>
 	}
 }
 
-export class TupleTransactionSubspace<S extends TupleValuePair>
+export class TupleTransactionSubspace<S extends KeyValuePair>
 	implements TupleTransactionApi<S>
 {
 	constructor(
@@ -241,31 +241,31 @@ export class TupleTransactionSubspace<S extends TupleValuePair>
 		public subspacePrefix: Tuple
 	) {}
 
-	scan<P extends TuplePrefix<S[0]>>(
+	scan<P extends TuplePrefix<S["key"]>>(
 		args: ScanArgs<P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.tx.scan(storageScanArgs)
 	}
 
-	get<T extends S[0]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
+	get<T extends S["key"]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.get(fullTuple)
 	}
 
-	exists<T extends S[0]>(tuple: T): Identity<boolean> {
+	exists<T extends S["key"]>(tuple: T): Identity<boolean> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.exists(fullTuple)
 	}
 
 	// ReadApis
-	set<T extends S>(tuple: T[0], value: T[1]): TupleTransactionApi<S> {
+	set<T extends S>(tuple: T["key"], value: T["value"]): TupleTransactionApi<S> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.set(fullTuple, value)
 		return this
 	}
 
-	remove(tuple: S[0]): TupleTransactionApi<S> {
+	remove(tuple: S["key"]): TupleTransactionApi<S> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.remove(fullTuple)
 		return this
@@ -278,8 +278,8 @@ export class TupleTransactionSubspace<S extends TupleValuePair>
 		for (const tuple of remove || []) {
 			this.remove(tuple)
 		}
-		for (const [tuple, value] of set || []) {
-			this.set(tuple, value)
+		for (const { key, value } of set || []) {
+			this.set(key, value)
 		}
 		return this
 	}
@@ -292,7 +292,7 @@ export class TupleTransactionSubspace<S extends TupleValuePair>
 		return this.tx.cancel()
 	}
 
-	subspace<P extends TuplePrefix<S[0]>>(
+	subspace<P extends TuplePrefix<S["key"]>>(
 		prefix: P
 	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
 		return new TupleTransactionSubspace(this.tx, [

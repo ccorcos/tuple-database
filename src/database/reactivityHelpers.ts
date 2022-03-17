@@ -52,7 +52,7 @@ function getListenersForTuplePrefix(
 			lt: [[...prefix, MIN]],
 		})
 
-		for (const [_prefix, value] of results) {
+		for (const { value } of results) {
 			listeners.push(value)
 		}
 	}
@@ -86,11 +86,11 @@ type ReactivityEmits = Map<Callback, Required<Writes>>
 function getReactivityEmits(listenersDb: TupleStorageApi, writes: Writes) {
 	const emits: ReactivityEmits = new Map()
 
-	for (const [tuple, value] of writes.set || []) {
-		const callbacks = getListenerCallbacksForTuple(listenersDb, tuple)
+	for (const { key, value } of writes.set || []) {
+		const callbacks = getListenerCallbacksForTuple(listenersDb, key)
 		for (const callback of callbacks) {
 			if (!emits.has(callback)) emits.set(callback, { set: [], remove: [] })
-			emits.get(callback)!.set.push([tuple, value])
+			emits.get(callback)!.set.push({ key, value })
 		}
 	}
 
@@ -117,7 +117,7 @@ function subscribe(
 	const id = randomId()
 	const value: Listener = { callback, bounds: args }
 
-	listenersDb.commit({ set: [[[prefix, id], value]] })
+	listenersDb.commit({ set: [{ key: [prefix, id], value }] })
 
 	const unsubscribe = () => {
 		// this.log("db/unsubscribe", args)

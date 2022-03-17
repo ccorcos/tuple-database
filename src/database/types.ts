@@ -1,4 +1,4 @@
-import { Tuple, TupleValuePair, Writes } from "../storage/types"
+import { KeyValuePair, Tuple, Writes } from "../storage/types"
 
 export type ScanArgs<T extends Tuple = Tuple> = {
 	gt?: T
@@ -12,7 +12,7 @@ export type ScanArgs<T extends Tuple = Tuple> = {
 
 export type TxId = string
 
-export type Callback<S extends TupleValuePair = TupleValuePair> = (
+export type Callback<S extends KeyValuePair = KeyValuePair> = (
 	write: Writes<S>
 ) => void
 export type Unsubscribe = () => void

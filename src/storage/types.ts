@@ -26,7 +26,7 @@ export type Value =
 
 export type Tuple = Value[]
 
-export type TupleValuePair = [Tuple, any]
+export type KeyValuePair = { key: Tuple; value: any }
 
 // If keys were always encoded when they were stored, we could add a \x00 or \xFF byte to
 // the end of the encoded tuple key in order to do prefix queries. However, we don't want
@@ -36,14 +36,10 @@ export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
 // TODO: call this a "Write" or a "Commit"
-export type Writes<S extends TupleValuePair = TupleValuePair> = {
+export type Writes<S extends KeyValuePair = KeyValuePair> = {
 	set?: S[]
-	remove?: S[0][]
+	remove?: S["key"][]
 }
-
-export type Operation =
-	| { type: "set"; tuple: Tuple; value: any; prev: any }
-	| { type: "remove"; tuple: Tuple; prev: any }
 
 export type ScanStorageArgs = {
 	gt?: Tuple

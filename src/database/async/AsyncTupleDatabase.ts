@@ -1,5 +1,5 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
-import { ScanStorageArgs, TupleValuePair, Writes } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { ReactivityTracker } from "../reactivityHelpers"
 import { TupleStorageApi } from "../sync/types"
@@ -12,10 +12,7 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 	log = new ConcurrencyLog()
 	reactivity = new ReactivityTracker()
 
-	async scan(
-		args: ScanStorageArgs = {},
-		txId?: TxId
-	): Promise<TupleValuePair[]> {
+	async scan(args: ScanStorageArgs = {}, txId?: TxId): Promise<KeyValuePair[]> {
 		const { reverse, limit, ...bounds } = args
 		if (txId) this.log.read(txId, bounds)
 		return this.storage.scan({ ...bounds, reverse, limit })

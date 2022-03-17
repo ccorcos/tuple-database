@@ -13,15 +13,15 @@ describe("subspaceHelpers", () => {
 			assert.deepEqual(
 				prependPrefixToWrites(["x"], {
 					set: [
-						[["a"], 1],
-						[["b"], 2],
+						{ key: ["a"], value: 1 },
+						{ key: ["b"], value: 2 },
 					],
 					remove: [["c"]],
 				}),
 				{
 					set: [
-						[["x", "a"], 1],
-						[["x", "b"], 2],
+						{ key: ["x", "a"], value: 1 },
+						{ key: ["x", "b"], value: 2 },
 					],
 					remove: [["x", "c"]],
 				}
@@ -34,15 +34,15 @@ describe("subspaceHelpers", () => {
 			assert.deepEqual(
 				removePrefixFromWrites(["x"], {
 					set: [
-						[["x", "a"], 1],
-						[["x", "b"], 2],
+						{ key: ["x", "a"], value: 1 },
+						{ key: ["x", "b"], value: 2 },
 					],
 					remove: [["x", "c"]],
 				}),
 				{
 					set: [
-						[["a"], 1],
-						[["b"], 2],
+						{ key: ["a"], value: 1 },
+						{ key: ["b"], value: 2 },
 					],
 					remove: [["c"]],
 				}
@@ -52,8 +52,8 @@ describe("subspaceHelpers", () => {
 			assert.throws(() => {
 				removePrefixFromWrites(["y"], {
 					set: [
-						[["x", "a"], 1],
-						[["x", "b"], 2],
+						{ key: ["x", "a"], value: 1 },
+						{ key: ["x", "b"], value: 2 },
 					],
 					remove: [["x", "c"]],
 				})

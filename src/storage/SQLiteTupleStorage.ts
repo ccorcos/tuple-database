@@ -1,7 +1,7 @@
 import { Database, Transaction } from "better-sqlite3"
 import { TupleStorageApi } from "../database/sync/types"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { ScanStorageArgs, Tuple, TupleValuePair, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, Tuple, Writes } from "./types"
 
 export class SQLiteTupleStorage implements TupleStorageApi {
 	/**
@@ -26,12 +26,12 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 				inserts,
 				deletes,
 			}: {
-				inserts: TupleValuePair[] | undefined
+				inserts: KeyValuePair[] | undefined
 				deletes: Tuple[] | undefined
 			}) => {
-				for (const [tuple, value] of inserts || []) {
+				for (const { key, value } of inserts || []) {
 					insertQuery.run({
-						key: encodeTuple(tuple),
+						key: encodeTuple(key),
 						value: JSON.stringify(value),
 					})
 				}
@@ -86,7 +86,10 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 
 		return results.map(
 			({ key, value }) =>
-				[decodeTuple(key) as Tuple, JSON.parse(value)] as TupleValuePair
+				({
+					key: decodeTuple(key) as Tuple,
+					value: JSON.parse(value),
+				} as KeyValuePair)
 		)
 	}
 

@@ -28,11 +28,11 @@ import {
 
 type Person = { id: string; name: string; age: number }
 
-// First element is the key, second element is the value.
+// Key-value storage schema.
 type Schema =
-	| [["person", string], Person]
-	| [["personByName", string, string], Person]
-	| [["personByAge", number, string], Person]
+	| {key: ["person", string], value: Person}
+	| {key: ["personByName", string, string], value: Person}
+	| {key: ["personByAge", number, string], value: Person}
 
 const db = new TupleDatabaseClient<Schema>(
 		new TupleDatabase(new InMemoryTupleStorage())
@@ -94,7 +94,10 @@ const unsubscribe = personByName.subscribe({prefix: ["Tanishq"]}}, (writes) => {
 	console.log("Writes:", writes)
 })
 writePerson(db, { id: "3", name: "Tanishq", age: 23 })
-// > Writes: {set: [[["personByName", "Tanishq", "3"], { id: "3", name: "Tanishq", age: 23 }]]}
+// > Writes: {set: [{
+//     key: ["personByName", "Tanishq", "3"],
+//     value: { id: "3", name: "Tanishq", age: 23 }
+//   }]}
 
 removePerson(db, "3")
 // > Writes: {remove: [["personByName", "Tanishq", "3"]]}

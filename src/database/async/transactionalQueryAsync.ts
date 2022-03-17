@@ -1,4 +1,4 @@
-import { TupleValuePair } from "../../main"
+import { KeyValuePair } from "../../main"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
@@ -10,9 +10,9 @@ import {
 // This outer function is just used for the schema type because currying is the only way
 // we can partially infer generic type parameters.
 // https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic
-export function transactionalAsyncQuery<
-	S extends TupleValuePair = TupleValuePair
->(retries = 5) {
+export function transactionalAsyncQuery<S extends KeyValuePair = KeyValuePair>(
+	retries = 5
+) {
 	return function <I extends any[], O>(
 		fn: (tx: AsyncTupleTransactionApi<S>, ...args: I) => Promise<O>
 	) {

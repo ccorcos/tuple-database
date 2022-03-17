@@ -9,9 +9,9 @@ type Value = string | number | boolean
 type Fact = [string, string, Value]
 
 type Schema =
-	| [["eav", ...Fact], null]
-	| [["ave", string, Value, string], null]
-	| [["vea", Value, string, string], null]
+	| { key: ["eav", ...Fact]; value: null }
+	| { key: ["ave", string, Value, string]; value: null }
+	| { key: ["vea", Value, string, string]; value: null }
 
 const writeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
 	const [e, a, v] = fact
@@ -49,7 +49,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// ___
 					return tx
 						.scan({ prefix: ["eav"] })
-						.map(([[_eav, e, a, v], _value]) => ({
+						.map(({ key: [_eav, e, a, v] }) => ({
 							[$e.name]: e,
 							[$a.name]: a,
 							[$v.name]: v,
@@ -58,7 +58,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// __V
 					return tx
 						.scan({ prefix: ["vea", $v] })
-						.map(([[_vea, _v, e, a], _value]) => ({
+						.map(({ key: [_vea, _v, e, a] }) => ({
 							[$e.name]: e,
 							[$a.name]: a,
 						}))
@@ -68,7 +68,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// A__
 					return tx
 						.scan({ prefix: ["ave", $a] })
-						.map(([[_ave, _a, v, e], _value]) => ({
+						.map(({ key: [_ave, _a, v, e] }) => ({
 							[$e.name]: e,
 							[$v.name]: v,
 						}))
@@ -76,7 +76,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// A_V
 					return tx
 						.scan({ prefix: ["ave", $a, $v] })
-						.map(([[_ave, _a, _v, e], _value]) => ({
+						.map(({ key: [_ave, _a, _v, e] }) => ({
 							[$e.name]: e,
 						}))
 				}
@@ -87,7 +87,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// E__
 					return tx
 						.scan({ prefix: ["eav", $e] })
-						.map(([[_eav, _e, a, v], _value]) => ({
+						.map(({ key: [_eav, _e, a, v] }) => ({
 							[$a.name]: a,
 							[$v.name]: v,
 						}))
@@ -95,7 +95,7 @@ const queryExpression = transactionalQuery<Schema>()(
 					// E_V
 					return tx
 						.scan({ prefix: ["vea", $v, $e] })
-						.map(([[_vea, _v, _e, a], _value]) => ({
+						.map(({ key: [_vea, _v, _e, a] }) => ({
 							[$a.name]: a,
 						}))
 				}
@@ -104,14 +104,14 @@ const queryExpression = transactionalQuery<Schema>()(
 					// EA_
 					return tx
 						.scan({ prefix: ["eav", $e, $a] })
-						.map(([[_eav, _e, _a, v], _value]) => ({
+						.map(({ key: [_eav, _e, _a, v] }) => ({
 							[$v.name]: v,
 						}))
 				} else {
 					// EAV
 					return tx
 						.scan({ prefix: ["eav", $e, $a, $v] })
-						.map(([[_eav, _e, _a, _v], _value]) => ({}))
+						.map(({ key: [_eav, _e, _a, _v] }) => ({}))
 				}
 			}
 		}

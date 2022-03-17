@@ -37,8 +37,8 @@ const initialize = transactionalAsyncQuery()(async (tx) => {
 const readRemoveWrite = transactionalAsyncQuery()(async (tx) => {
 	for (const i of range(readIters)) {
 		const results = await tx.scan({ gt: randomTuple(), limit: 10 })
-		for (const [tuple] of results) {
-			tx.remove(tuple)
+		for (const { key } of results) {
+			tx.remove(key)
 		}
 	}
 	for (const i of range(writeIters)) {

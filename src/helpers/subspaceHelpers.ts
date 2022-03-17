@@ -1,11 +1,6 @@
 import { isEqual, omitBy } from "lodash"
 import { ScanArgs } from "../database/types"
-import {
-	ScanStorageArgs,
-	Tuple,
-	TupleValuePair,
-	Writes,
-} from "../storage/types"
+import { KeyValuePair, ScanStorageArgs, Tuple, Writes } from "../storage/types"
 import { normalizeTupleBounds } from "./sortedTupleArray"
 
 export function prependPrefixToTuple(prefix: Tuple, tuple: Tuple): Tuple {
@@ -18,16 +13,19 @@ function prependPrefixToTuples(prefix: Tuple, tuples: Tuple[]): Tuple[] {
 
 function prependPrefixToTupleValuePair(
 	prefix: Tuple,
-	pair: TupleValuePair
-): TupleValuePair {
-	const [tuple, value] = pair
-	return [prependPrefixToTuple(prefix, tuple), value]
+	pair: KeyValuePair
+): KeyValuePair {
+	const { key, value } = pair
+	return {
+		key: prependPrefixToTuple(prefix, key),
+		value,
+	}
 }
 
 function prependPrefixToTupleValuePairs(
 	prefix: Tuple,
-	pairs: TupleValuePair[]
-): TupleValuePair[] {
+	pairs: KeyValuePair[]
+): KeyValuePair[] {
 	return pairs.map((pair) => prependPrefixToTupleValuePair(prefix, pair))
 }
 
@@ -68,16 +66,16 @@ function removePrefixFromTuples(prefix: Tuple, tuples: Tuple[]) {
 
 function removePrefixFromTupleValuePair(
 	prefix: Tuple,
-	pair: TupleValuePair
-): TupleValuePair {
-	const [tuple, value] = pair
-	return [removePrefixFromTuple(prefix, tuple), value]
+	pair: KeyValuePair
+): KeyValuePair {
+	const { key, value } = pair
+	return { key: removePrefixFromTuple(prefix, key), value }
 }
 
 export function removePrefixFromTupleValuePairs(
 	prefix: Tuple,
-	pairs: TupleValuePair[]
-): TupleValuePair[] {
+	pairs: KeyValuePair[]
+): KeyValuePair[] {
 	return pairs.map((pair) => removePrefixFromTupleValuePair(prefix, pair))
 }
 
