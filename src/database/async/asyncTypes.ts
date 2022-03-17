@@ -26,33 +26,37 @@ export type AsyncTupleDatabaseApi = {
 /** Wraps AsyncTupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
 export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 	{
-		// Types
-		commit: (writes: Writes<S>, txId?: TxId) => Promise<void>
 		cancel: (txId: string) => Promise<void>
-		scan: <P extends TuplePrefix<S["key"]>>(
-			args?: ScanArgs<P>,
-			txId?: TxId
-		) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
-		subscribe: <P extends TuplePrefix<S["key"]>>(
-			args: ScanArgs<P>,
-			callback: Callback<FilterTupleValuePairByPrefix<S, P>>
-		) => Promise<Unsubscribe>
 		close: () => Promise<void>
 
-		// ReadApis
-		get: <T extends S["key"]>(
-			tuple: T,
+		// NOTE: all of these types must have an implicit <T extends S> so that the
+		// Database<A | B> can be passed as an argument expecting Database<A>.
+
+		// Types
+		commit: (writes: Writes<S>, txId?: TxId) => Promise<void>
+		scan: <T extends S, P extends TuplePrefix<T["key"]>>(
+			args?: ScanArgs<P>,
 			txId?: TxId
-		) => Promise<ValueForTuple<S, T> | undefined>
+		) => Promise<FilterTupleValuePairByPrefix<T, P>[]>
+		subscribe: <T extends S, P extends TuplePrefix<T["key"]>>(
+			args: ScanArgs<P>,
+			callback: Callback<FilterTupleValuePairByPrefix<T, P>>
+		) => Promise<Unsubscribe>
+
+		// ReadApis
+		get: <T extends S, K extends T["key"]>(
+			tuple: K,
+			txId?: TxId
+		) => Promise<ValueForTuple<T, K> | undefined>
 		exists: <T extends S["key"]>(tuple: T, txId?: TxId) => Promise<boolean>
 
 		// Subspace
-		subspace: <P extends TuplePrefix<S["key"]>>(
+		subspace: <T extends S, P extends TuplePrefix<T["key"]>>(
 			prefix: P
-		) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+		) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>>
 
 		// Transaction
-		transact: (txId?: TxId) => AsyncTupleTransactionApi<S>
+		transact: <T extends S>(txId?: TxId) => AsyncTupleTransactionApi<T>
 	}
 
 export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
@@ -85,18 +89,18 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 export type ReadOnlyAsyncTupleDatabaseClientApi<
 	S extends KeyValuePair = KeyValuePair
 > = {
-	scan: <P extends TuplePrefix<S["key"]>>(
+	scan: <T extends S, P extends TuplePrefix<T["key"]>>(
 		args?: ScanArgs<P>,
 		txId?: TxId
-	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S["key"]>(
-		tuple: T,
+	) => Promise<FilterTupleValuePairByPrefix<T, P>[]>
+	get: <T extends S, K extends T["key"]>(
+		tuple: K,
 		txId?: TxId
-	) => Promise<ValueForTuple<S, T> | undefined>
+	) => Promise<ValueForTuple<T, K> | undefined>
 	exists: <T extends S["key"]>(tuple: T, txId?: TxId) => Promise<boolean>
-	subspace: <P extends TuplePrefix<S["key"]>>(
+	subspace: <T extends S, P extends TuplePrefix<T["key"]>>(
 		prefix: P
-	) => ReadOnlyAsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+	) => ReadOnlyAsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>>
 
 	// subscribe?
 }

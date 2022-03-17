@@ -36,27 +36,27 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		public subspacePrefix: Tuple = []
 	) {}
 
-	scan<P extends TuplePrefix<S["key"]>>(
+	scan<T extends S, P extends TuplePrefix<T["key"]>>(
 		args: ScanArgs<P> = {},
 		txId?: TxId
-	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
+	): Identity<FilterTupleValuePairByPrefix<T, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as FilterTupleValuePairByPrefix<T, P>[]
 	}
 
-	subscribe<P extends TuplePrefix<S["key"]>>(
+	subscribe<T extends S, P extends TuplePrefix<T["key"]>>(
 		args: ScanArgs<P>,
-		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
+		callback: Callback<FilterTupleValuePairByPrefix<T, P>>
 	): Identity<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write) => {
-			callback(
-				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
-					FilterTupleValuePairByPrefix<S, P>
-				>
-			)
+			const subspaceWrites = removePrefixFromWrites(
+				this.subspacePrefix,
+				write
+			) as Writes<FilterTupleValuePairByPrefix<T, P>>
+			callback(subspaceWrites)
 		})
 	}
 
@@ -89,15 +89,15 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Subspace
-	subspace<P extends TuplePrefix<S["key"]>>(
+	subspace<T extends S, P extends TuplePrefix<T["key"]>>(
 		prefix: P
-	): TupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
+	): TupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
 		return new TupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction
-	transact(txId?: TxId): TupleTransactionApi<S> {
+	transact<T extends S>(txId?: TxId): TupleTransactionApi<T> {
 		const id = txId || randomId()
 		return new TupleTransaction(this.db, this.subspacePrefix, id)
 	}

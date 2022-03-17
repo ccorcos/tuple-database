@@ -51,7 +51,9 @@ type F1 = Assert<
 	{ key: [1, 2]; value: number }
 >
 
-type DistributiveProp<T, K extends keyof T> = T extends unknown ? T[K] : never
+export type DistributiveProp<T, K extends keyof T> = T extends unknown
+	? T[K]
+	: never
 
 export type ValueForTuple<
 	S extends KeyValuePair,

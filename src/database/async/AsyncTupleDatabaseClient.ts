@@ -32,27 +32,27 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		public subspacePrefix: Tuple = []
 	) {}
 
-	async scan<P extends TuplePrefix<S["key"]>>(
+	async scan<T extends S, P extends TuplePrefix<T["key"]>>(
 		args: ScanArgs<P> = {},
 		txId?: TxId
-	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
+	): Promise<FilterTupleValuePairByPrefix<T, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = await this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as FilterTupleValuePairByPrefix<T, P>[]
 	}
 
-	async subscribe<P extends TuplePrefix<S["key"]>>(
+	async subscribe<T extends S, P extends TuplePrefix<T["key"]>>(
 		args: ScanArgs<P>,
-		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
+		callback: Callback<FilterTupleValuePairByPrefix<T, P>>
 	): Promise<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write) => {
-			callback(
-				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
-					FilterTupleValuePairByPrefix<S, P>
-				>
-			)
+			const subspaceWrites = removePrefixFromWrites(
+				this.subspacePrefix,
+				write
+			) as Writes<FilterTupleValuePairByPrefix<T, P>>
+			callback(subspaceWrites)
 		})
 	}
 
@@ -85,15 +85,15 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Subspace
-	subspace<P extends TuplePrefix<S["key"]>>(
+	subspace<T extends S, P extends TuplePrefix<T["key"]>>(
 		prefix: P
-	): AsyncTupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
+	): AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
 		return new AsyncTupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction
-	transact(txId?: TxId): AsyncTupleTransactionApi<S> {
+	transact<T extends S>(txId?: TxId): AsyncTupleTransactionApi<T> {
 		const id = txId || randomId()
 		return new AsyncTupleTransaction(this.db, this.subspacePrefix, id)
 	}

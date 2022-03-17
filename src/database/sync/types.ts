@@ -36,33 +36,37 @@ export type TupleDatabaseApi = {
 
 /** Wraps TupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
 export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
-	// Types
-	commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
-	scan: <P extends TuplePrefix<S["key"]>>(
-		args?: ScanArgs<P>,
-		txId?: TxId
-	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
-	subscribe: <P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P>,
-		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
-	) => Identity<Unsubscribe>
 	close: () => Identity<void>
 
-	// ReadApis
-	get: <T extends S["key"]>(
-		tuple: T,
+	// NOTE: all of these types must have an implicit <T extends S> so that the
+	// Database<A | B> can be passed as an argument expecting Database<A>.
+
+	// Types
+	commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
+	scan: <T extends S, P extends TuplePrefix<T["key"]>>(
+		args?: ScanArgs<P>,
 		txId?: TxId
-	) => Identity<ValueForTuple<S, T> | undefined>
+	) => Identity<FilterTupleValuePairByPrefix<T, P>[]>
+	subscribe: <T extends S, P extends TuplePrefix<T["key"]>>(
+		args: ScanArgs<P>,
+		callback: Callback<FilterTupleValuePairByPrefix<T, P>>
+	) => Identity<Unsubscribe>
+
+	// ReadApis
+	get: <T extends S, K extends T["key"]>(
+		tuple: K,
+		txId?: TxId
+	) => Identity<ValueForTuple<T, K> | undefined>
 	exists: <T extends S["key"]>(tuple: T, txId?: TxId) => Identity<boolean>
 
 	// Subspace
-	subspace: <P extends TuplePrefix<S["key"]>>(
+	subspace: <T extends S, P extends TuplePrefix<T["key"]>>(
 		prefix: P
-	) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+	) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>>
 
 	// Transaction
-	transact: (txId?: TxId) => TupleTransactionApi<S>
+	transact: <T extends S>(txId?: TxId) => TupleTransactionApi<T>
 }
 
 export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
@@ -95,18 +99,18 @@ export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 export type ReadOnlyTupleDatabaseClientApi<
 	S extends KeyValuePair = KeyValuePair
 > = {
-	scan: <P extends TuplePrefix<S["key"]>>(
+	scan: <T extends S, P extends TuplePrefix<T["key"]>>(
 		args?: ScanArgs<P>,
 		txId?: TxId
-	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S["key"]>(
-		tuple: T,
+	) => Identity<FilterTupleValuePairByPrefix<T, P>[]>
+	get: <T extends S, K extends T["key"]>(
+		tuple: K,
 		txId?: TxId
-	) => Identity<ValueForTuple<S, T> | undefined>
+	) => Identity<ValueForTuple<T, K> | undefined>
 	exists: <T extends S["key"]>(tuple: T, txId?: TxId) => Identity<boolean>
-	subspace: <P extends TuplePrefix<S["key"]>>(
+	subspace: <T extends S, P extends TuplePrefix<T["key"]>>(
 		prefix: P
-	) => ReadOnlyTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+	) => ReadOnlyTupleDatabaseClientApi<RemoveTupleValuePairPrefix<T, P>>
 
 	// subscribe?
 }
