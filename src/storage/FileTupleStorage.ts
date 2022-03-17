@@ -6,7 +6,15 @@ function parseFile(str: string): KeyValuePair[] {
 	if (str === "") {
 		return []
 	}
-	return str.split("\n").map((line) => JSON.parse(line))
+	return str.split("\n").map((line) => {
+		const pair = JSON.parse(line)
+		// Backward compatibility with [key, value].
+		if (Array.isArray(pair)) {
+			const [key, value] = pair
+			return { key, value }
+		}
+		return pair
+	})
 }
 
 function serializeFile(data: KeyValuePair[]) {
