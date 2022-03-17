@@ -43,6 +43,9 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 		txId?: TxId
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
+
+		console.log("ScanArgs", storageScanArgs)
+
 		const pairs = await this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
@@ -224,7 +227,7 @@ export class AsyncTupleTransaction<S extends TupleValuePair>
 
 	async commit() {
 		this.committed = true
-		return this.db.commit(this.writes)
+		return this.db.commit(this.writes, this.id)
 	}
 
 	async cancel() {

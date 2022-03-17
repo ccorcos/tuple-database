@@ -971,6 +971,8 @@ export function storageTestSuite(
 				// Meghan turns it off if its on.
 				if (meghan.get(["lamp"])) meghan.set(["lamp"], false)
 
+				console.log(chet["writes"], meghan["writes"])
+
 				// Someone has to lose. Whoever commits first wins.
 				chet.commit()
 				assert.throws(() => meghan.commit())

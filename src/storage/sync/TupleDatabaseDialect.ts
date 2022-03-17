@@ -47,6 +47,9 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 		txId?: TxId
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
+
+		console.log("ScanArgs", storageScanArgs)
+
 		const pairs = this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
@@ -222,7 +225,7 @@ export class TupleTransaction<S extends TupleValuePair>
 
 	commit() {
 		this.committed = true
-		return this.db.commit(this.writes)
+		return this.db.commit(this.writes, this.id)
 	}
 
 	cancel() {
