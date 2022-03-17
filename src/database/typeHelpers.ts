@@ -105,3 +105,14 @@ type A13 = Assert<
 	[[2, 3], string]
 >
 type A14 = Assert<RemoveTupleValuePairPrefix<[[1, 2, 3], string], [2]>, never>
+
+// Using the DistributiveProp trick here too.
+export type SchemaSubspace<
+	T extends TupleValuePair,
+	P extends Tuple
+> = T extends unknown ? [[...P, ...T[0]], T[1]] : never
+
+type A15 = Assert<
+	SchemaSubspace<[[1], 1] | [[2], 2], ["int"]>,
+	[["int", 1], 1] | [["int", 2], 2]
+>
