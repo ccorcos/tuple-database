@@ -245,7 +245,9 @@ export class TupleTransactionSubspace<S extends KeyValuePair>
 		args: ScanArgs<P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
-		return this.tx.scan(storageScanArgs)
+		const pairs = this.tx.scan(storageScanArgs)
+		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
+		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
 	get<T extends S["key"]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {

@@ -1408,7 +1408,6 @@ export function asyncDatabaseTestSuite(
 				assertEqual(await tx.get([1]), 1)
 				assertEqual(await tx.get([3]), 3)
 				await tx.commit()
-
 				assertEqual(await aa.scan(), [
 					{ key: [1], value: 1 },
 					{ key: [2], value: 2 },
@@ -1432,6 +1431,14 @@ export function asyncDatabaseTestSuite(
 				tx.set(["a", 3], 3)
 				const aa = tx.subspace(["a"])
 				aa.set([4], 4)
+
+				assertEqual(await aa.scan(), [
+					{ key: [1], value: 1 },
+					{ key: [2], value: 2 },
+					{ key: [3], value: 3 },
+					{ key: [4], value: 4 },
+				])
+
 				await aa.commit()
 
 				assertEqual(await a.scan(), [
