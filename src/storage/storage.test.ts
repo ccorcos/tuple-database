@@ -4,102 +4,71 @@ import * as path from "path"
 import { sortedValues } from "../test/fixtures"
 import { asyncStorageTestSuite } from "./async/asyncStorageTestSuite"
 import { AsyncTupleDatabase } from "./async/AsyncTupleDatabase"
-import { AsyncTupleDatabaseClient } from "./async/AsyncTupleDatabaseClient"
-import { ReactiveAsyncTupleDatabase } from "./async/ReactiveAsyncTupleDatabase"
+import { AsyncTupleDatabaseDialect } from "./async/AsyncTupleDatabaseDialect"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
 import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
-import { ReactiveTupleDatabase } from "./sync/ReactiveTupleDatabase"
 import { storageTestSuite } from "./sync/storageTestSuite"
 import { TupleDatabase } from "./sync/TupleDatabase"
-import { TupleDatabaseClient } from "./sync/TupleDatabaseClient"
+import { TupleDatabaseDialect } from "./sync/TupleDatabaseDialect"
 
 const tmpDir = path.resolve(__dirname, "/../../tmp")
 
 storageTestSuite(
-	"TupleDatabase(InMemoryTupleStorage)",
+	"TupleDatabaseDialect(TupleDatabase(InMemoryTupleStorage))",
 	sortedValues,
-	() => new TupleDatabase(new InMemoryTupleStorage()),
+	() => new TupleDatabaseDialect(new TupleDatabase(new InMemoryTupleStorage())),
 	false
 )
 
 storageTestSuite(
-	"ReactiveTupleDatabase(InMemoryTupleStorage)",
-	sortedValues,
-	() => new ReactiveTupleDatabase(new InMemoryTupleStorage()),
-	false
-)
-
-storageTestSuite(
-	"TupleDatabase(FileTupleStorage)",
-	sortedValues,
-	(id) => new TupleDatabase(new FileTupleStorage(path.join(tmpDir, id)))
-)
-
-storageTestSuite(
-	"TupleDatabase(SQLiteTupleStorage)",
+	"TupleDatabaseDialect(TupleDatabase(FileTupleStorage))",
 	sortedValues,
 	(id) =>
-		new TupleDatabase(
-			new SQLiteTupleStorage(sqlite(path.join(tmpDir, id + ".db")))
+		new TupleDatabaseDialect(
+			new TupleDatabase(new FileTupleStorage(path.join(tmpDir, id)))
 		)
 )
 
 storageTestSuite(
-	"ReactiveTupleDatabase(SQLiteTupleStorage)",
+	"TupleDatabaseDialect(TupleDatabase(SQLiteTupleStorage))",
 	sortedValues,
 	(id) =>
-		new ReactiveTupleDatabase(
-			new SQLiteTupleStorage(sqlite(path.join(tmpDir, id + ".db")))
-		)
-)
-
-storageTestSuite(
-	"TupleDatabaseClient(TupleDatabase(InMemoryTupleStorage))",
-	sortedValues,
-	() => new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage())),
-	false
-)
-
-asyncStorageTestSuite(
-	"AsyncTupleDatabase(InMemoryTupleStorage)",
-	sortedValues,
-	() => new AsyncTupleDatabase(new InMemoryTupleStorage()),
-	false
-)
-
-asyncStorageTestSuite(
-	"ReactiveAsyncTupleDatabase(InMemoryTupleStorage)",
-	sortedValues,
-	() => new ReactiveAsyncTupleDatabase(new InMemoryTupleStorage()),
-	false
-)
-
-asyncStorageTestSuite(
-	"AsyncTupleDatabase(LevelTupleStorage)",
-	sortedValues,
-	(id) =>
-		new AsyncTupleDatabase(
-			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
+		new TupleDatabaseDialect(
+			new TupleDatabase(
+				new SQLiteTupleStorage(sqlite(path.join(tmpDir, id + ".db")))
+			)
 		)
 )
 
 asyncStorageTestSuite(
-	"ReactiveAsyncTupleDatabase(LevelTupleStorage)",
-	sortedValues,
-	(id) =>
-		new ReactiveAsyncTupleDatabase(
-			new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
-		)
-)
-
-asyncStorageTestSuite(
-	"AsyncTupleDatabaseClient(AsyncTupleDatabase(InMemoryTupleStorage))",
+	"AsyncTupleDatabaseDialect(TupleDatabase(InMemoryTupleStorage))",
 	sortedValues,
 	() =>
-		new AsyncTupleDatabaseClient(
+		new AsyncTupleDatabaseDialect(
+			new TupleDatabase(new InMemoryTupleStorage())
+		),
+	false
+)
+
+asyncStorageTestSuite(
+	"AsyncTupleDatabaseDialect(AsyncTupleDatabase(InMemoryTupleStorage))",
+	sortedValues,
+	() =>
+		new AsyncTupleDatabaseDialect(
 			new AsyncTupleDatabase(new InMemoryTupleStorage())
 		),
 	false
+)
+
+asyncStorageTestSuite(
+	"AsyncTupleDatabaseDialect(AsyncTupleDatabase(LevelTupleStorage))",
+	sortedValues,
+	(id) =>
+		new AsyncTupleDatabaseDialect(
+			new AsyncTupleDatabase(
+				new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
+			)
+		)
 )

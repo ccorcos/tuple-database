@@ -9,9 +9,13 @@ import * as fs from "fs-extra"
 import level from "level"
 import { range } from "lodash"
 import * as path from "path"
-import { InMemoryTupleStorage, transactionalAsync } from "../main"
+import {
+	AsyncTupleDatabaseDialect,
+	InMemoryTupleStorage,
+	transactionalAsync,
+} from "../main"
 import { AsyncTupleDatabase } from "../storage/async/AsyncTupleDatabase"
-import { AsyncTupleDatabaseApi } from "../storage/async/types"
+import { AsyncTupleDatabaseDialectApi } from "../storage/async/asyncTypes"
 import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
 
@@ -52,7 +56,7 @@ async function timeIt(label: string, fn: () => Promise<void>) {
 	console.log(label, end - start)
 }
 
-async function asyncBenchmark(label: string, db: AsyncTupleDatabaseApi) {
+async function asyncBenchmark(label: string, db: AsyncTupleDatabaseDialectApi) {
 	await timeIt(label + ":initialize", () => initialize(db))
 
 	await timeIt(label + ":readRemoveWrite", async () => {
@@ -69,20 +73,26 @@ async function main() {
 
 	await asyncBenchmark(
 		"AsyncTupleDatabase(InMemoryTupleStorage))",
-		new AsyncTupleDatabase(new InMemoryTupleStorage())
+		new AsyncTupleDatabaseDialect(
+			new AsyncTupleDatabase(new InMemoryTupleStorage())
+		)
 	)
 
 	await asyncBenchmark(
 		"AsyncTupleDatabase(SQLiteTupleStorage))",
-		new AsyncTupleDatabase(
-			new SQLiteTupleStorage(sqlite(path.join(tmpDir, "benchmark-sqlite.db")))
+		new AsyncTupleDatabaseDialect(
+			new AsyncTupleDatabase(
+				new SQLiteTupleStorage(sqlite(path.join(tmpDir, "benchmark-sqlite.db")))
+			)
 		)
 	)
 
 	await asyncBenchmark(
 		"AsyncTupleDatabase(LevelTupleStorage))",
-		new AsyncTupleDatabase(
-			new LevelTupleStorage(level(path.join(tmpDir, "benchmark-level.db")))
+		new AsyncTupleDatabaseDialect(
+			new AsyncTupleDatabase(
+				new LevelTupleStorage(level(path.join(tmpDir, "benchmark-level.db")))
+			)
 		)
 	)
 }

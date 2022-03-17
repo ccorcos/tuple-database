@@ -5,11 +5,11 @@ import {
 	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { TupleDatabase } from "./sync/TupleDatabase"
+import { TupleStorageApi } from "./sync/types"
 import { Callback, MIN, ScanStorageArgs, Tuple, Writes } from "./types"
 
 export class ReactivityTracker {
-	private listenersDb = new TupleDatabase(new InMemoryTupleStorage())
+	private listenersDb = new InMemoryTupleStorage()
 
 	subscribe(args: ScanStorageArgs, callback: Callback) {
 		return subscribe(this.listenersDb, args, callback)
@@ -38,7 +38,10 @@ function iterateTuplePrefixes(tuple: Tuple) {
 }
 
 /** Query the listenersDb based on tuple prefixes. */
-function getListenersForTuplePrefix(listenersDb: TupleDatabase, tuple: Tuple) {
+function getListenersForTuplePrefix(
+	listenersDb: TupleStorageApi,
+	tuple: Tuple
+) {
 	const listeners: Listener[] = []
 
 	// Look for listeners at each prefix of the tuple.
@@ -58,7 +61,7 @@ function getListenersForTuplePrefix(listenersDb: TupleDatabase, tuple: Tuple) {
 
 /** Query the listenersDb based on tuple prefixes, and additionally check for query bounds. */
 function getListenerCallbacksForTuple(
-	listenersDb: TupleDatabase,
+	listenersDb: TupleStorageApi,
 	tuple: Tuple
 ) {
 	const callbacks: Callback[] = []
@@ -79,7 +82,7 @@ function getListenerCallbacksForTuple(
 
 type ReactivityEmits = Map<Callback, Required<Writes>>
 
-function getReactivityEmits(listenersDb: TupleDatabase, writes: Writes) {
+function getReactivityEmits(listenersDb: TupleStorageApi, writes: Writes) {
 	const emits: ReactivityEmits = new Map()
 
 	for (const [tuple, value] of writes.set || []) {
@@ -102,7 +105,7 @@ function getReactivityEmits(listenersDb: TupleDatabase, writes: Writes) {
 }
 
 function subscribe(
-	listenersDb: TupleDatabase,
+	listenersDb: TupleStorageApi,
 	args: ScanStorageArgs,
 	callback: Callback
 ) {
@@ -113,11 +116,11 @@ function subscribe(
 	const id = randomId()
 	const value: Listener = { callback, bounds: args }
 
-	listenersDb.transact().set([prefix, id], value).commit()
+	listenersDb.commit({ set: [[[prefix, id], value]] })
 
 	const unsubscribe = () => {
 		// this.log("db/unsubscribe", args)
-		listenersDb.transact().remove([prefix, id]).commit()
+		listenersDb.commit({ remove: [[prefix, id]] })
 	}
 
 	return unsubscribe

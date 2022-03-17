@@ -1,5 +1,22 @@
 ## TODO
 
+- big refactor
+	- TupleStorage
+	- TupleDatabase
+	- TupleDatabaseDialect
+
+	- dialect -> client
+	- file organization.
+	- SyncTupleDatabase
+	- general cleanup of names?
+
+	- separate storage, vs dialect, vs client tests.
+
+	class scheduling test.
+
+	- improve tests.
+
+
 - types with min/max for scanning..
 
 How to organize these different layers?

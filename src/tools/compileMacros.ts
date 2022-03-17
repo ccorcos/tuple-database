@@ -27,7 +27,8 @@ function convertAsyncToSync(contents: string) {
 	// Remove async
 	contents = contents.replace(/[Aa]sync/g, "")
 	contents = contents.replace(/await/g, "")
-	contents = contents.replace(/Promise<([^>]+)>/g, "$1")
+	// Return "Identity" to avoid having to parse matching brackets.
+	contents = contents.replace(/Promise<([^>]+)>/g, "Identity<$1>")
 
 	// Sync test assertions.
 	contents = contents.replace(/assert\.rejects/g, "assert.throws")
@@ -51,10 +52,14 @@ function convertAsyncToSyncFile(inputPath: string, outputPath: string) {
 This file is generated from async/${path.parse(inputPath).base}
 
 */
+
+type Identity<T> = T
+
 ${contents}
 `
 
 	fs.writeFileSync(outputPath, contents)
+
 	execSync(
 		path.join(rootPath, "node_modules/.bin/organize-imports-cli") +
 			" " +
