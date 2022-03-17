@@ -39,7 +39,7 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 	) {}
 
 	async scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>,
+		args: ScanArgs<P> = {},
 		txId?: TxId
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -87,7 +87,7 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 		// Not sure why these types aren't happy
 		const items = await this.scan({ gte: tuple, lte: tuple as any }, txId)
 		if (items.length === 0) return false
-		return items.length > 1
+		return items.length >= 1
 	}
 
 	// Subspace
@@ -101,7 +101,7 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 	// Transaction
 	transact(txId?: TxId): AsyncTupleTransactionApi<S> {
 		const id = txId || randomId()
-		return new AsyncTupleTransaction2(this.db, this.subspacePrefix, id)
+		return new AsyncTupleTransaction(this.db, this.subspacePrefix, id)
 	}
 
 	async close() {
@@ -109,7 +109,7 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 	}
 }
 
-export class AsyncTupleTransaction2<S extends TupleValuePair>
+export class AsyncTupleTransaction<S extends TupleValuePair>
 	implements AsyncTupleTransactionApi<S>
 {
 	constructor(
@@ -128,7 +128,7 @@ export class AsyncTupleTransaction2<S extends TupleValuePair>
 	}
 
 	async scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>
+		args: ScanArgs<P> = {}
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
 
@@ -187,7 +187,7 @@ export class AsyncTupleTransaction2<S extends TupleValuePair>
 			this.id
 		)
 		if (items.length === 0) return false
-		return items.length > 1
+		return items.length >= 1
 	}
 
 	// ReadApis
@@ -227,7 +227,7 @@ export class AsyncTupleTransaction2<S extends TupleValuePair>
 		return this.db.commit(this.writes)
 	}
 
-	cancel() {
+	async cancel() {
 		this.canceled = true
 		return this.db.cancel(this.id)
 	}
@@ -249,7 +249,7 @@ export class AsyncTupleTransactionSubspace<S extends TupleValuePair>
 	) {}
 
 	async scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>
+		args: ScanArgs<P> = {}
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.tx.scan(storageScanArgs)
@@ -297,7 +297,7 @@ export class AsyncTupleTransactionSubspace<S extends TupleValuePair>
 		return this.tx.commit()
 	}
 
-	cancel() {
+	async cancel() {
 		return this.tx.cancel()
 	}
 

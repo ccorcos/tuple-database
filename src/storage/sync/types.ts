@@ -23,88 +23,81 @@ import {
 
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
-	scan(args: ScanStorageArgs): Identity<TupleValuePair[]>
-	commit(writes: Writes): Identity<void>
-	close(): Identity<void>
+	scan: (args: ScanStorageArgs) => Identity<TupleValuePair[]>
+	commit: (writes: Writes) => Identity<void>
+	close: () => Identity<void>
 }
 
 /** Wraps TupleStorageApi with reactivity and MVCC */
 export type TupleDatabaseApi = {
-	scan(args: ScanStorageArgs, txId?: TxId): Identity<TupleValuePair[]>
-	commit(writes: Writes, txId?: TxId): Identity<void>
-	cancel(txId: string)
-	subscribe(args: ScanStorageArgs, callback: Callback): Identity<Unsubscribe>
-	close(): Identity<void>
+	scan: (args: ScanStorageArgs, txId?: TxId) => Identity<TupleValuePair[]>
+	commit: (writes: Writes, txId?: TxId) => Identity<void>
+	cancel: (txId: string) => Identity<void>
+	subscribe: (
+		args: ScanStorageArgs,
+		callback: Callback
+	) => Identity<Unsubscribe>
+	close: () => Identity<void>
 }
 
 /** Wraps TupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
 export type TupleDatabaseDialectApi<S extends TupleValuePair = TupleValuePair> =
 	{
 		// Types
-		commit(writes: Writes<S>, txId?: TxId): Identity<void>
-		cancel(txId: string)
-		scan<P extends TuplePrefix<S[0]>>(
+		commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
+		cancel: (txId: string) => Identity<void>
+		scan: <P extends TuplePrefix<S[0]>>(
 			args?: ScanArgs<P>,
 			txId?: TxId
-		): Identity<FilterTupleValuePairByPrefix<S, P>[]>
-		subscribe<P extends TuplePrefix<S[0]>>(
+		) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+		subscribe: <P extends TuplePrefix<S[0]>>(
 			args: ScanArgs<P>,
 			callback: Callback<FilterTupleValuePairByPrefix<S, P>>
-		): Identity<Unsubscribe>
-		close(): Identity<void>
+		) => Identity<Unsubscribe>
+		close: () => Identity<void>
 
 		// ReadApis
-		get<T extends S[0]>(
+		get: <T extends S[0]>(
 			tuple: T,
 			txId?: TxId
-		): Identity<FilterTupleValuePairByPrefix<S, T>[1]>
-		exists<T extends S[0]>(tuple: T, txId?: TxId): Identity<boolean>
+		) => Identity<FilterTupleValuePairByPrefix<S, T>[1]>
+		exists: <T extends S[0]>(tuple: T, txId?: TxId) => Identity<boolean>
 
 		// Subspace
-		subspace<P extends TuplePrefix<S[0]>>(
+		subspace: <P extends TuplePrefix<S[0]>>(
 			prefix: P
-		): TupleDatabaseDialectApi<RemoveTupleValuePairPrefix<S, P>>
+		) => TupleDatabaseDialectApi<RemoveTupleValuePairPrefix<S, P>>
 
 		// Transaction
-		transact(txId?: TxId): TupleTransactionApi<S>
+		transact: (txId?: TxId) => TupleTransactionApi<S>
 	}
 
 export type TupleTransactionApi<S extends TupleValuePair = TupleValuePair> = {
 	// Same as TupleDatabaseDialectApi without the txId argument.
-	scan<P extends TuplePrefix<S[0]>>(
+	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
-	): Identity<FilterTupleValuePairByPrefix<S, P>[]>
-	get<T extends S[0]>(tuple: T): Identity<FilterTupleValuePairByPrefix<S, T>[1]>
-	exists<T extends S[0]>(tuple: T): Identity<boolean>
+	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S[0]>(
+		tuple: T
+	) => Identity<FilterTupleValuePairByPrefix<S, T>[1]>
+	exists: <T extends S[0]>(tuple: T) => Identity<boolean>
 
 	// WriteApis
-	set<T extends S>(tuple: T[0], value: T[1]): TupleTransactionApi<S>
-	remove(tuple: S[0]): TupleTransactionApi<S>
-	write(writes: Writes<S>): TupleTransactionApi<S>
-	commit(): Identity<void>
-	cancel(): Identity<void>
+	set: <T extends S>(tuple: T[0], value: T[1]) => TupleTransactionApi<S>
+	remove: (tuple: S[0]) => TupleTransactionApi<S>
+	write: (writes: Writes<S>) => TupleTransactionApi<S>
+	commit: () => Identity<void>
+	cancel: () => Identity<void>
 
 	// Subspace
-	subspace<P extends TuplePrefix<S[0]>>(
+	subspace: <P extends TuplePrefix<S[0]>>(
 		prefix: P
-	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
 }
 
 /** Useful for indicating that a function does not commit any writes. */
 // export type ReadOnlyTupleDatabaseApi = {
-// 	get(tuple: Tuple, txId?: TxId): Identity<any>
+// 	get(tuple: Tuple, txId?: TxId) => Identity<any>
 // 	exists(tuple: Tuple, txId?: TxId): Identity<boolean>
 // 	scan(args?: ScanArgs, txId?: TxId): Identity<TupleValuePair[]>
 // }
-
-// /** The methods necessary to create a client in a different process. */
-// export type TupleDatabaseClientArgs = ReadOnlyTupleDatabaseApi & {
-// 	commit(writes: Writes, txId?: string): Identity<void>
-// 	cancel(txId: string): Identity<void>
-// 	close(): Identity<void>
-// }
-
-// export type ReactiveTupleDatabaseClientArgs =
-// 	TupleDatabaseClientArgs & {
-// 		subscribe(args: ScanArgs, callback: Callback): Identity<Unsubscribe>
-// 	}

@@ -17,6 +17,7 @@ import {
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWrites,
 } from "../../helpers/subspaceHelpers"
+import { TupleDatabaseApi } from "../sync/types"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
@@ -31,22 +32,18 @@ import {
 	Unsubscribe,
 	Writes,
 } from "../types"
-import {
-	TupleDatabaseApi,
-	TupleDatabaseDialectApi,
-	TupleTransactionApi,
-} from "./types"
+import { TupleDatabaseDialectApi, TupleTransactionApi } from "./types"
 
 export class TupleDatabaseDialect<S extends TupleValuePair>
 	implements TupleDatabaseDialectApi<S>
 {
 	constructor(
-		private db: TupleDatabaseApi,
+		private db: TupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple = []
 	) {}
 
 	scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>,
+		args: ScanArgs<P> = {},
 		txId?: TxId
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -94,7 +91,7 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 		// Not sure why these types aren't happy
 		const items = this.scan({ gte: tuple, lte: tuple as any }, txId)
 		if (items.length === 0) return false
-		return items.length > 1
+		return items.length >= 1
 	}
 
 	// Subspace
@@ -108,7 +105,7 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 	// Transaction
 	transact(txId?: TxId): TupleTransactionApi<S> {
 		const id = txId || randomId()
-		return new TupleTransaction2(this.db, this.subspacePrefix, id)
+		return new TupleTransaction(this.db, this.subspacePrefix, id)
 	}
 
 	close() {
@@ -116,11 +113,11 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 	}
 }
 
-export class TupleTransaction2<S extends TupleValuePair>
+export class TupleTransaction<S extends TupleValuePair>
 	implements TupleTransactionApi<S>
 {
 	constructor(
-		private db: TupleDatabaseApi,
+		private db: TupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple,
 		public id: TxId
 	) {}
@@ -135,7 +132,7 @@ export class TupleTransaction2<S extends TupleValuePair>
 	}
 
 	scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>
+		args: ScanArgs<P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
 
@@ -188,7 +185,7 @@ export class TupleTransaction2<S extends TupleValuePair>
 		}
 		const items = this.db.scan({ gte: fullTuple, lte: fullTuple }, this.id)
 		if (items.length === 0) return false
-		return items.length > 1
+		return items.length >= 1
 	}
 
 	// ReadApis
@@ -250,7 +247,7 @@ export class TupleTransactionSubspace<S extends TupleValuePair>
 	) {}
 
 	scan<P extends TuplePrefix<S[0]>>(
-		args: ScanArgs<P>
+		args: ScanArgs<P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.tx.scan(storageScanArgs)
