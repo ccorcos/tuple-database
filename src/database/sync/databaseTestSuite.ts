@@ -1030,6 +1030,49 @@ export function databaseTestSuite(
 				assertEqual(store.get(["lamp"]), false)
 			})
 
+			// NOTE: this test doesn't really make sense for the sync version...
+			it("transactionalQuery will retry on those errors", () => {
+				const id = randomId()
+				type Schema = [["score"], number]
+				const store = createStorage<Schema>(id)
+
+				store.commit({ set: [[["score"], 0]] })
+
+				const sleep = (timeMs) =>
+					new Promise((resolve) => setTimeout(resolve, timeMs))
+
+				const incScore = transactionalQuery<Schema>()(
+					(tx, amount: number, sleepMs: number) => {
+						const score = tx.get(["score"])!
+						sleep(sleepMs)
+						tx.set(["score"], score + amount)
+					}
+				)
+
+				// 0 -> chet reads
+				// 1 -> meghan reads
+				// 2 -> chet writes
+				// 3 -> meghan writes -- conflict!
+				// 3 -> meghan reads -- retry
+				// 4 -> meghan writes -- success!
+
+				function chet() {
+					incScore(store, 10, 2)
+					assertEqual(store.get(["score"]), 10)
+				}
+
+				function meghan() {
+					sleep(1)
+					incScore(store, -1, 2)
+					assertEqual(store.get(["score"]), 9)
+				}
+
+				Promise.all([chet(), meghan()])
+
+				// Final state.
+				assertEqual(store.get(["score"]), 9)
+			})
+
 			it("should probably generalize to scans as well", () => {
 				const id = randomId()
 				type Schema =

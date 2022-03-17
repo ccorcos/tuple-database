@@ -1028,6 +1028,49 @@ export function asyncDatabaseTestSuite(
 				assertEqual(await store.get(["lamp"]), false)
 			})
 
+			// NOTE: this test doesn't really make sense for the sync version...
+			it("transactionalAsyncQuery will retry on those errors", async () => {
+				const id = randomId()
+				type Schema = [["score"], number]
+				const store = createStorage<Schema>(id)
+
+				await store.commit({ set: [[["score"], 0]] })
+
+				const sleep = (timeMs) =>
+					new Promise((resolve) => setTimeout(resolve, timeMs))
+
+				const incScore = transactionalAsyncQuery<Schema>()(
+					async (tx, amount: number, sleepMs: number) => {
+						const score = (await tx.get(["score"]))!
+						await sleep(sleepMs)
+						tx.set(["score"], score + amount)
+					}
+				)
+
+				// 0 -> chet reads
+				// 1 -> meghan reads
+				// 2 -> chet writes
+				// 3 -> meghan writes -- conflict!
+				// 3 -> meghan reads -- retry
+				// 4 -> meghan writes -- success!
+
+				async function chet() {
+					await incScore(store, 10, 2)
+					assertEqual(await store.get(["score"]), 10)
+				}
+
+				async function meghan() {
+					await sleep(1)
+					await incScore(store, -1, 2)
+					assertEqual(await store.get(["score"]), 9)
+				}
+
+				await Promise.all([chet(), meghan()])
+
+				// Final state.
+				assertEqual(await store.get(["score"]), 9)
+			})
+
 			it("should probably generalize to scans as well", async () => {
 				const id = randomId()
 				type Schema =

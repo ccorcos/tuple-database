@@ -15,9 +15,9 @@ import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 // This outer function is just used for the schema type because currying is the only way
 // we can partially infer generic type parameters.
 // https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic
-export function transactionalQuery<
-	S extends TupleValuePair = TupleValuePair
->() {
+export function transactionalQuery<S extends TupleValuePair = TupleValuePair>(
+	retries = 5
+) {
 	return function <I extends any[], O>(
 		fn: (tx: TupleTransactionApi<S>, ...args: I) => Identity<O>
 	) {
@@ -26,10 +26,24 @@ export function transactionalQuery<
 			...args: I
 		): Identity<O> {
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
-			const tx = dbOrTx.transact()
-			const result = fn(tx, ...args)
-			tx.commit()
+			return retry(retries, () => {
+				const tx = dbOrTx.transact()
+				const result = fn(tx, ...args)
+				tx.commit()
+				return result
+			})
+		}
+	}
+}
+
+function retry<O>(retries: number, fn: () => Identity<O>) {
+	while (true) {
+		try {
+			const result = fn()
 			return result
+		} catch (error) {
+			if (retries <= 0) throw error
+			retries -= 1
 		}
 	}
 }

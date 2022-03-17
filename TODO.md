@@ -1,12 +1,6 @@
 ## TODO
 
-- transactional subspace argument?
-- SubspaceSchema types
-
 - transactional should retry!
-- class scheduling test.
-- improve tests.
-
 
 - Architecture README
 	- TupleStorage
@@ -14,9 +8,12 @@
 	- TupleDatabaseClient
 	- transactionalQuery
 
+- types for ScanArgs with min/max for scanning..
 
+- cleanup this TODO
 
-- types with min/max for scanning..
+---
+
 
 How to organize these different layers?
 - storage

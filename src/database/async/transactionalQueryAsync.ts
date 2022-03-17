@@ -12,7 +12,7 @@ import {
 // https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic
 export function transactionalAsyncQuery<
 	S extends TupleValuePair = TupleValuePair
->() {
+>(retries = 5) {
 	return function <I extends any[], O>(
 		fn: (tx: AsyncTupleTransactionApi<S>, ...args: I) => Promise<O>
 	) {
@@ -21,10 +21,24 @@ export function transactionalAsyncQuery<
 			...args: I
 		): Promise<O> {
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
-			const tx = dbOrTx.transact()
-			const result = await fn(tx, ...args)
-			await tx.commit()
+			return await retry(retries, async () => {
+				const tx = dbOrTx.transact()
+				const result = await fn(tx, ...args)
+				await tx.commit()
+				return result
+			})
+		}
+	}
+}
+
+async function retry<O>(retries: number, fn: () => Promise<O>) {
+	while (true) {
+		try {
+			const result = await fn()
 			return result
+		} catch (error) {
+			if (retries <= 0) throw error
+			retries -= 1
 		}
 	}
 }
