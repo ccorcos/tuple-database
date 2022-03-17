@@ -3,7 +3,6 @@
 - more triplestore ergonomics
 - game counter with history...
 
-
 - {key, value} object so that it isnt a valid tuple for the key.
 - types for ScanArgs with min/max for scanning..
 

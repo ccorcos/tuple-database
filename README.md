@@ -1,12 +1,3 @@
-
-- Architecture README
-	- TupleStorage
-	- TupleDatabase
-	- TupleDatabaseClient
-	- transactionalQuery
-	- subspace
-
-
 # Tuple Database
 
 Some features of this database:
