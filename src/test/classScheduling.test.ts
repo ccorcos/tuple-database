@@ -5,19 +5,20 @@ import { flatten, range } from "lodash"
 import { describe, it } from "mocha"
 import { transactionalQuery } from "../database/sync/transactionalQuery"
 import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types"
+import { SchemaSubspace } from "../database/typeHelpers"
 import {
 	InMemoryTupleStorage,
 	TupleDatabase,
 	TupleDatabaseClient,
 } from "../main"
 
-type Schema =
-	| [["scheduling", "class", string], number]
-	| [["scheduling", "attends", string, string], null]
+type SchoolSchema =
+	| [["class", string], number]
+	| [["attends", string, string], null]
 
-const addClass = transactionalQuery<Schema>()(
+const addClass = transactionalQuery<SchoolSchema>()(
 	(tr, className: string, remainingSeats: number) => {
-		const course = tr.subspace(["scheduling", "class"])
+		const course = tr.subspace(["class"])
 		course.set([className], remainingSeats)
 	}
 )
@@ -58,7 +59,7 @@ const classNames = flatten(
 	)
 )
 
-const init = transactionalQuery<Schema>()((tr) => {
+const init = transactionalQuery<SchoolSchema>()((tr) => {
 	// Clear the directory.
 	for (const [tuple] of tr.scan()) {
 		tr.remove(tuple)
@@ -69,9 +70,9 @@ const init = transactionalQuery<Schema>()((tr) => {
 	}
 })
 
-function availableClasses(db: ReadOnlyTupleDatabaseClientApi<Schema>) {
+function availableClasses(db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>) {
 	return db
-		.subspace(["scheduling", "class"])
+		.subspace(["class"])
 		.scan()
 		.filter(([tuple, value]) => value > 0)
 		.map(([tuple, value]) => {
@@ -80,10 +81,10 @@ function availableClasses(db: ReadOnlyTupleDatabaseClientApi<Schema>) {
 		})
 }
 
-const signup = transactionalQuery<Schema>()(
+const signup = transactionalQuery<SchoolSchema>()(
 	(tr, student: string, className: string) => {
-		const attends = tr.subspace(["scheduling", "attends"])
-		const course = tr.subspace(["scheduling", "class"])
+		const attends = tr.subspace(["attends"])
+		const course = tr.subspace(["class"])
 
 		if (attends.exists([student, className])) return // Already signed up.
 
@@ -98,10 +99,10 @@ const signup = transactionalQuery<Schema>()(
 	}
 )
 
-const drop = transactionalQuery<Schema>()(
+const drop = transactionalQuery<SchoolSchema>()(
 	(tr, student: string, className: string) => {
-		const attends = tr.subspace(["scheduling", "attends"])
-		const course = tr.subspace(["scheduling", "class"])
+		const attends = tr.subspace(["attends"])
+		const course = tr.subspace(["class"])
 
 		if (!attends.exists([student, className])) return // Not taking this class.
 
@@ -111,7 +112,7 @@ const drop = transactionalQuery<Schema>()(
 	}
 )
 
-const switchClasses = transactionalQuery<Schema>()(
+const switchClasses = transactionalQuery<SchoolSchema>()(
 	(tr, student: string, classes: { old: string; new: string }) => {
 		drop(tr, student, classes.old)
 		signup(tr, student, classes.new)
@@ -119,10 +120,10 @@ const switchClasses = transactionalQuery<Schema>()(
 )
 
 function getClasses(
-	db: ReadOnlyTupleDatabaseClientApi<Schema>,
+	db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>,
 	student: string
 ) {
-	const attends = db.subspace(["scheduling", "attends"])
+	const attends = db.subspace(["attends"])
 	const classes = attends
 		.scan({ prefix: [student] })
 		.map(([tuple, value]) => tuple[1])
@@ -135,10 +136,18 @@ describe("Class Scheduling Example", () => {
 		(i) => `student${i}`
 	)
 
-	it("signup", () => {
+	function createStorage() {
+		// The class scheduling application is just a subspace!
+		type Schema = SchemaSubspace<SchoolSchema, ["scheduling"]>
 		const db = new TupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
+		const scheduling = db.subspace(["scheduling"])
+		return scheduling
+	}
+
+	it("signup", () => {
+		const db = createStorage()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -147,9 +156,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - already signed up", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -160,15 +167,13 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup more than one", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
 		assert.equal(getClasses(db, student2).length, 0)
 
-		const course = db.subspace(["scheduling", "class"])
+		const course = db.subspace(["class"])
 
 		assert.equal(course.get([class1]), 4)
 		assert.equal(course.get([class2]), 4)
@@ -190,9 +195,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -203,9 +206,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop - not taking this class", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -216,9 +217,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - max attendance", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		signup(db, student1, class1)
@@ -226,16 +225,14 @@ describe("Class Scheduling Example", () => {
 		signup(db, student3, class1)
 		signup(db, student4, class1)
 
-		const course = db.subspace(["scheduling", "class"])
+		const course = db.subspace(["class"])
 
 		assert.equal(course.get([class1]), 0)
 		assert.throws(() => signup(db, student5, class1))
 	})
 
 	it("signup - too many classes", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		signup(db, student1, class1)
@@ -250,9 +247,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("switchClasses", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		signup(db, student1, class1)
@@ -271,9 +266,7 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("availableClasses", () => {
-		const db = new TupleDatabaseClient<Schema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
+		const db = createStorage()
 		init(db)
 
 		assert.ok(availableClasses(db).includes(class1))
