@@ -783,6 +783,44 @@ export function asyncDatabaseTestSuite(
 			assert.deepEqual(await tr.exists(["d"]), true)
 		})
 
+		it("committing a transaction prevents any further interaction", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.commit()
+
+			assert.throws(() => tx.get([1]))
+			assert.throws(() => tx.exists([1]))
+			assert.throws(() => tx.scan())
+			assert.throws(() => tx.write({}))
+			assert.throws(() => tx.cancel())
+			assert.throws(() => tx.commit())
+		})
+
+		it("canceling a transaction prevents any further interaction", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.cancel()
+
+			assert.throws(() => tx.get([1]))
+			assert.throws(() => tx.exists([1]))
+			assert.throws(() => tx.scan())
+			assert.throws(() => tx.write({}))
+			assert.throws(() => tx.cancel())
+			assert.throws(() => tx.commit())
+		})
+
+		it("cancelling a transaction does not submit writes", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.set([1], 2)
+			assert.equal(tx.get([1]), 2)
+			tx.cancel()
+
+			assert.equal(store.get([1]), undefined)
+		})
+
+		it.skip("cancelled transaction cannot conflict with other transactions")
+
 		describe("application-level indexing", () => {
 			it("bidirectional friends stored as keys", async () => {
 				const store = createStorage(randomId())
@@ -1068,6 +1106,8 @@ export function asyncDatabaseTestSuite(
 				await a.commit() // ok
 				await assert.rejects(() => b.commit())
 			})
+
+			it.skip("can be used for transactional reads")
 		})
 
 		describe("Reactivity", () => {
