@@ -16,6 +16,7 @@ import {
 	Writes,
 } from "../../storage/types"
 import {
+	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
@@ -60,7 +61,7 @@ export type TupleDatabaseClientApi<S extends TupleValuePair = TupleValuePair> =
 		get: <T extends S[0]>(
 			tuple: T,
 			txId?: TxId
-		) => Identity<FilterTupleValuePairByPrefix<S, T>[1]>
+		) => Identity<FilterTupleValuePair<S, T>[1]>
 		exists: <T extends S[0]>(tuple: T, txId?: TxId) => Identity<boolean>
 
 		// Subspace
@@ -77,9 +78,7 @@ export type TupleTransactionApi<S extends TupleValuePair = TupleValuePair> = {
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S[0]>(
-		tuple: T
-	) => Identity<FilterTupleValuePairByPrefix<S, T>[1]>
+	get: <T extends S[0]>(tuple: T) => Identity<FilterTupleValuePair<S, T>[1]>
 	exists: <T extends S[0]>(tuple: T) => Identity<boolean>
 
 	// WriteApis
@@ -96,8 +95,21 @@ export type TupleTransactionApi<S extends TupleValuePair = TupleValuePair> = {
 }
 
 /** Useful for indicating that a function does not commit any writes. */
-// export type ReadOnlyTupleDatabaseApi = {
-// 	get(tuple: Tuple, txId?: TxId) => Identity<any>
-// 	exists(tuple: Tuple, txId?: TxId): Identity<boolean>
-// 	scan(args?: ScanArgs, txId?: TxId): Identity<TupleValuePair[]>
-// }
+export type ReadOnlyTupleDatabaseClientApi<
+	S extends TupleValuePair = TupleValuePair
+> = {
+	scan: <P extends TuplePrefix<S[0]>>(
+		args?: ScanArgs<P>,
+		txId?: TxId
+	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S[0]>(
+		tuple: T,
+		txId?: TxId
+	) => Identity<FilterTupleValuePair<S, T>[1]>
+	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Identity<boolean>
+	subspace: <P extends TuplePrefix<S[0]>>(
+		prefix: P
+	) => ReadOnlyTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// subscribe?
+}

@@ -64,3 +64,26 @@ asyncDatabaseTestSuite(
 		),
 	true
 )
+
+// Test that the entire test suite works within a subspace.
+asyncDatabaseTestSuite(
+	"Subspace: AsyncTupleDatabaseClient(AsyncTupleDatabase(InMemoryTupleStorage))",
+	() => {
+		const store = new AsyncTupleDatabaseClient(
+			new AsyncTupleDatabase(new InMemoryTupleStorage())
+		)
+		return store.subspace(["myApp"]) as any
+	},
+	false
+)
+
+databaseTestSuite(
+	"Subspace: TupleDatabaseClient(TupleDatabase(InMemoryTupleStorage))",
+	() => {
+		const store = new TupleDatabaseClient(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
+		return store.subspace(["myApp"]) as any
+	},
+	false
+)

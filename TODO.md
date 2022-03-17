@@ -1,14 +1,8 @@
 ## TODO
 
-- subspace tests
-- schema type tests
-- subspace types test
+- transactional subspace argument
+- SubspaceSchema types
 
-- transactionalAsyncQuery types wherever its used.
-- type tests
-
-
-- separate storage, vs dialect, vs client tests.
 - transactional should retry!
 - class scheduling test.
 - improve tests.

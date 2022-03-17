@@ -4,18 +4,23 @@ import { transactionalQuery } from "../database/sync/transactional"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { Value } from "../storage/types"
 
-type Fact = [Value, Value, Value]
+type Value = string | number | boolean
+type Fact = [string, string, Value]
 
-const writeFact = transactionalQuery()((tx, fact: Fact) => {
+type Schema =
+	| [["eav", ...Fact], null]
+	| [["ave", string, Value, string], null]
+	| [["vea", Value, string, string], null]
+
+const writeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 	tx.set(["eav", e, a, v], null)
 	tx.set(["ave", a, v, e], null)
 	tx.set(["vea", v, e, a], null)
 })
 
-const removeFact = transactionalQuery()((tx, fact: Fact) => {
+const removeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 	tx.remove(["eav", e, a, v])
 	tx.remove(["ave", a, v, e])
@@ -31,11 +36,11 @@ function $(name: string) {
 	return new Variable(name)
 }
 
-type Expression = [Value | Variable, Value | Variable, Value | Variable]
+type Expression = [string | Variable, string | Variable, Value | Variable]
 
 type Binding = { [varName: string]: Value }
 
-const queryExpression = transactionalQuery()(
+const queryExpression = transactionalQuery<Schema>()(
 	(tx, expr: Expression): Binding[] => {
 		const [$e, $a, $v] = expr
 		if ($e instanceof Variable) {
@@ -115,7 +120,7 @@ const queryExpression = transactionalQuery()(
 
 type Filter = Expression[]
 
-const query = transactionalQuery()((tx, filter: Filter): Binding[] => {
+const query = transactionalQuery<Schema>()((tx, filter: Filter): Binding[] => {
 	const [first, ...rest] = filter
 
 	if (rest.length === 0) return queryExpression(tx, first)
@@ -147,7 +152,7 @@ const query = transactionalQuery()((tx, filter: Filter): Binding[] => {
 
 describe("Triplestore", () => {
 	it("works", () => {
-		const db = new TupleDatabaseClient(
+		const db = new TupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
@@ -177,7 +182,7 @@ describe("Triplestore", () => {
 	})
 
 	it("family example", () => {
-		const db = new TupleDatabaseClient(
+		const db = new TupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 

@@ -1030,7 +1030,10 @@ export function asyncDatabaseTestSuite(
 
 			it("should probably generalize to scans as well", async () => {
 				const id = randomId()
-				const store = createStorage(id)
+				type Schema =
+					| [["player", string, number], null]
+					| [["total", number], null]
+				const store = createStorage<Schema>(id)
 				await store.commit({
 					set: [
 						// TODO: add test using value as well.
@@ -1041,28 +1044,26 @@ export function asyncDatabaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalAsyncQuery()(
+				const addScore = transactionalAsyncQuery<Schema>()(
 					async (tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = async (player: string) => {
 							const pairs = await tx.scan({ prefix: ["player", player] })
 							if (pairs.length !== 1) throw new Error("Missing player.")
 							const [[tuple, _value]] = pairs
-							return tuple[2] as number
+							return tuple[2]
 						}
 
 						const getCurrentTotal = async () => {
 							const totals = await tx.scan({ prefix: ["total"] })
 							if (totals.length !== 1) throw new Error("Too many totals.")
 							const [[tuple, _value]] = totals
-							return tuple[1] as number
+							return tuple[1]
 						}
 
 						const resetTotal = async () => {
 							const pairs = await tx.scan({ prefix: ["player"] })
-							const total = sum(
-								pairs.map(([tuple, _value]) => tuple[2] as number)
-							)
+							const total = sum(pairs.map(([tuple, _value]) => tuple[2]))
 							tx.remove(["total", await getCurrentTotal()])
 							tx.set(["total", total], null)
 						}

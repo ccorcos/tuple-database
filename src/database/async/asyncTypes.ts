@@ -8,6 +8,7 @@ import {
 	Writes,
 } from "../../storage/types"
 import {
+	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
@@ -50,7 +51,7 @@ export type AsyncTupleDatabaseClientApi<
 	get: <T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	) => Promise<FilterTupleValuePairByPrefix<S, T>[1]>
+	) => Promise<FilterTupleValuePair<S, T>[1]>
 	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Promise<boolean>
 
 	// Subspace
@@ -69,9 +70,7 @@ export type AsyncTupleTransactionApi<
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S[0]>(
-		tuple: T
-	) => Promise<FilterTupleValuePairByPrefix<S, T>[1]>
+	get: <T extends S[0]>(tuple: T) => Promise<FilterTupleValuePair<S, T>[1]>
 	exists: <T extends S[0]>(tuple: T) => Promise<boolean>
 
 	// WriteApis
@@ -88,8 +87,21 @@ export type AsyncTupleTransactionApi<
 }
 
 /** Useful for indicating that a function does not commit any writes. */
-// export type ReadOnlyAsyncTupleDatabaseApi = {
-// 	get(tuple: Tuple, txId?: TxId) => Promise<any>
-// 	exists(tuple: Tuple, txId?: TxId): Promise<boolean>
-// 	scan(args?: ScanArgs, txId?: TxId): Promise<TupleValuePair[]>
-// }
+export type ReadOnlyAsyncTupleDatabaseClientApi<
+	S extends TupleValuePair = TupleValuePair
+> = {
+	scan: <P extends TuplePrefix<S[0]>>(
+		args?: ScanArgs<P>,
+		txId?: TxId
+	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S[0]>(
+		tuple: T,
+		txId?: TxId
+	) => Promise<FilterTupleValuePair<S, T>[1]>
+	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Promise<boolean>
+	subspace: <P extends TuplePrefix<S[0]>>(
+		prefix: P
+	) => ReadOnlyAsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// subscribe?
+}

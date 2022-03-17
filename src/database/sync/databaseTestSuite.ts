@@ -1032,7 +1032,10 @@ export function databaseTestSuite(
 
 			it("should probably generalize to scans as well", () => {
 				const id = randomId()
-				const store = createStorage(id)
+				type Schema =
+					| [["player", string, number], null]
+					| [["total", number], null]
+				const store = createStorage<Schema>(id)
 				store.commit({
 					set: [
 						// TODO: add test using value as well.
@@ -1043,28 +1046,26 @@ export function databaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalQuery()(
+				const addScore = transactionalQuery<Schema>()(
 					(tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = (player: string) => {
 							const pairs = tx.scan({ prefix: ["player", player] })
 							if (pairs.length !== 1) throw new Error("Missing player.")
 							const [[tuple, _value]] = pairs
-							return tuple[2] as number
+							return tuple[2]
 						}
 
 						const getCurrentTotal = () => {
 							const totals = tx.scan({ prefix: ["total"] })
 							if (totals.length !== 1) throw new Error("Too many totals.")
 							const [[tuple, _value]] = totals
-							return tuple[1] as number
+							return tuple[1]
 						}
 
 						const resetTotal = () => {
 							const pairs = tx.scan({ prefix: ["player"] })
-							const total = sum(
-								pairs.map(([tuple, _value]) => tuple[2] as number)
-							)
+							const total = sum(pairs.map(([tuple, _value]) => tuple[2]))
 							tx.remove(["total", getCurrentTotal()])
 							tx.set(["total", total], null)
 						}

@@ -1,251 +1,268 @@
-// // Based on FoundationDb tutorial: https://apple.github.io/foundationdb/class-scheduling.html
+// Based on FoundationDb tutorial: https://apple.github.io/foundationdb/class-scheduling.html
 
-// import { strict as assert } from "assert"
-// import { flatten, range } from "lodash"
-// import { describe, it } from "mocha"
-// import { Subspace } from "../helpers/Subspace"
-// import { transactional } from "../helpers/transactional"
-// import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-// import { TupleDatabase } from "../storage/sync/TupleDatabase"
-// import { ReadOnlyTupleDatabaseApi } from "../storage/sync/types"
+import { strict as assert } from "assert"
+import { flatten, range } from "lodash"
+import { describe, it } from "mocha"
+import { transactionalQuery } from "../database/sync/transactional"
+import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types"
+import {
+	InMemoryTupleStorage,
+	TupleDatabase,
+	TupleDatabaseClient,
+} from "../main"
 
-// const scheduling = new Subspace("scheduling")
-// const course = scheduling.subspace("class")
-// const attends = scheduling.subspace("attends")
+type Schema =
+	| [["scheduling", "class", string], number]
+	| [["scheduling", "attends", string, string], null]
 
-// const addClass = transactional(
-// 	(tr, className: string, remainingSeats: number) => {
-// 		tr.set(course.pack([className]), remainingSeats)
-// 	}
-// )
+const addClass = transactionalQuery<Schema>()(
+	(tr, className: string, remainingSeats: number) => {
+		const course = tr.subspace(["scheduling", "class"])
+		course.set([className], remainingSeats)
+	}
+)
 
-// // Generate 1,620 classes like '9:00 chem for dummies'
-// const levels = [
-// 	"intro",
-// 	"for dummies",
-// 	"remedial",
-// 	"101",
-// 	"201",
-// 	"301",
-// 	"mastery",
-// 	"lab",
-// 	"seminar",
-// ]
+// Generate 1,620 classes like '9:00 chem for dummies'
+const levels = [
+	"intro",
+	"for dummies",
+	"remedial",
+	"101",
+	"201",
+	"301",
+	"mastery",
+	"lab",
+	"seminar",
+]
 
-// const types = [
-// 	"chem",
-// 	"bio",
-// 	"cs",
-// 	"geometry",
-// 	"calc",
-// 	"alg",
-// 	"film",
-// 	"music",
-// 	"art",
-// 	"dance",
-// ]
+const types = [
+	"chem",
+	"bio",
+	"cs",
+	"geometry",
+	"calc",
+	"alg",
+	"film",
+	"music",
+	"art",
+	"dance",
+]
 
-// const times = range(2, 20).map((t) => `${t}:00`)
+const times = range(2, 20).map((t) => `${t}:00`)
 
-// const classNames = flatten(
-// 	flatten(
-// 		levels.map((level) =>
-// 			types.map((type) => times.map((time) => [level, type, time].join(" ")))
-// 		)
-// 	)
-// )
+const classNames = flatten(
+	flatten(
+		levels.map((level) =>
+			types.map((type) => times.map((time) => [level, type, time].join(" ")))
+		)
+	)
+)
 
-// const init = transactional((tr) => {
-// 	// Clear the directory.
-// 	for (const [tuple] of tr.scan()) {
-// 		tr.remove(tuple)
-// 	}
+const init = transactionalQuery<Schema>()((tr) => {
+	// Clear the directory.
+	for (const [tuple] of tr.scan()) {
+		tr.remove(tuple)
+	}
 
-// 	for (const className of classNames) {
-// 		addClass(tr, className, 4)
-// 	}
-// })
+	for (const className of classNames) {
+		addClass(tr, className, 4)
+	}
+})
 
-// function availableClasses(db: ReadOnlyTupleDatabaseApi) {
-// 	return db
-// 		.scan(course.range())
-// 		.filter(([tuple, value]) => value > 0)
-// 		.map(([tuple, value]) => {
-// 			const className = course.unpack(tuple)[0] as string
-// 			return className
-// 		})
-// }
+function availableClasses(db: ReadOnlyTupleDatabaseClientApi<Schema>) {
+	return db
+		.subspace(["scheduling", "class"])
+		.scan()
+		.filter(([tuple, value]) => value > 0)
+		.map(([tuple, value]) => {
+			const className = tuple[0]
+			return className
+		})
+}
 
-// const signup = transactional((tr, student: string, className: string) => {
-// 	const record = attends.pack([student, className])
-// 	if (tr.exists(record)) return // Already signed up.
+const signup = transactionalQuery<Schema>()(
+	(tr, student: string, className: string) => {
+		const attends = tr.subspace(["scheduling", "attends"])
+		const course = tr.subspace(["scheduling", "class"])
 
-// 	const remainingSeats = tr.get(course.pack([className]))
-// 	if (remainingSeats <= 0) throw new Error("No remaining seats.")
+		if (attends.exists([student, className])) return // Already signed up.
 
-// 	const classes = tr.scan(attends.range([student]))
-// 	if (classes.length >= 5) throw new Error("Too many classes.")
+		const remainingSeats = course.get([className])
+		if (remainingSeats <= 0) throw new Error("No remaining seats.")
 
-// 	tr.set(course.pack([className]), remainingSeats - 1)
-// 	tr.set(record, null)
-// })
+		const classes = attends.scan({ prefix: [student] })
+		if (classes.length >= 5) throw new Error("Too many classes.")
 
-// const drop = transactional((tr, student: string, className: string) => {
-// 	const record = attends.pack([student, className])
+		course.set([className], remainingSeats - 1)
+		attends.set([student, className], null)
+	}
+)
 
-// 	if (!tr.exists(record)) return // Not taking this class.
+const drop = transactionalQuery<Schema>()(
+	(tr, student: string, className: string) => {
+		const attends = tr.subspace(["scheduling", "attends"])
+		const course = tr.subspace(["scheduling", "class"])
 
-// 	const remainingSeats = tr.get(course.pack([className]))
-// 	tr.set(course.pack([className]), remainingSeats + 1)
-// 	tr.remove(record)
-// })
+		if (!attends.exists([student, className])) return // Not taking this class.
 
-// const switchClasses = transactional(
-// 	(tr, student: string, classes: { old: string; new: string }) => {
-// 		drop(tr, student, classes.old)
-// 		signup(tr, student, classes.new)
-// 	}
-// )
+		const remainingSeats = course.get([className])
+		course.set([className], remainingSeats + 1)
+		attends.remove([student, className])
+	}
+)
 
-// function getClasses(db: ReadOnlyTupleDatabaseApi, student: string) {
-// 	const classes = db
-// 		.scan(attends.range([student]))
-// 		.map(([tuple, value]) => attends.unpack(tuple)[1] as string)
-// 	return classes
-// }
+const switchClasses = transactionalQuery<Schema>()(
+	(tr, student: string, classes: { old: string; new: string }) => {
+		drop(tr, student, classes.old)
+		signup(tr, student, classes.new)
+	}
+)
 
-// describe("Class Scheduling Example", () => {
-// 	const [class1, class2, class3, class4, class5, class6] = classNames
-// 	const [student1, student2, student3, student4, student5] = range(0, 5).map(
-// 		(i) => `student${i}`
-// 	)
+function getClasses(
+	db: ReadOnlyTupleDatabaseClientApi<Schema>,
+	student: string
+) {
+	const attends = db.subspace(["scheduling", "attends"])
+	const classes = attends
+		.scan({ prefix: [student] })
+		.map(([tuple, value]) => tuple[1])
+	return classes
+}
 
-// 	it("signup", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+describe("Class Scheduling Example", () => {
+	const [class1, class2, class3, class4, class5, class6] = classNames
+	const [student1, student2, student3, student4, student5] = range(0, 5).map(
+		(i) => `student${i}`
+	)
 
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 	})
+	it("signup", () => {
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
+		init(db)
 
-// 	it("signup - already signed up", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.equal(getClasses(db, student1).length, 0)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+	})
 
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 	})
+	it("signup - already signed up", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 	it("signup more than one", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.equal(getClasses(db, student1).length, 0)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+	})
 
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 		assert.equal(getClasses(db, student2).length, 0)
-// 		assert.equal(db.get(course.pack([class1])), 4)
-// 		assert.equal(db.get(course.pack([class2])), 4)
+	it("signup more than one", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 		assert.equal(db.get(course.pack([class1])), 3)
+		assert.equal(getClasses(db, student1).length, 0)
+		assert.equal(getClasses(db, student2).length, 0)
+		assert.equal(db.get(course.pack([class1])), 4)
+		assert.equal(db.get(course.pack([class2])), 4)
 
-// 		signup(db, student1, class2)
-// 		assert.equal(getClasses(db, student1).length, 2)
-// 		assert.equal(db.get(course.pack([class2])), 3)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+		assert.equal(db.get(course.pack([class1])), 3)
 
-// 		signup(db, student2, class2)
+		signup(db, student1, class2)
+		assert.equal(getClasses(db, student1).length, 2)
+		assert.equal(db.get(course.pack([class2])), 3)
 
-// 		assert.equal(getClasses(db, student1).length, 2)
-// 		assert.equal(getClasses(db, student2).length, 1)
+		signup(db, student2, class2)
 
-// 		assert.equal(db.get(course.pack([class2])), 2)
-// 	})
+		assert.equal(getClasses(db, student1).length, 2)
+		assert.equal(getClasses(db, student2).length, 1)
 
-// 	it("drop", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.equal(db.get(course.pack([class2])), 2)
+	})
 
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 		drop(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 	})
+	it("drop", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 	it("drop - not taking this class", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.equal(getClasses(db, student1).length, 0)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+		drop(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 0)
+	})
 
-// 		assert.equal(getClasses(db, student1).length, 0)
-// 		signup(db, student1, class1)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 		drop(db, student1, class2)
-// 		assert.equal(getClasses(db, student1).length, 1)
-// 	})
+	it("drop - not taking this class", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 	it("signup - max attendance", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.equal(getClasses(db, student1).length, 0)
+		signup(db, student1, class1)
+		assert.equal(getClasses(db, student1).length, 1)
+		drop(db, student1, class2)
+		assert.equal(getClasses(db, student1).length, 1)
+	})
 
-// 		signup(db, student1, class1)
-// 		signup(db, student2, class1)
-// 		signup(db, student3, class1)
-// 		signup(db, student4, class1)
+	it("signup - max attendance", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 		assert.equal(db.get(course.pack([class1])), 0)
+		signup(db, student1, class1)
+		signup(db, student2, class1)
+		signup(db, student3, class1)
+		signup(db, student4, class1)
 
-// 		assert.throws(() => signup(db, student5, class1))
-// 	})
+		assert.equal(db.get(course.pack([class1])), 0)
 
-// 	it("signup - too many classes", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.throws(() => signup(db, student5, class1))
+	})
 
-// 		signup(db, student1, class1)
-// 		signup(db, student1, class2)
-// 		signup(db, student1, class3)
-// 		signup(db, student1, class4)
-// 		signup(db, student1, class5)
+	it("signup - too many classes", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 		assert.equal(getClasses(db, student1).length, 5)
+		signup(db, student1, class1)
+		signup(db, student1, class2)
+		signup(db, student1, class3)
+		signup(db, student1, class4)
+		signup(db, student1, class5)
 
-// 		assert.throws(() => signup(db, student1, class6))
-// 	})
+		assert.equal(getClasses(db, student1).length, 5)
 
-// 	it("switchClasses", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		assert.throws(() => signup(db, student1, class6))
+	})
 
-// 		signup(db, student1, class1)
-// 		signup(db, student1, class2)
-// 		signup(db, student1, class3)
-// 		signup(db, student1, class4)
-// 		signup(db, student1, class5)
+	it("switchClasses", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 		assert.equal(getClasses(db, student1).length, 5)
+		signup(db, student1, class1)
+		signup(db, student1, class2)
+		signup(db, student1, class3)
+		signup(db, student1, class4)
+		signup(db, student1, class5)
 
-// 		switchClasses(db, student1, { old: class5, new: class6 })
-// 		const classes = getClasses(db, student1)
-// 		assert.equal(classes.length, 5)
-// 		assert.ok(classes.includes(class6))
-// 		assert.ok(!classes.includes(class5))
-// 	})
+		assert.equal(getClasses(db, student1).length, 5)
 
-// 	it("availableClasses", () => {
-// 		const db = new TupleDatabase(new InMemoryTupleStorage())
-// 		init(db)
+		switchClasses(db, student1, { old: class5, new: class6 })
+		const classes = getClasses(db, student1)
+		assert.equal(classes.length, 5)
+		assert.ok(classes.includes(class6))
+		assert.ok(!classes.includes(class5))
+	})
 
-// 		assert.ok(availableClasses(db).includes(class1))
+	it("availableClasses", () => {
+		const db = new TupleDatabase(new InMemoryTupleStorage())
+		init(db)
 
-// 		signup(db, student1, class1)
-// 		signup(db, student2, class1)
-// 		signup(db, student3, class1)
-// 		signup(db, student4, class1)
+		assert.ok(availableClasses(db).includes(class1))
 
-// 		assert.ok(!availableClasses(db).includes(class1))
-// 	})
-// })
+		signup(db, student1, class1)
+		signup(db, student2, class1)
+		signup(db, student3, class1)
+		signup(db, student4, class1)
+
+		assert.ok(!availableClasses(db).includes(class1))
+	})
+})

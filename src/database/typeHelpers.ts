@@ -34,6 +34,19 @@ type A3 = Assert<
 	[[1, 2], number] | [[1, 3], string]
 >
 
+export type FilterTupleValuePair<
+	S extends TupleValuePair,
+	P extends Tuple
+> = Extract<S, { 0: P }>
+
+type F1 = Assert<
+	FilterTupleValuePair<
+		[[1, 2], number] | [[1, 3], string] | [[2, 1], null],
+		[1, 2]
+	>,
+	[[1, 2], number]
+>
+
 type IsTuple = [] | { 0: any }
 type A4 = Assert<[], IsTuple>
 type A5 = Assert<[1, 2], IsTuple>
