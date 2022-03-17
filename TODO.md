@@ -1,13 +1,5 @@
 ## TODO
 
-
-- Architecture README
-	- TupleStorage
-	- TupleDatabase
-	- TupleDatabaseClient
-	- transactionalQuery
-	- subspace
-
 - more triplestore ergonomics
 - game counter with history...
 

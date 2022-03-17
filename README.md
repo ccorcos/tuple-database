@@ -1,190 +1,164 @@
+
+- Architecture README
+	- TupleStorage
+	- TupleDatabase
+	- TupleDatabaseClient
+	- transactionalQuery
+	- subspace
+
+
 # Tuple Database
 
-This database stores tuples in component-wise lexicographical sorted order.
+Some features of this database:
 
-It is an ordered key-value database with some encoding facilities for storing numbers, booleans, and ordered dictionaries.
+- ordered key-value store with JSON tuples as keys.
+- reactivity for all queries.
+- transactional reads and writes (aka multi-version concurrency control).
+- build with TypeScript and works in Node.js or the Browser.
+- works with synchronous and asynchronous storage making it well-suited for frontend state management.
+- a simple storage interface and with existing adapters for SQLite and LevelDb.
 
-This database works very similar to FoundationDb. In fact, I've created some abstractions modeled after their api. I've implemented the [class scheduling tutorial](https://apple.github.io/foundationdb/class-scheduling.html) from FoundationDb [as a test in this project](./src/test/classScheduling.test.ts).
 
+# Documentation
 
-## API by example
+## Quick Start (by Example)
 
-Creating a SQLite-backed database, writing and querying.
+```sh
+npm install --save tuple-database
+```
 
 ```ts
-import sqlite from "better-sqlite3"
-import {TupleDatabase} from "tuple-database"
-import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
+import {
+	InMemoryTupleStorage,
+	TupleDatabase,
+	TupleDatabaseClient,
+	transactionalQuery
+} from "tuple-database"
 
-const db = new TupleDatabase(
-	new SQLiteTupleStorage(sqlite("./app.db"))
+type Person = { id: string; name: string; age: number }
+
+// First element is the key, second element is the value.
+type Schema =
+	| [["person", string], Person]
+	| [["personByName", string, string], Person]
+	| [["personByAge", number, string], Person]
+
+const db = new TupleDatabaseClient<Schema>(
+		new TupleDatabase(new InMemoryTupleStorage())
 )
 
-const people = [
-	{ id: 1, first: "Chet", last: "Corcos", age: 29 },
-	{ id: 2, first: "Simon", last: "Last", age: 26 },
-	{ id: 3, first: "Jon", last: "Schwartz", age: 30 },
-	{ id: 4, first: "Luke", last: "Hansen", age: 29 },
-]
-
-const tx = db.transact()
-for (const person of people) {
-	// Putting the id in there to make sure this tuple "key" is unique.
-	tx.set(["personByAge", person.age, person.id], person)
-}
-tx.commit()
-
-console.log(db.scan({ prefix: ["personByAge"], lt: [30] }))
-// [
-//   [[ 26, 2 ], { id: 2, first: 'Simon', last: 'Last', age: 26 } ],
-//   [[ 29, 1 ], { id: 1, first: 'Chet', last: 'Corcos', age: 29 } ],
-//   [[ 29, 4 ], { id: 4, fsirst: 'Luke', last: 'Hansen', age: 29 } ]
-// ]
-```
-
-We can create multiple indexes of the same data so we can query things conveniently.
-
-```ts
-const tx = db.transact()
-for (const person of people) {
-	// Putting the id in there to make sure this tuple "key" is unique.
-	tx.set(["personById", person.id], person)
-	tx.set(["personByLastFirst", person.last, person.first, person.id], person)
-	tx.set(["personByFirstLast", person.first, person.last, person.id], person)
-	tx.set(["personByAge", person.age, person.id], person)
-}
-tx.commit()
-```
-
-We also have read-write transactional guarantees:
-
-```ts
-const tx1 = db.transact()
-const score = tx1.get(["score"])
-tx1.set(["score"], score + 1)
-
-const tx2 = db.transact()
-tx2.set(["score"], 10)
-tx2.commit()
-
-tx1.commit() // Throws an error.
-```
-
-There are also some nice abstractions inspired by FoundationDb such as `Subspace` and `transactional`.
-
-When dealing with a big application with logs of data, its helpful to use a Subspace to manage tuple prefixes.
-
-```ts
-import { Subspace } from "tuple-database"
-
-const contacts = new Subspace("contacts")
-const byAge = contacts.subspace("byAge")
-
-contacts.pack([1]) // ["contacts", 1]
-contacts.unpack(["contacts", 1]) // [1]
-
-byAge.pack([29, 1]) // ["contacts", "byAge", 29, 1]
-byAge.unpack(["contacts", "byAge", 29, 1]) // [29, 1]
-```
-
-So we might use this for contructing an entire application data model and use them to pack and unpack tuples.
-
-```ts
-db.transact()
-	.set(contacts.pack([person.id]), person)
-	.set(byAge.pack([person.age, person.id]), person)
-	.commit()
-
-// Use range for prefix queries into the subspace.
-byAge.range([29])
-// => {gte: ["contacts", "byAge", 29, MIN], lte: ["contacts", "byAge", 29, MAX]}
-
-// Unpack the tuples to remove the prefix.
-db.scan(byAge.range([29])).map(([tuple, value]) => byAge.unpack(tuple))
-// => [[29, 1], [29, 4]]
-```
-
-There's also a nice helper function for composing writes to the database.
-
-```ts
-import { transactional } from "tuple-database"
-
-const setPersonById = transactional((tx, person) => {
-	tx.set(byAge.pack([person.id]), person)
-})
-
-const setPersonByAge = transactional((tx, person) => {
-	tx.set(byAge.pack([person.age, person.id]), person)
-})
-
-const setPerson = transactional((tx, person) => {
-	setPersonById(tx, person)
-	setPersonByAge(tx, person)
-})
-
-// When you call a transactional function with a transaction, the transaction will not be committed,
-// but when you call with a database, it will create and commit the transaction. This allows you to
-// compose writes together.
-
-setPerson(db, { id: 1, first: 'Chet', last: 'Corcos', age: 29 })
-```
-
-Last but not least, queries are also reactive based on the prefix for the `gt/lt` arguments.
-
-```ts
-import { ReactiveStorage, MIN, MAX } from "tuple-database"
-
-db = new ReactiveStorage(db)
-
-const unsubscribe = db.subscribe(
-	byAge.range([30]),
-	(updates) => {
-		console.log("UPDATES", updates)
+// Remove a person from the database.
+const removePerson = transactionalQuery<Schema>()(
+	(tx, id: string) => {
+		const person = tx.get(["person", id])
+		if (person) {
+			tx.remove(["person", existing.id])
+			tx.remove(["personByName", existing.name, existing.id])
+			tx.remove(["personByAge", existing.age, existing.id])
+		}
 	}
 )
 
-console.log(db.scan(byAge.range([30])))
-// [
-//   [ 30, 'Schwartz', { id: 3, first: 'Jon', last: 'Schwartz', age: 30 } ]
+// Write a person to the database.
+const writePerson = transactionalQuery<Schema>()(
+	(tx, person: Person) => {
+		removePerson(tx, person.id) // (these transactions compose together ;)
+		tx.set(["person", person.id], person)
+		tx.set(["personByName", person.name, person.id], person)
+		tx.set(["personByAge", person.age, person.id], person)
+	}
+)
+
+writePerson(db, { id: "1", name: "Chet", age: 31 })
+writePerson(db, { id: "2", name: "Meghan", age: 30 })
+writePerson(db, { id: "3", name: "Tanishq", age: 22 })
+
+const personByAge = db.subspace(["personByAge"])
+personByAge.scan().map(([tuple, value]) => value)
+// => [
+//   { id: "3", name: "Tanishq", age: 22 }
+//   { id: "2", name: "Meghan", age: 30 }
+//   { id: "1", name: "Chet", age: 31 }
 // ]
 
-// Update my age from 29 -> 30.
-updatePerson({ id: 1, first: 'Chet', last: 'Corcos', age: 30 })
+personByAge.scan({gte: [30]}).map(([tuple, value]) => value)
+// => [
+//   { id: "2", name: "Meghan", age: 30 }
+//   { id: "1", name: "Chet", age: 31 }
+// ]
 
-// > UPDATES {
-// 	person: {
-// 		sets: [[["contacts", "byAge", 30, 1], { id: 1, first: "Chet", last: "Corcos", age: 30 }]],
-// 		removes: [],
-// 	},
-// }
+personByAge.scan({reverse: true, limit: 1}).map(([tuple, value]) => value)
+// => [
+//   { id: "1", name: "Chet", age: 31 }
+// ]
 
-// Update Simon's age from 26 -> 27
-updatePerson({ id: 2, first: 'Simon', last: 'Last', age: 27 })
+const personById = db.subspace(["person"])
+personById.get(["2"])
+// => { id: "2", name: "Meghan", age: 30 }
 
-// Update doesn't log because it falls outside the query.
+
+// Reactivity as well.
+const personByName = db.subspace(["personByName"])
+const unsubscribe = personByName.subscribe({prefix: ["Tanishq"]}}, (writes) => {
+	console.log("Writes:", writes)
+})
+writePerson(db, { id: "3", name: "Tanishq", age: 23 })
+// > Writes: {set: [[["personByName", "Tanishq", "3"], { id: "3", name: "Tanishq", age: 23 }]]}
+
+removePerson(db, "3")
+// > Writes: {remove: [["personByName", "Tanishq", "3"]]}
 ```
 
-For more interesting tips about data modeling using this library read this: https://apple.github.io/foundationdb/data-modeling.html
+## Architecture
 
-## Comparison with FoundationDb
+At the lowest level, we have storage layers that are the backend for this database.
 
-- This database is meant to be embedded, not multi-tenant hosted in the cloud. There is no support for concurrent writes at the moment, though it could later on.
-- This database also has reactive queries, similar to Firebase.
-- This database also has indexing hooks so you can manage your own indexes.
-- FoundationDb relies on the serialization process for running range queries. They do this by simply adding  `\0x00` and `0xff` bytes to the end of a serializied tuple prefix. This is really convenient, but it doesn't work for an in-memory database that does not serialize the data. Serialization for an in-memory database is just an unnecessary performance hit. That's why we have the `MIN` and `MAX` symbols.
+Storage layers must implement the `TupleStorageApi` or `AsyncTupleStorageApi`.
 
-## Why?
+These are the existing storage layers, but there's no reason you couldn't build one for just about any database.
+
+```ts
+// Synchronous Storage
+import { InMemoryTupleStorage } from "tuple-database"
+import { FileTupleStorage } from "tuple-database/storage/FileTupleStorage"
+import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
+// Asynchronous Storage
+import { LevelTupleStorage } from "tuple-database/storage/LevelTupleStorage"
+```
+
+The next level up is the database layer. `TupleDatabase` and `AsyncTupleDatabase` accept a storage layer and implement reactivity and multi-version concurrency control (MVCC). This is the "embedded" database in the sense that it is necessary that all reads and writes into storage go through this database in order to keep track of concurrency issues and reactivity.
+
+The highest level layer is the `TupleDatabaseClient` and `AsyncTupleDatabaseClient`. These layers implement some convenient syntax (`get(tuple)`, `exists(tuple)`, `transact()`, `subspace(prefix)`) as well as TypeScript typed schemas. This is the layer you will almost always be working with. When you construct a client, it accepts a `TupleDatabaseApi` (or `AsyncTupleDatabaseApi`) rather than the actual class which allows you to implement this API across process boundaries. For example, you might have the `AsyncTupleDatabase` in the main process of an Electron app with a `AsyncTupleDatabaseClient` in each of your renderer processes communicating over IPC bridge that implements `AsyncTupleDatabaseApi`.
+
+# Motivation
 
 Databases are complicated. And as with most complicated things, you might find yourself battling the tool more than battling the problem you're trying to solve.
 
-The goal of this project is to create a dead-simple database. It's just a binary tree index where you can store tuples that are component-wise sorted.
+The goal of this project is to create a dead-simple database. It's just a binary tree index where you can store tuples that are component-wise sorted. In fact, you might notice that there are some striking similarities with FoundationDb or Firebase.
 
 This database pushes all of the data modeling and indexing details down to you, the developer, so you get fine-grained control over read/write performance trade-offs.
 
-Last but not least, this database is designed to be embedded in [local-first](https://www.inkandswitch.com/local-first.html) applications.
+**Last but not least**, this database is primarily designed to be embedded in [Local-first](https://www.inkandswitch.com/local-first.html) applications and solve some acute pain points:
 
+1. You can transactionally read/write to this database from a different process through a simple API. This is important because your rendering will likely happen in a separate process. However, queries are fast because they're local so there isn't a need for a complex optimistic cache.
 
-## Development
+2. All queries are reactive which makes it much easier for building user interfaces. SQLite is the current gold-standard for storage in Local-first applications, but leaves this fairly non-trivial feature to be desired.
+
+**And one more thing**, this database has been designed so that it can as a state management layer for frontend applications! Once you have a sufficiently complex application, you'll find yourself normalizing and denormalizing data, creating and caching indexes, and creating a complex reactivity system to power it all. This is what databases are designed to do and it's about time we get accustomed to using databases in our frontend applications.
+
+One crucial piece that enabled this to work well for frontend state management is that there is a synchronous database api option that works with in-memory storage (as well as asynchronous for durable or remote storage). In frontend applications in the browser, it's *very important* that your state updates can happen in the same synchronous callback from a user event because browsers often require that some actions must happen synchronously in response to a user action (for example opening up a link in a new tab). With an asynchronous state management layer, you will be constantly battling these kinds of UX / abstraction issues.
+
+## Comparison with FoundationDb
+
+This database works very similar to FoundationDb. In fact, I've created some abstractions modeled after their API. I've implemented the [class scheduling tutorial](https://apple.github.io/foundationdb/class-scheduling.html) from FoundationDb [as a test in this project](./src/test/classScheduling.test.ts).
+
+However, there are some crucial differences with FoundationDb.
+
+- This database is meant to be embedded, not a mutli-node cluster in the cloud.
+- This database also has reactive queries, similar to Firebase.
+- FoundationDb relies on the serialization process for running range queries. They do this by simply adding  `\0x00` and `0xff` bytes to the end of a serializied tuple prefix. This is really convenient, but it doesn't work for an in-memory database that does not serialize the data. Serialization for an in-memory database is just an unnecessary performance hit. That's why we have the `MIN` and `MAX` symbols.
+
+# Development
 
 One thing that's been pretty annoying is building async and sync storage abstractions in parallel. That's why `npm run build:macros` will compile async code into sync code for us.
 
