@@ -26,12 +26,12 @@ import {
 } from "../types"
 import {
 	AsyncTupleDatabaseApi,
-	AsyncTupleDatabaseDialectApi,
+	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
 
-export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
-	implements AsyncTupleDatabaseDialectApi<S>
+export class AsyncTupleDatabaseClient<S extends TupleValuePair>
+	implements AsyncTupleDatabaseClientApi<S>
 {
 	constructor(
 		private db: AsyncTupleDatabaseApi | TupleDatabaseApi,
@@ -43,9 +43,6 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 		txId?: TxId
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
-
-		console.log("ScanArgs", storageScanArgs)
-
 		const pairs = await this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
@@ -96,9 +93,9 @@ export class AsyncTupleDatabaseDialect<S extends TupleValuePair>
 	// Subspace
 	subspace<P extends TuplePrefix<S[0]>>(
 		prefix: P
-	): AsyncTupleDatabaseDialect<RemoveTupleValuePairPrefix<S, P>> {
+	): AsyncTupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
-		return new AsyncTupleDatabaseDialect(this.db, subspacePrefix)
+		return new AsyncTupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction

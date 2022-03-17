@@ -6,14 +6,14 @@ import { randomId } from "../../helpers/randomId"
 import { transactionalAsync } from "../../helpers/transactional"
 import { MAX, MIN, Tuple, TupleValuePair, Writes } from "../types"
 import {
-	AsyncTupleDatabaseDialectApi,
+	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
 
 export function asyncStorageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => AsyncTupleDatabaseDialectApi,
+	createStorage: (id: string) => AsyncTupleDatabaseClientApi,
 	durable = true
 ) {
 	describe(name, () => {

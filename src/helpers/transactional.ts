@@ -1,11 +1,11 @@
 // Accepts a transaction or a database and allows you to compose transactions together.
 
 import {
-	AsyncTupleDatabaseDialectApi,
+	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "../storage/async/asyncTypes"
 import {
-	TupleDatabaseDialectApi,
+	TupleDatabaseClientApi,
 	TupleTransactionApi,
 } from "../storage/sync/types"
 
@@ -14,7 +14,7 @@ export function transactional<I extends any[], O>(
 	fn: (tx: TupleTransactionApi, ...args: I) => O
 ) {
 	return function (
-		dbOrTx: TupleDatabaseDialectApi | TupleTransactionApi,
+		dbOrTx: TupleDatabaseClientApi | TupleTransactionApi,
 		...args: I
 	): O {
 		return composeTx(dbOrTx, (tx) => fn(tx, ...args))
@@ -25,7 +25,7 @@ export function transactionalAsync<I extends any[], O>(
 	fn: (tx: AsyncTupleTransactionApi, ...args: I) => Promise<O>
 ) {
 	return async function (
-		dbOrTx: AsyncTupleDatabaseDialectApi | AsyncTupleTransactionApi,
+		dbOrTx: AsyncTupleDatabaseClientApi | AsyncTupleTransactionApi,
 		...args: I
 	): Promise<O> {
 		return composeTxAsync(dbOrTx, (tx) => fn(tx, ...args))
@@ -33,7 +33,7 @@ export function transactionalAsync<I extends any[], O>(
 }
 
 function composeTx<T>(
-	dbOrTx: TupleDatabaseDialectApi | TupleTransactionApi,
+	dbOrTx: TupleDatabaseClientApi | TupleTransactionApi,
 	fn: (tx: TupleTransactionApi) => T
 ) {
 	if ("set" in dbOrTx) return fn(dbOrTx)
@@ -44,7 +44,7 @@ function composeTx<T>(
 }
 
 async function composeTxAsync<T>(
-	dbOrTx: AsyncTupleDatabaseDialectApi | AsyncTupleTransactionApi,
+	dbOrTx: AsyncTupleDatabaseClientApi | AsyncTupleTransactionApi,
 	fn: (tx: AsyncTupleTransactionApi) => Promise<T>
 ) {
 	if ("set" in dbOrTx) return fn(dbOrTx)

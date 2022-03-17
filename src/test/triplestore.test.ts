@@ -3,7 +3,7 @@ import { describe, it } from "mocha"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { TupleDatabase } from "../storage/sync/TupleDatabase"
-import { TupleDatabaseDialect } from "../storage/sync/TupleDatabaseDialect"
+import { TupleDatabaseClient } from "../storage/sync/TupleDatabaseClient"
 import { Value } from "../storage/types"
 
 type Fact = [Value, Value, Value]
@@ -145,7 +145,7 @@ const query = transactional((tx, filter: Filter): Binding[] => {
 
 describe("Triplestore", () => {
 	it("works", () => {
-		const db = new TupleDatabaseDialect(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
@@ -175,7 +175,7 @@ describe("Triplestore", () => {
 	})
 
 	it("family example", () => {
-		const db = new TupleDatabaseDialect(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 

@@ -30,7 +30,7 @@ export type AsyncTupleDatabaseApi = {
 }
 
 /** Wraps AsyncTupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
-export type AsyncTupleDatabaseDialectApi<
+export type AsyncTupleDatabaseClientApi<
 	S extends TupleValuePair = TupleValuePair
 > = {
 	// Types
@@ -56,7 +56,7 @@ export type AsyncTupleDatabaseDialectApi<
 	// Subspace
 	subspace: <P extends TuplePrefix<S[0]>>(
 		prefix: P
-	) => AsyncTupleDatabaseDialectApi<RemoveTupleValuePairPrefix<S, P>>
+	) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// Transaction
 	transact: (txId?: TxId) => AsyncTupleTransactionApi<S>
@@ -65,7 +65,7 @@ export type AsyncTupleDatabaseDialectApi<
 export type AsyncTupleTransactionApi<
 	S extends TupleValuePair = TupleValuePair
 > = {
-	// Same as AsyncTupleDatabaseDialectApi without the txId argument.
+	// Same as AsyncTupleDatabaseClientApi without the txId argument.
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>

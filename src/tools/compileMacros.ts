@@ -5,7 +5,7 @@
 */
 
 import { execSync } from "child_process"
-import * as fs from "fs"
+import * as fs from "fs-extra"
 import * as path from "path"
 
 const rootPath = path.resolve(__dirname, "../..")
@@ -69,6 +69,9 @@ ${contents}
 		path.join(rootPath, "node_modules/.bin/prettier") + " --write " + outputPath
 	)
 }
+
+fs.removeSync(path.join(rootPath, "src/storage/sync"))
+fs.mkdirpSync(path.join(rootPath, "src/storage/sync"))
 
 const fileNames: string[] = fs.readdirSync(
 	path.join(rootPath, "src/storage/async")

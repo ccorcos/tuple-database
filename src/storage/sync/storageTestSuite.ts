@@ -13,12 +13,12 @@ import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { transactional } from "../../helpers/transactional"
 import { MAX, MIN, Tuple, TupleValuePair, Writes } from "../types"
-import { TupleDatabaseDialectApi, TupleTransactionApi } from "./types"
+import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export function storageTestSuite(
 	name: string,
 	sortedValues: Tuple,
-	createStorage: (id: string) => TupleDatabaseDialectApi,
+	createStorage: (id: string) => TupleDatabaseClientApi,
 	durable = true
 ) {
 	describe(name, () => {
@@ -970,8 +970,6 @@ export function storageTestSuite(
 
 				// Meghan turns it off if its on.
 				if (meghan.get(["lamp"])) meghan.set(["lamp"], false)
-
-				console.log(chet["writes"], meghan["writes"])
 
 				// Someone has to lose. Whoever commits first wins.
 				chet.commit()

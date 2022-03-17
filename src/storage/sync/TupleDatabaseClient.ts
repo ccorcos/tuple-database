@@ -1,6 +1,6 @@
 /*
 
-This file is generated from async/AsyncTupleDatabaseDialect.ts
+This file is generated from async/AsyncTupleDatabaseClient.ts
 
 */
 
@@ -32,10 +32,10 @@ import {
 	Unsubscribe,
 	Writes,
 } from "../types"
-import { TupleDatabaseDialectApi, TupleTransactionApi } from "./types"
+import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
-export class TupleDatabaseDialect<S extends TupleValuePair>
-	implements TupleDatabaseDialectApi<S>
+export class TupleDatabaseClient<S extends TupleValuePair>
+	implements TupleDatabaseClientApi<S>
 {
 	constructor(
 		private db: TupleDatabaseApi | TupleDatabaseApi,
@@ -47,9 +47,6 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 		txId?: TxId
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
-
-		console.log("ScanArgs", storageScanArgs)
-
 		const pairs = this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
@@ -100,9 +97,9 @@ export class TupleDatabaseDialect<S extends TupleValuePair>
 	// Subspace
 	subspace<P extends TuplePrefix<S[0]>>(
 		prefix: P
-	): TupleDatabaseDialect<RemoveTupleValuePairPrefix<S, P>> {
+	): TupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
-		return new TupleDatabaseDialect(this.db, subspacePrefix)
+		return new TupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction

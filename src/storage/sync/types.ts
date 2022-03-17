@@ -41,7 +41,7 @@ export type TupleDatabaseApi = {
 }
 
 /** Wraps TupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
-export type TupleDatabaseDialectApi<S extends TupleValuePair = TupleValuePair> =
+export type TupleDatabaseClientApi<S extends TupleValuePair = TupleValuePair> =
 	{
 		// Types
 		commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
@@ -66,14 +66,14 @@ export type TupleDatabaseDialectApi<S extends TupleValuePair = TupleValuePair> =
 		// Subspace
 		subspace: <P extends TuplePrefix<S[0]>>(
 			prefix: P
-		) => TupleDatabaseDialectApi<RemoveTupleValuePairPrefix<S, P>>
+		) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 		// Transaction
 		transact: (txId?: TxId) => TupleTransactionApi<S>
 	}
 
 export type TupleTransactionApi<S extends TupleValuePair = TupleValuePair> = {
-	// Same as TupleDatabaseDialectApi without the txId argument.
+	// Same as TupleDatabaseClientApi without the txId argument.
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>

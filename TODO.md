@@ -3,7 +3,7 @@
 - big refactor
 	- TupleStorage
 	- TupleDatabase
-	- TupleDatabaseDialect
+	- TupleDatabaseClient
 
 	- dialect -> client
 	- file organization.
