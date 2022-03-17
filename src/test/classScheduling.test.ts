@@ -12,17 +12,6 @@ import {
 	TupleDatabaseClient,
 } from "../main"
 
-type SchoolSchema =
-	| { key: ["class", string]; value: number }
-	| { key: ["attends", string, string]; value: null }
-
-const addClass = transactionalQuery<SchoolSchema>()(
-	(tr, className: string, remainingSeats: number) => {
-		const course = tr.subspace(["class"])
-		course.set([className], remainingSeats)
-	}
-)
-
 // Generate 1,620 classes like '9:00 chem for dummies'
 const levels = [
 	"intro",
@@ -57,6 +46,17 @@ const classNames = flatten(
 			types.map((type) => times.map((time) => [level, type, time].join(" ")))
 		)
 	)
+)
+
+type SchoolSchema =
+	| { key: ["class", string]; value: number }
+	| { key: ["attends", string, string]; value: null }
+
+const addClass = transactionalQuery<SchoolSchema>()(
+	(tr, className: string, remainingSeats: number) => {
+		const course = tr.subspace(["class"])
+		course.set([className], remainingSeats)
+	}
 )
 
 const init = transactionalQuery<SchoolSchema>()((tr) => {
