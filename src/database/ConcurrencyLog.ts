@@ -9,6 +9,12 @@ type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }
 
 type LogItem = ReadItem | WriteItem
 
+export class ReadWriteConflictError extends Error {
+	constructor(txId: string | undefined) {
+		super("ReadWriteConflictError: " + txId)
+	}
+}
+
 export class ConcurrencyLog {
 	// O(n) refers to this.log.length
 	log: LogItem[] = []
@@ -43,7 +49,7 @@ export class ConcurrencyLog {
 				} else if (item.type === "write") {
 					for (const read of reads) {
 						if (isTupleWithinBounds(item.tuple, read)) {
-							throw new Error("Conflicting read/write: " + item.txId)
+							throw new ReadWriteConflictError(item.txId)
 						}
 					}
 				}

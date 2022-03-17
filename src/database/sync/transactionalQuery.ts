@@ -7,6 +7,7 @@ This file is generated from async/transactionalQueryAsync.ts
 type Identity<T> = T
 
 import { KeyValuePair } from "../../main"
+import { ReadWriteConflictError } from "../ConcurrencyLog"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
@@ -43,6 +44,8 @@ function retry<O>(retries: number, fn: () => Identity<O>) {
 			return result
 		} catch (error) {
 			if (retries <= 0) throw error
+			const isConflict = error instanceof ReadWriteConflictError
+			if (!isConflict) throw error
 			retries -= 1
 		}
 	}

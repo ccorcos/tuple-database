@@ -1,4 +1,5 @@
 import { KeyValuePair } from "../../main"
+import { ReadWriteConflictError } from "../ConcurrencyLog"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
@@ -38,6 +39,8 @@ async function retry<O>(retries: number, fn: () => Promise<O>) {
 			return result
 		} catch (error) {
 			if (retries <= 0) throw error
+			const isConflict = error instanceof ReadWriteConflictError
+			if (!isConflict) throw error
 			retries -= 1
 		}
 	}
