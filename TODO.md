@@ -1,13 +1,16 @@
 ## TODO
 
-- file organization.
-- SyncTupleDatabase
-- general cleanup of names?
+- storage test
+- database test
+- database client test
+
+- reactivityHelpers test
+- subspace types test
+
 
 - separate storage, vs dialect, vs client tests.
-
-class scheduling test.
-
+- transactional should retry!
+- class scheduling test.
 - improve tests.
 
 

@@ -1,4 +1,4 @@
-import { isEqual } from "lodash"
+import { isEqual, omitBy } from "lodash"
 import {
 	ScanArgs,
 	ScanStorageArgs,
@@ -86,11 +86,11 @@ export function normalizeSubspaceScanArgs(
 	args: ScanArgs
 ): ScanStorageArgs {
 	const prefix = args.prefix
-		? [...args.prefix, ...subspacePrefix]
+		? [...subspacePrefix, ...args.prefix]
 		: subspacePrefix
 
 	const bounds = normalizeTupleBounds({ ...args, prefix })
 	const { limit, reverse } = args
 
-	return { ...bounds, limit, reverse }
+	return omitBy({ ...bounds, limit, reverse }, (x) => x === undefined)
 }

@@ -1,8 +1,8 @@
 import { randomId } from "../helpers/randomId"
 import {
 	Bounds,
+	getPrefixContainingBounds,
 	isTupleWithinBounds,
-	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { Callback, MIN, ScanStorageArgs, Tuple, Writes } from "../storage/types"
@@ -111,7 +111,7 @@ function subscribe(
 ) {
 	// this.log("db/subscribe", args)
 
-	const prefix = prefixTupleBounds(args)
+	const prefix = getPrefixContainingBounds(args)
 
 	const id = randomId()
 	const value: Listener = { callback, bounds: args }

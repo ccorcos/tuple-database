@@ -2,7 +2,13 @@ import { strict as assert } from "assert"
 import * as _ from "lodash"
 import { describe, it } from "mocha"
 import { MAX, MIN, Tuple } from "../storage/types"
-import { scan, set } from "./sortedTupleArray"
+import {
+	getPrefixContainingBounds,
+	isTupleWithinBounds,
+	normalizeTupleBounds,
+	scan,
+	set,
+} from "./sortedTupleArray"
 
 describe("sortedTupleArray", () => {
 	describe("prefix basics", () => {
@@ -308,6 +314,70 @@ describe("sortedTupleArray", () => {
 		it("prefix lt reverse", () => {
 			const result = scan(items, { prefix: ["a"], lt: ["c"], reverse: true })
 			assert.deepEqual(result, [["a", "b"], ["a", "a"], ["a"]])
+		})
+	})
+
+	describe("normalizeTupleBounds", () => {
+		it("normalized prefix", () => {
+			assert.deepEqual(normalizeTupleBounds({ prefix: ["a"] }), {
+				gte: ["a"], // NOTE: this is not ["a", MIN]
+				lte: ["a", MAX],
+			})
+		})
+
+		it("prepends prefix to constraints", () => {
+			assert.deepEqual(normalizeTupleBounds({ prefix: ["a"], gte: ["b"] }), {
+				gte: ["a", "b"],
+				lte: ["a", MAX],
+			})
+		})
+	})
+
+	describe("prefixTupleBounds", () => {
+		it("Computes trivial bounds prefix", () => {
+			assert.deepEqual(
+				getPrefixContainingBounds({ gte: ["a", 1], lte: ["a", 10] }),
+				["a"]
+			)
+		})
+
+		it("Handles entirely disjoint tuples", () => {
+			assert.deepEqual(
+				getPrefixContainingBounds({ gte: ["a", 1], lte: ["b", 10] }),
+				[]
+			)
+		})
+	})
+
+	describe("isTupleWithinBounds", () => {
+		it("Works for exact equality range", () => {
+			assert.deepEqual(
+				isTupleWithinBounds(["a"], { gte: ["a"], lte: ["a"] }),
+				true
+			)
+			assert.deepEqual(
+				isTupleWithinBounds(["a", 1], { gte: ["a"], lte: ["a"] }),
+				false
+			)
+		})
+
+		it("Works for non-trivial range", () => {
+			assert.deepEqual(
+				isTupleWithinBounds(["a"], { gt: ["a"], lte: ["b"] }),
+				false
+			)
+			assert.deepEqual(
+				isTupleWithinBounds(["a", 1], { gt: ["a"], lte: ["b"] }),
+				true
+			)
+			assert.deepEqual(
+				isTupleWithinBounds(["b"], { gt: ["a"], lte: ["b"] }),
+				true
+			)
+			assert.deepEqual(
+				isTupleWithinBounds(["b", 1], { gt: ["a"], lte: ["b"] }),
+				false
+			)
 		})
 	})
 })

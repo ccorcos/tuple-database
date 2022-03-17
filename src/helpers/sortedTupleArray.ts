@@ -1,3 +1,4 @@
+import { omitBy } from "lodash"
 import { MAX, ScanArgs, Tuple } from "../storage/types"
 import { compareTuple } from "./compareTuple"
 import * as sortedList from "./sortedList"
@@ -55,11 +56,10 @@ export function normalizeTupleBounds(args: ScanArgs): Bounds {
 		lte = [...args.prefix, MAX]
 	}
 
-	return { gte, gt, lte, lt }
+	return omitBy({ gte, gt, lte, lt }, (x) => x === undefined)
 }
 
-/** Compute the prefix that captures all bounds. */
-export function prefixTupleBounds(bounds: Bounds) {
+export function getPrefixContainingBounds(bounds: Bounds) {
 	const prefix: Tuple = []
 	const start = bounds.gt || bounds.gte || []
 	const end = bounds.lt || bounds.lte || []
