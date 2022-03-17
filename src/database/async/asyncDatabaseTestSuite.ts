@@ -10,7 +10,7 @@ import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
-import { transactionalAsyncQuery } from "./transactionalAsync"
+import { transactionalAsyncQuery } from "./transactionalQueryAsync"
 
 export function asyncDatabaseTestSuite(
 	name: string,
@@ -1319,7 +1319,7 @@ export function asyncDatabaseTestSuite(
 					(await personByAge.scan()).map(([tuple, value]) => tuple[0]),
 					[22, 30, 31]
 				)
-				assertEqual((await personByAge.get([22, "3"])).name, "Tanishq")
+				assertEqual((await personByAge.get([22, "3"]))!.name, "Tanishq")
 				assertEqual(await personByAge.exists([31, "1"]), true)
 				assertEqual(await personByAge.exists([31, "2"]), false)
 			})

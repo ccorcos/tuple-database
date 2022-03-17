@@ -1,6 +1,6 @@
 ## TODO
 
-- transactional subspace argument
+- transactional subspace argument?
 - SubspaceSchema types
 
 - transactional should retry!

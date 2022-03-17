@@ -1,6 +1,6 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
-import { transactionalQuery } from "../database/sync/transactional"
+import { transactionalQuery } from "../database/sync/transactionalQuery"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"

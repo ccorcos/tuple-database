@@ -52,7 +52,7 @@ type DistributiveProp<T, K extends keyof T> = T extends unknown ? T[K] : never
 export type ValueForTuple<
 	S extends TupleValuePair,
 	P extends Tuple
-> = DistributiveProp<FilterTupleValuePair<S, P>, 1>
+> = DistributiveProp<FilterTupleValuePairByPrefix<S, P>, 1>
 
 type F2 = Assert<
 	ValueForTuple<[[1, 2], number] | [[1, 3], string] | [[2, 1], null], [1, 2]>,

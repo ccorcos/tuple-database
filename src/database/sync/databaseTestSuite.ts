@@ -14,7 +14,7 @@ import { randomId } from "../../helpers/randomId"
 import { MAX, MIN, TupleValuePair, Writes } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
-import { transactionalQuery } from "./transactional"
+import { transactionalQuery } from "./transactionalQuery"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export function databaseTestSuite(
@@ -1321,7 +1321,7 @@ export function databaseTestSuite(
 					personByAge.scan().map(([tuple, value]) => tuple[0]),
 					[22, 30, 31]
 				)
-				assertEqual(personByAge.get([22, "3"]).name, "Tanishq")
+				assertEqual(personByAge.get([22, "3"])!.name, "Tanishq")
 				assertEqual(personByAge.exists([31, "1"]), true)
 				assertEqual(personByAge.exists([31, "2"]), false)
 			})

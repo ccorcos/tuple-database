@@ -3,7 +3,7 @@
 import { strict as assert } from "assert"
 import { flatten, range } from "lodash"
 import { describe, it } from "mocha"
-import { transactionalQuery } from "../database/sync/transactional"
+import { transactionalQuery } from "../database/sync/transactionalQuery"
 import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types"
 import {
 	InMemoryTupleStorage,

@@ -1,6 +1,6 @@
 /*
 
-This file is generated from async/transactionalAsync.ts
+This file is generated from async/transactionalQueryAsync.ts
 
 */
 
