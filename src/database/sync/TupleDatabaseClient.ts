@@ -221,11 +221,13 @@ export class TupleTransaction<S extends TupleValuePair>
 	}
 
 	commit() {
+		this.checkActive()
 		this.committed = true
 		return this.db.commit(this.writes, this.id)
 	}
 
 	cancel() {
+		this.checkActive()
 		this.canceled = true
 		return this.db.cancel(this.id)
 	}
@@ -233,6 +235,7 @@ export class TupleTransaction<S extends TupleValuePair>
 	subspace<P extends TuplePrefix<S[0]>>(
 		prefix: P
 	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
+		this.checkActive()
 		// TODO: types.
 		return new TupleTransactionSubspace(this as any, prefix)
 	}

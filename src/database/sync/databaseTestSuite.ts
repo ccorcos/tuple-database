@@ -11,14 +11,16 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
-import { transactional } from "../../helpers/transactional"
 import { MAX, MIN, TupleValuePair, Writes } from "../../storage/types"
 import { sortedValues } from "../../test/fixtures"
+import { transactionalQuery } from "./transactional"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export function databaseTestSuite(
 	name: string,
-	createStorage: (id: string) => TupleDatabaseClientApi,
+	createStorage: <S extends TupleValuePair = TupleValuePair>(
+		id: string
+	) => TupleDatabaseClientApi<S>,
 	durable = true
 ) {
 	describe(name, () => {
@@ -788,6 +790,48 @@ export function databaseTestSuite(
 			assert.deepEqual(tr.exists(["d"]), true)
 		})
 
+		it("committing a transaction prevents any further interaction", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.commit()
+
+			assert.throws(() => tx.get([1]))
+			assert.throws(() => tx.exists([1]))
+			assert.throws(() => tx.scan())
+			assert.throws(() => tx.write({}))
+			assert.throws(() => tx.set([1], 2))
+			assert.throws(() => tx.remove([1]))
+			assert.throws(() => tx.cancel())
+			assert.throws(() => tx.commit())
+		})
+
+		it("canceling a transaction prevents any further interaction", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.cancel()
+
+			assert.throws(() => tx.get([1]))
+			assert.throws(() => tx.exists([1]))
+			assert.throws(() => tx.scan())
+			assert.throws(() => tx.write({}))
+			assert.throws(() => tx.set([1], 2))
+			assert.throws(() => tx.remove([1]))
+			assert.throws(() => tx.cancel())
+			assert.throws(() => tx.commit())
+		})
+
+		it("cancelling a transaction does not submit writes", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.set([1], 2)
+			assert.equal(tx.get([1]), 2)
+			tx.cancel()
+
+			assert.equal(store.get([1]), undefined)
+		})
+
+		it.skip("cancelled transaction cannot conflict with other transactions")
+
 		describe("application-level indexing", () => {
 			it("bidirectional friends stored as keys", () => {
 				const store = createStorage(randomId())
@@ -998,38 +1042,40 @@ export function databaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactional((tx, player: string, inc: number) => {
-					// It has this miserable api, lol.
-					const getPlayerScore = (player: string) => {
-						const pairs = tx.scan({ prefix: ["player", player] })
-						if (pairs.length !== 1) throw new Error("Missing player.")
-						const [[tuple, _value]] = pairs
-						return tuple[2] as number
+				const addScore = transactionalQuery()(
+					(tx, player: string, inc: number) => {
+						// It has this miserable api, lol.
+						const getPlayerScore = (player: string) => {
+							const pairs = tx.scan({ prefix: ["player", player] })
+							if (pairs.length !== 1) throw new Error("Missing player.")
+							const [[tuple, _value]] = pairs
+							return tuple[2] as number
+						}
+
+						const getCurrentTotal = () => {
+							const totals = tx.scan({ prefix: ["total"] })
+							if (totals.length !== 1) throw new Error("Too many totals.")
+							const [[tuple, _value]] = totals
+							return tuple[1] as number
+						}
+
+						const resetTotal = () => {
+							const pairs = tx.scan({ prefix: ["player"] })
+							const total = sum(
+								pairs.map(([tuple, _value]) => tuple[2] as number)
+							)
+							tx.remove(["total", getCurrentTotal()])
+							tx.set(["total", total], null)
+						}
+
+						// But crucially, we reset the whole total whenever someone scores.
+						const playerScore = getPlayerScore(player)
+						tx.remove(["player", player, playerScore])
+						tx.set(["player", player, playerScore + inc], null)
+
+						resetTotal()
 					}
-
-					const getCurrentTotal = () => {
-						const totals = tx.scan({ prefix: ["total"] })
-						if (totals.length !== 1) throw new Error("Too many totals.")
-						const [[tuple, _value]] = totals
-						return tuple[1] as number
-					}
-
-					const resetTotal = () => {
-						const pairs = tx.scan({ prefix: ["player"] })
-						const total = sum(
-							pairs.map(([tuple, _value]) => tuple[2] as number)
-						)
-						tx.remove(["total", getCurrentTotal()])
-						tx.set(["total", total], null)
-					}
-
-					// But crucially, we reset the whole total whenever someone scores.
-					const playerScore = getPlayerScore(player)
-					tx.remove(["player", player, playerScore])
-					tx.set(["player", player, playerScore + inc], null)
-
-					resetTotal()
-				})
+				)
 
 				// Chet an meghan are playing a game.
 				const chet = store.transact()
@@ -1068,6 +1114,8 @@ export function databaseTestSuite(
 				a.commit() // ok
 				assert.throws(() => b.commit())
 			})
+
+			it.skip("can be used for transactional reads")
 		})
 
 		describe("Reactivity", () => {
@@ -1241,6 +1289,22 @@ export function databaseTestSuite(
 					set: [[["a", "c", 1], 1]],
 					remove: [],
 				} as Writes)
+			})
+		})
+
+		describe("subspace", () => {
+			type Person = { id: string; name: string; age: number }
+			type Schema =
+				| [["person", string], Person]
+				| [["personByName", string, string], Person]
+				| [["personByAge", number, string], Person]
+
+			const store = createStorage<Schema>(randomId())
+
+			const writePerson = transactionalQuery<Schema>()((tx, person: Person) => {
+				tx.set(["person", person.id], person)
+				tx.set(["personByName", person.name, person.id], person)
+				tx.set(["personByAge", person.age, person.id], person)
 			})
 		})
 

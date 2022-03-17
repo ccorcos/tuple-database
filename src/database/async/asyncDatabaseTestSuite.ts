@@ -3,17 +3,19 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
-import { transactionalAsync } from "../../helpers/transactional"
 import { MAX, MIN, TupleValuePair, Writes } from "../../storage/types"
 import { sortedValues } from "../../test/fixtures"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
+import { transactionalAsyncQuery } from "./transactionalAsync"
 
 export function asyncDatabaseTestSuite(
 	name: string,
-	createStorage: (id: string) => AsyncTupleDatabaseClientApi,
+	createStorage: <S extends TupleValuePair = TupleValuePair>(
+		id: string
+	) => AsyncTupleDatabaseClientApi<S>,
 	durable = true
 ) {
 	describe(name, () => {
@@ -783,40 +785,44 @@ export function asyncDatabaseTestSuite(
 			assert.deepEqual(await tr.exists(["d"]), true)
 		})
 
-		it("committing a transaction prevents any further interaction", () => {
+		it("committing a transaction prevents any further interaction", async () => {
 			const store = createStorage(randomId())
 			const tx = store.transact()
-			tx.commit()
+			await tx.commit()
 
-			assert.throws(() => tx.get([1]))
-			assert.throws(() => tx.exists([1]))
-			assert.throws(() => tx.scan())
+			assert.rejects(() => tx.get([1]))
+			assert.rejects(() => tx.exists([1]))
+			assert.rejects(() => tx.scan())
 			assert.throws(() => tx.write({}))
-			assert.throws(() => tx.cancel())
-			assert.throws(() => tx.commit())
+			assert.throws(() => tx.set([1], 2))
+			assert.throws(() => tx.remove([1]))
+			assert.rejects(() => tx.cancel())
+			assert.rejects(() => tx.commit())
 		})
 
-		it("canceling a transaction prevents any further interaction", () => {
+		it("canceling a transaction prevents any further interaction", async () => {
 			const store = createStorage(randomId())
 			const tx = store.transact()
-			tx.cancel()
+			await tx.cancel()
 
-			assert.throws(() => tx.get([1]))
-			assert.throws(() => tx.exists([1]))
-			assert.throws(() => tx.scan())
+			assert.rejects(() => tx.get([1]))
+			assert.rejects(() => tx.exists([1]))
+			assert.rejects(() => tx.scan())
 			assert.throws(() => tx.write({}))
-			assert.throws(() => tx.cancel())
-			assert.throws(() => tx.commit())
+			assert.throws(() => tx.set([1], 2))
+			assert.throws(() => tx.remove([1]))
+			assert.rejects(() => tx.cancel())
+			assert.rejects(() => tx.commit())
 		})
 
-		it("cancelling a transaction does not submit writes", () => {
+		it("cancelling a transaction does not submit writes", async () => {
 			const store = createStorage(randomId())
 			const tx = store.transact()
 			tx.set([1], 2)
-			assert.equal(tx.get([1]), 2)
-			tx.cancel()
+			assert.equal(await tx.get([1]), 2)
+			await tx.cancel()
 
-			assert.equal(store.get([1]), undefined)
+			assert.equal(await store.get([1]), undefined)
 		})
 
 		it.skip("cancelled transaction cannot conflict with other transactions")
@@ -1034,7 +1040,7 @@ export function asyncDatabaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalAsync(
+				const addScore = transactionalAsyncQuery()(
 					async (tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = async (player: string) => {
@@ -1282,6 +1288,24 @@ export function asyncDatabaseTestSuite(
 					remove: [],
 				} as Writes)
 			})
+		})
+
+		describe("subspace", () => {
+			type Person = { id: string; name: string; age: number }
+			type Schema =
+				| [["person", string], Person]
+				| [["personByName", string, string], Person]
+				| [["personByAge", number, string], Person]
+
+			const store = createStorage<Schema>(randomId())
+
+			const writePerson = transactionalAsyncQuery<Schema>()(
+				async (tx, person: Person) => {
+					tx.set(["person", person.id], person)
+					tx.set(["personByName", person.name, person.id], person)
+					tx.set(["personByAge", person.age, person.id], person)
+				}
+			)
 		})
 
 		if (durable) {

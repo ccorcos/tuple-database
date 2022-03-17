@@ -4,6 +4,9 @@
 - database test
 - database client test
 
+- transactionalAsyncQuery types wherever its used.
+- type tests
+
 - reactivityHelpers test
 - subspace types test
 

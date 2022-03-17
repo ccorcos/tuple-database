@@ -1,21 +1,21 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
+import { transactionalQuery } from "../database/sync/transactional"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { Value } from "../storage/types"
 
 type Fact = [Value, Value, Value]
 
-const writeFact = transactional((tx, fact: Fact) => {
+const writeFact = transactionalQuery()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 	tx.set(["eav", e, a, v], null)
 	tx.set(["ave", a, v, e], null)
 	tx.set(["vea", v, e, a], null)
 })
 
-const removeFact = transactional((tx, fact: Fact) => {
+const removeFact = transactionalQuery()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 	tx.remove(["eav", e, a, v])
 	tx.remove(["ave", a, v, e])
@@ -35,85 +35,87 @@ type Expression = [Value | Variable, Value | Variable, Value | Variable]
 
 type Binding = { [varName: string]: Value }
 
-const queryExpression = transactional((tx, expr: Expression): Binding[] => {
-	const [$e, $a, $v] = expr
-	if ($e instanceof Variable) {
-		if ($a instanceof Variable) {
-			if ($v instanceof Variable) {
-				// ___
-				return tx
-					.scan({ prefix: ["eav"] })
-					.map(([[_eav, e, a, v], _value]) => ({
-						[$e.name]: e,
-						[$a.name]: a,
-						[$v.name]: v,
-					}))
+const queryExpression = transactionalQuery()(
+	(tx, expr: Expression): Binding[] => {
+		const [$e, $a, $v] = expr
+		if ($e instanceof Variable) {
+			if ($a instanceof Variable) {
+				if ($v instanceof Variable) {
+					// ___
+					return tx
+						.scan({ prefix: ["eav"] })
+						.map(([[_eav, e, a, v], _value]) => ({
+							[$e.name]: e,
+							[$a.name]: a,
+							[$v.name]: v,
+						}))
+				} else {
+					// __V
+					return tx
+						.scan({ prefix: ["vea", $v] })
+						.map(([[_vea, _v, e, a], _value]) => ({
+							[$e.name]: e,
+							[$a.name]: a,
+						}))
+				}
 			} else {
-				// __V
-				return tx
-					.scan({ prefix: ["vea", $v] })
-					.map(([[_vea, _v, e, a], _value]) => ({
-						[$e.name]: e,
-						[$a.name]: a,
-					}))
+				if ($v instanceof Variable) {
+					// A__
+					return tx
+						.scan({ prefix: ["ave", $a] })
+						.map(([[_ave, _a, v, e], _value]) => ({
+							[$e.name]: e,
+							[$v.name]: v,
+						}))
+				} else {
+					// A_V
+					return tx
+						.scan({ prefix: ["ave", $a, $v] })
+						.map(([[_ave, _a, _v, e], _value]) => ({
+							[$e.name]: e,
+						}))
+				}
 			}
 		} else {
-			if ($v instanceof Variable) {
-				// A__
-				return tx
-					.scan({ prefix: ["ave", $a] })
-					.map(([[_ave, _a, v, e], _value]) => ({
-						[$e.name]: e,
-						[$v.name]: v,
-					}))
+			if ($a instanceof Variable) {
+				if ($v instanceof Variable) {
+					// E__
+					return tx
+						.scan({ prefix: ["eav", $e] })
+						.map(([[_eav, _e, a, v], _value]) => ({
+							[$a.name]: a,
+							[$v.name]: v,
+						}))
+				} else {
+					// E_V
+					return tx
+						.scan({ prefix: ["vea", $v, $e] })
+						.map(([[_vea, _v, _e, a], _value]) => ({
+							[$a.name]: a,
+						}))
+				}
 			} else {
-				// A_V
-				return tx
-					.scan({ prefix: ["ave", $a, $v] })
-					.map(([[_ave, _a, _v, e], _value]) => ({
-						[$e.name]: e,
-					}))
-			}
-		}
-	} else {
-		if ($a instanceof Variable) {
-			if ($v instanceof Variable) {
-				// E__
-				return tx
-					.scan({ prefix: ["eav", $e] })
-					.map(([[_eav, _e, a, v], _value]) => ({
-						[$a.name]: a,
-						[$v.name]: v,
-					}))
-			} else {
-				// E_V
-				return tx
-					.scan({ prefix: ["vea", $v, $e] })
-					.map(([[_vea, _v, _e, a], _value]) => ({
-						[$a.name]: a,
-					}))
-			}
-		} else {
-			if ($v instanceof Variable) {
-				// EA_
-				return tx
-					.scan({ prefix: ["eav", $e, $a] })
-					.map(([[_eav, _e, _a, v], _value]) => ({
-						[$v.name]: v,
-					}))
-			} else {
-				// EAV
-				return tx
-					.scan({ prefix: ["eav", $e, $a, $v] })
-					.map(([[_eav, _e, _a, _v], _value]) => ({}))
+				if ($v instanceof Variable) {
+					// EA_
+					return tx
+						.scan({ prefix: ["eav", $e, $a] })
+						.map(([[_eav, _e, _a, v], _value]) => ({
+							[$v.name]: v,
+						}))
+				} else {
+					// EAV
+					return tx
+						.scan({ prefix: ["eav", $e, $a, $v] })
+						.map(([[_eav, _e, _a, _v], _value]) => ({}))
+				}
 			}
 		}
 	}
-})
+)
 
 type Filter = Expression[]
 
-const query = transactional((tx, filter: Filter): Binding[] => {
+const query = transactionalQuery()((tx, filter: Filter): Binding[] => {
 	const [first, ...rest] = filter
 
 	if (rest.length === 0) return queryExpression(tx, first)
