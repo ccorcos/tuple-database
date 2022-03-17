@@ -1,4 +1,5 @@
-import { ScanArgs, Tuple, TupleValuePair } from "../storage/types"
+import { ScanArgs } from "../database/types"
+import { Tuple, TupleValuePair } from "../storage/types"
 import { compareTuple } from "./compareTuple"
 import * as sortedList from "./sortedList"
 import { normalizeTupleBounds } from "./sortedTupleArray"

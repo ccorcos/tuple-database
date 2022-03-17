@@ -1,5 +1,6 @@
 import { omitBy } from "lodash"
-import { MAX, ScanArgs, Tuple } from "../storage/types"
+import { ScanArgs } from "../database/types"
+import { MAX, Tuple } from "../storage/types"
 import { compareTuple } from "./compareTuple"
 import * as sortedList from "./sortedList"
 

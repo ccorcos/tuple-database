@@ -35,16 +35,6 @@ export type TupleValuePair = [Tuple, any]
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 
-export type ScanArgs<T extends Tuple = Tuple> = {
-	gt?: T
-	gte?: T
-	lt?: T
-	lte?: T
-	prefix?: T
-	limit?: number
-	reverse?: boolean
-}
-
 // TODO: call this a "Write" or a "Commit"
 export type Writes<S extends TupleValuePair = TupleValuePair> = {
 	set?: S[]
@@ -55,8 +45,6 @@ export type Operation =
 	| { type: "set"; tuple: Tuple; value: any; prev: any }
 	| { type: "remove"; tuple: Tuple; prev: any }
 
-export type TxId = string
-
 export type ScanStorageArgs = {
 	gt?: Tuple
 	gte?: Tuple
@@ -65,8 +53,3 @@ export type ScanStorageArgs = {
 	limit?: number
 	reverse?: boolean
 }
-
-export type Callback<S extends TupleValuePair = TupleValuePair> = (
-	write: Writes<S>
-) => void
-export type Unsubscribe = () => void

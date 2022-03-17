@@ -1,6 +1,6 @@
 import { isEqual, omitBy } from "lodash"
+import { ScanArgs } from "../database/types"
 import {
-	ScanArgs,
 	ScanStorageArgs,
 	Tuple,
 	TupleValuePair,

@@ -1,26 +1,18 @@
 ## TODO
 
-- transactional should retry!
 
 - Architecture README
 	- TupleStorage
 	- TupleDatabase
 	- TupleDatabaseClient
 	- transactionalQuery
+	- subspace
 
 - types for ScanArgs with min/max for scanning..
 
 - cleanup this TODO
 
 ---
-
-
-How to organize these different layers?
-- storage
-	- with mvcc
-	- with subscribe
-	- with transaction
-	- with types and subspace
 
 - schema types so its more ergonomic.
 - {key, value} object so that it isnt a valid tuple for the key.

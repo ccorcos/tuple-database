@@ -17,15 +17,7 @@ import {
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWrites,
 } from "../../helpers/subspaceHelpers"
-import {
-	Callback,
-	ScanArgs,
-	Tuple,
-	TupleValuePair,
-	TxId,
-	Unsubscribe,
-	Writes,
-} from "../../storage/types"
+import { Tuple, TupleValuePair, Writes } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
 import {
 	FilterTupleValuePairByPrefix,
@@ -33,6 +25,7 @@ import {
 	TuplePrefix,
 	ValueForTuple,
 } from "../typeHelpers"
+import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
