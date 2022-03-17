@@ -1,9 +1,9 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
+import { TupleDatabase } from "../database/sync/TupleDatabase"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { transactional } from "../helpers/transactional"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { TupleDatabase } from "../storage/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../storage/sync/TupleDatabaseClient"
 import { Value } from "../storage/types"
 
 type Fact = [Value, Value, Value]

@@ -1,7 +1,4 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
-import { ConcurrencyLog } from "../ConcurrencyLog"
-import { ReactivityTracker } from "../reactivityHelpers"
-import { TupleStorageApi } from "../sync/types"
 import {
 	Callback,
 	ScanStorageArgs,
@@ -9,7 +6,10 @@ import {
 	TxId,
 	Unsubscribe,
 	Writes,
-} from "../types"
+} from "../../storage/types"
+import { ConcurrencyLog } from "../ConcurrencyLog"
+import { ReactivityTracker } from "../reactivityHelpers"
+import { TupleStorageApi } from "../sync/types"
 import { AsyncTupleDatabaseApi, AsyncTupleStorageApi } from "./asyncTypes"
 
 export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {

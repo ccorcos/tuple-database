@@ -9,13 +9,13 @@ import * as fs from "fs-extra"
 import level from "level"
 import { range } from "lodash"
 import * as path from "path"
+import { AsyncTupleDatabase } from "../database/async/AsyncTupleDatabase"
+import { AsyncTupleDatabaseClientApi } from "../database/async/asyncTypes"
 import {
 	AsyncTupleDatabaseClient,
 	InMemoryTupleStorage,
 	transactionalAsync,
 } from "../main"
-import { AsyncTupleDatabase } from "../storage/async/AsyncTupleDatabase"
-import { AsyncTupleDatabaseClientApi } from "../storage/async/asyncTypes"
 import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
 

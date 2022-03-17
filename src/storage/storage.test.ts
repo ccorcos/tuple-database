@@ -1,17 +1,17 @@
 import sqlite from "better-sqlite3"
 import level from "level"
 import * as path from "path"
+import { asyncStorageTestSuite } from "../database/async/asyncStorageTestSuite"
+import { AsyncTupleDatabase } from "../database/async/AsyncTupleDatabase"
+import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
+import { storageTestSuite } from "../database/sync/storageTestSuite"
+import { TupleDatabase } from "../database/sync/TupleDatabase"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { sortedValues } from "../test/fixtures"
-import { asyncStorageTestSuite } from "./async/asyncStorageTestSuite"
-import { AsyncTupleDatabase } from "./async/AsyncTupleDatabase"
-import { AsyncTupleDatabaseClient } from "./async/AsyncTupleDatabaseClient"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
 import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
-import { storageTestSuite } from "./sync/storageTestSuite"
-import { TupleDatabase } from "./sync/TupleDatabase"
-import { TupleDatabaseClient } from "./sync/TupleDatabaseClient"
 
 const tmpDir = path.resolve(__dirname, "/../../tmp")
 

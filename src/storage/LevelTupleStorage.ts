@@ -1,12 +1,12 @@
 import { AbstractBatch } from "abstract-leveldown"
 import level from "level"
+import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
 import {
 	decodeTuple,
 	decodeValue,
 	encodeTuple,
 	encodeValue,
 } from "../helpers/codec"
-import { AsyncTupleStorageApi } from "./async/asyncTypes"
 import { ScanStorageArgs, TupleValuePair, Writes } from "./types"
 
 export class LevelTupleStorage implements AsyncTupleStorageApi {

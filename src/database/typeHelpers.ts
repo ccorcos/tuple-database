@@ -1,4 +1,4 @@
-import { Tuple, TupleValuePair } from "./types"
+import { Tuple, TupleValuePair } from "../storage/types"
 
 export type Assert<Actual extends Expected, Expected> = Actual
 

@@ -7,11 +7,6 @@ This file is generated from async/asyncTypes.ts
 type Identity<T> = T
 
 import {
-	FilterTupleValuePairByPrefix,
-	RemoveTupleValuePairPrefix,
-	TuplePrefix,
-} from "../typeHelpers"
-import {
 	Callback,
 	ScanArgs,
 	ScanStorageArgs,
@@ -19,7 +14,12 @@ import {
 	TxId,
 	Unsubscribe,
 	Writes,
-} from "../types"
+} from "../../storage/types"
+import {
+	FilterTupleValuePairByPrefix,
+	RemoveTupleValuePairPrefix,
+	TuplePrefix,
+} from "../typeHelpers"
 
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {

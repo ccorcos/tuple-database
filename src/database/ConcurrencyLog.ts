@@ -1,6 +1,6 @@
 import { mutableFilter } from "../helpers/mutableFilter"
 import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray"
-import { Tuple } from "./types"
+import { Tuple } from "../storage/types"
 
 export type TxId = string
 

@@ -1,20 +1,21 @@
 ## TODO
 
-- big refactor
+- file organization.
+- SyncTupleDatabase
+- general cleanup of names?
+
+- separate storage, vs dialect, vs client tests.
+
+class scheduling test.
+
+- improve tests.
+
+
+- Architecture README
 	- TupleStorage
 	- TupleDatabase
 	- TupleDatabaseClient
 
-	- dialect -> client
-	- file organization.
-	- SyncTupleDatabase
-	- general cleanup of names?
-
-	- separate storage, vs dialect, vs client tests.
-
-	class scheduling test.
-
-	- improve tests.
 
 
 - types with min/max for scanning..

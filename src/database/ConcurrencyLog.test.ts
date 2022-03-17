@@ -1,8 +1,8 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
 import { normalizeTupleBounds } from "../helpers/sortedTupleArray"
+import { Tuple } from "../storage/types"
 import { ConcurrencyLog } from "./ConcurrencyLog"
-import { Tuple } from "./types"
 
 function bounds(prefix: Tuple) {
 	return normalizeTupleBounds({ prefix })

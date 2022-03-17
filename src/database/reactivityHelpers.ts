@@ -4,9 +4,9 @@ import {
 	isTupleWithinBounds,
 	prefixTupleBounds,
 } from "../helpers/sortedTupleArray"
-import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { Callback, MIN, ScanStorageArgs, Tuple, Writes } from "../storage/types"
 import { TupleStorageApi } from "./sync/types"
-import { Callback, MIN, ScanStorageArgs, Tuple, Writes } from "./types"
 
 export class ReactivityTracker {
 	private listenersDb = new InMemoryTupleStorage()

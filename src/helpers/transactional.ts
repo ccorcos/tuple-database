@@ -3,11 +3,11 @@
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
-} from "../storage/async/asyncTypes"
+} from "../database/async/asyncTypes"
 import {
 	TupleDatabaseClientApi,
 	TupleTransactionApi,
-} from "../storage/sync/types"
+} from "../database/sync/types"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
 export function transactional<I extends any[], O>(
