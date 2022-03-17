@@ -1,14 +1,11 @@
 ## TODO
 
-- storage test
-- database test
-- database client test
+- subspace tests
+- schema type tests
+- subspace types test
 
 - transactionalAsyncQuery types wherever its used.
 - type tests
-
-- reactivityHelpers test
-- subspace types test
 
 
 - separate storage, vs dialect, vs client tests.
@@ -21,6 +18,7 @@
 	- TupleStorage
 	- TupleDatabase
 	- TupleDatabaseClient
+	- transactionalQuery
 
 
 

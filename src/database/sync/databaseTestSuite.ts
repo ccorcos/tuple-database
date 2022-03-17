@@ -12,6 +12,7 @@ import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
 import { MAX, MIN, TupleValuePair, Writes } from "../../storage/types"
+import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { transactionalQuery } from "./transactional"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
@@ -43,7 +44,7 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 		})
 
 		it("inserting the same thing gets deduplicated", () => {
@@ -53,7 +54,7 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 0)
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, [[["a", "a"], 0]])
+			assertEqual(data, [[["a", "a"], 0]])
 		})
 
 		it("updates will overwrite the value", () => {
@@ -63,7 +64,7 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 1)
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, [[["a", "a"], 1]])
+			assertEqual(data, [[["a", "a"], 1]])
 		})
 
 		it("transaction value overwrites works", () => {
@@ -72,16 +73,16 @@ export function databaseTestSuite(
 			transaction.set(["a", "a"], 0)
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, [[["a", "a"], 0]])
+			assertEqual(data, [[["a", "a"], 0]])
 
 			const transaction2 = store.transact()
 			transaction2.set(["a", "a"], 1)
 			const data2 = transaction2.scan()
-			assert.deepEqual(data2, [[["a", "a"], 1]])
+			assertEqual(data2, [[["a", "a"], 1]])
 
 			transaction2.commit()
 			const data3 = store.scan()
-			assert.deepEqual(data3, [[["a", "a"], 1]])
+			assertEqual(data3, [[["a", "a"], 1]])
 		})
 
 		it("inserts the same thing gets deduplicated with ids", () => {
@@ -92,7 +93,7 @@ export function databaseTestSuite(
 				.set(["a", { uuid: "a" }], 0)
 				.commit()
 			const data = store.scan()
-			assert.deepEqual(data.length, 1)
+			assertEqual(data.length, 1)
 		})
 
 		it("inserts get deduplicated in separate transactions", () => {
@@ -109,7 +110,7 @@ export function databaseTestSuite(
 				.commit()
 
 			const data = store.scan()
-			assert.deepEqual(data.length, 1)
+			assertEqual(data.length, 1)
 		})
 
 		it("inserts get deduplicated set/remove in same transaction", () => {
@@ -122,7 +123,7 @@ export function databaseTestSuite(
 				.commit()
 
 			const data = store.scan()
-			assert.deepEqual(data.length, 0, `data: ${JSON.stringify(data)}`)
+			assertEqual(data.length, 0, `data: ${JSON.stringify(data)}`)
 		})
 
 		it("inserts get deduplicated remove/set in same transaction", () => {
@@ -135,7 +136,7 @@ export function databaseTestSuite(
 				.commit()
 
 			const data = store.scan()
-			assert.deepEqual(data.length, 1)
+			assertEqual(data.length, 1)
 		})
 
 		it("inserts get deduplicated set/remove in same transaction with initial tuple", () => {
@@ -153,7 +154,7 @@ export function databaseTestSuite(
 				.commit()
 
 			const data = store.scan()
-			assert.deepEqual(data.length, 0)
+			assertEqual(data.length, 0)
 		})
 
 		it("inserts get deduplicated remove/set in same transaction with initial tuple", () => {
@@ -171,7 +172,7 @@ export function databaseTestSuite(
 				.commit()
 
 			const data = store.scan()
-			assert.deepEqual(data.length, 1)
+			assertEqual(data.length, 1)
 		})
 
 		it("removes items correctly", () => {
@@ -192,14 +193,14 @@ export function databaseTestSuite(
 			for (const [key, value] of _.shuffle(items)) {
 				transaction.set(key, value)
 			}
-			assert.deepEqual(transaction.scan(), items)
+			assertEqual(transaction.scan(), items)
 
 			transaction.remove(["a", "a", "c"])
 			transaction.remove(["a", "c", "a"])
 			transaction.remove(["a", "b", "b"])
 
 			const data = transaction.scan()
-			assert.deepEqual(data, [
+			assertEqual(data, [
 				[["a", "a", "a"], 1],
 				[["a", "a", "b"], 2],
 				[["a", "b", "a"], 4],
@@ -208,7 +209,7 @@ export function databaseTestSuite(
 				[["a", "c", "c"], 9],
 			])
 			transaction.commit()
-			assert.deepEqual(store.scan(), data)
+			assertEqual(store.scan(), data)
 		})
 
 		it("transaction.write()", () => {
@@ -228,7 +229,7 @@ export function databaseTestSuite(
 
 			store.transact().write({ set: items }).commit()
 			let data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			store
 				.transact()
@@ -242,7 +243,7 @@ export function databaseTestSuite(
 				.commit()
 
 			data = store.scan()
-			assert.deepEqual(data, [
+			assertEqual(data, [
 				[["a", "a", "a"], 1],
 				[["a", "a", "b"], 2],
 				[["a", "a", "c"], 3],
@@ -272,13 +273,13 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gt: ["a", "a", MAX],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -308,14 +309,14 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "c", MIN],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -326,7 +327,7 @@ export function databaseTestSuite(
 				lt: ["a", "b", MAX],
 			})
 
-			assert.deepEqual(result2, [
+			assertEqual(result2, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -353,13 +354,13 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				prefix: ["a", "b"],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -388,7 +389,7 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				prefix: ["a", "b"],
@@ -396,7 +397,7 @@ export function databaseTestSuite(
 				lte: ["d"],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
 				[["a", "b", "d"], 6.5],
@@ -423,13 +424,13 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gte: ["a", "b", "a"],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -459,14 +460,14 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "c", MAX],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "a", "c"], 3],
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
@@ -497,13 +498,13 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gt: ["a", "b", MAX],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "c", "a"], 7],
 				[["a", "c", "b"], 8],
 				[["a", "c", "c"], 9],
@@ -530,14 +531,14 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gt: ["a", "a", MAX],
 				lt: ["a", "b", MAX],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -564,13 +565,13 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gte: ["a", "b", MIN],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -600,14 +601,14 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({
 				gte: ["a", "a", "c"],
 				lte: ["a", "b", MAX],
 			})
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "a", "c"], 3],
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
@@ -635,7 +636,7 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			try {
 				store.scan({
@@ -659,7 +660,7 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 		})
 
 		it("transaction overwrites when scanning data out", () => {
@@ -682,11 +683,11 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 			const data = store.scan()
-			assert.deepEqual(data, items)
+			assertEqual(data, items)
 
 			const result = store.scan({ prefix: ["a", "b"] })
 
-			assert.deepEqual(result, [
+			assertEqual(result, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 5],
 				[["a", "b", "c"], 6],
@@ -695,7 +696,7 @@ export function databaseTestSuite(
 			const transaction2 = store.transact()
 			transaction2.set(["a", "b", "b"], 99)
 			const result2 = transaction2.scan({ prefix: ["a", "b"] })
-			assert.deepEqual(result2, [
+			assertEqual(result2, [
 				[["a", "b", "a"], 4],
 				[["a", "b", "b"], 99],
 				[["a", "b", "c"], 6],
@@ -722,9 +723,9 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 
-			assert.deepEqual(store.get(["a", "a", "c"]), 3)
-			assert.deepEqual(store.get(["a", "c", "c"]), 9)
-			assert.deepEqual(store.get(["a", "c", "d"]), undefined)
+			assertEqual(store.get(["a", "a", "c"]), 3)
+			assertEqual(store.get(["a", "c", "c"]), 9)
+			assertEqual(store.get(["a", "c", "d"]), undefined)
 		})
 
 		it("transaction overwrites get", () => {
@@ -734,16 +735,16 @@ export function databaseTestSuite(
 
 			const tr = store.transact()
 			tr.set(["a"], 2)
-			assert.deepEqual(store.get(["a"]), 1)
-			assert.deepEqual(tr.get(["a"]), 2)
+			assertEqual(store.get(["a"]), 1)
+			assertEqual(tr.get(["a"]), 2)
 
 			tr.remove(["b"])
-			assert.deepEqual(store.get(["b"]), 2)
-			assert.deepEqual(tr.get(["b"]), undefined)
+			assertEqual(store.get(["b"]), 2)
+			assertEqual(tr.get(["b"]), undefined)
 
 			tr.set(["d"], 99)
-			assert.deepEqual(store.get(["d"]), undefined)
-			assert.deepEqual(tr.get(["d"]), 99)
+			assertEqual(store.get(["d"]), undefined)
+			assertEqual(tr.get(["d"]), 99)
 		})
 
 		it("exists", () => {
@@ -766,9 +767,9 @@ export function databaseTestSuite(
 			}
 			transaction.commit()
 
-			assert.deepEqual(store.exists(["a", "a", "c"]), true)
-			assert.deepEqual(store.exists(["a", "c", "c"]), true)
-			assert.deepEqual(store.exists(["a", "c", "d"]), false)
+			assertEqual(store.exists(["a", "a", "c"]), true)
+			assertEqual(store.exists(["a", "c", "c"]), true)
+			assertEqual(store.exists(["a", "c", "d"]), false)
 		})
 
 		it("transaction overwrites exists", () => {
@@ -778,16 +779,16 @@ export function databaseTestSuite(
 
 			const tr = store.transact()
 			tr.set(["a"], 2)
-			assert.deepEqual(store.exists(["a"]), true)
-			assert.deepEqual(tr.exists(["a"]), true)
+			assertEqual(store.exists(["a"]), true)
+			assertEqual(tr.exists(["a"]), true)
 
 			tr.remove(["b"])
-			assert.deepEqual(store.exists(["b"]), true)
-			assert.deepEqual(tr.exists(["b"]), false)
+			assertEqual(store.exists(["b"]), true)
+			assertEqual(tr.exists(["b"]), false)
 
 			tr.set(["d"], 99)
-			assert.deepEqual(store.exists(["d"]), false)
-			assert.deepEqual(tr.exists(["d"]), true)
+			assertEqual(store.exists(["d"]), false)
+			assertEqual(tr.exists(["d"]), true)
 		})
 
 		it("committing a transaction prevents any further interaction", () => {
@@ -824,10 +825,10 @@ export function databaseTestSuite(
 			const store = createStorage(randomId())
 			const tx = store.transact()
 			tx.set([1], 2)
-			assert.equal(tx.get([1]), 2)
+			assertEqual(tx.get([1]), 2)
 			tx.cancel()
 
-			assert.equal(store.get([1]), undefined)
+			assertEqual(store.get([1]), undefined)
 		})
 
 		it.skip("cancelled transaction cannot conflict with other transactions")
@@ -868,7 +869,7 @@ export function databaseTestSuite(
 
 				let result = store.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["friend", "a", "b"],
 					["friend", "a", "c"],
 					["friend", "b", "a"],
@@ -884,7 +885,7 @@ export function databaseTestSuite(
 				removeAEV(["friend", "a", "b"], tx)
 				result = tx.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["friend", "a", "c"],
 					["friend", "b", "c"],
 					["friend", "c", "a"],
@@ -897,7 +898,7 @@ export function databaseTestSuite(
 				setAEV(["friend", "d", "a"], tx)
 				result = tx.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["friend", "a", "c"],
 					["friend", "a", "d"],
 					["friend", "b", "c"],
@@ -948,7 +949,7 @@ export function databaseTestSuite(
 
 				let result = store.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["personByAge", 26, 2],
 					["personByAge", 29, 1],
 					["personByAge", 29, 4],
@@ -963,7 +964,7 @@ export function databaseTestSuite(
 				removePerson(3, tx)
 				result = tx.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["personByAge", 26, 2],
 					["personByAge", 29, 1],
 					["personByAge", 29, 4],
@@ -984,7 +985,7 @@ export function databaseTestSuite(
 
 				result = tx.scan().map(([tuple]) => tuple)
 
-				assert.deepEqual(result, [
+				assertEqual(result, [
 					["personByAge", 26, 2],
 					["personByAge", 29, 4],
 					["personByAge", 30, 1],
@@ -1018,7 +1019,7 @@ export function databaseTestSuite(
 				// Someone has to lose. Whoever commits first wins.
 				chet.commit()
 				assert.throws(() => meghan.commit())
-				assert.equal(store.get(["lamp"]), true)
+				assertEqual(store.get(["lamp"]), true)
 
 				// Meghan will have to try again.
 				const meghan2 = store.transact()
@@ -1026,7 +1027,7 @@ export function databaseTestSuite(
 				meghan2.commit()
 
 				// And she has her way.
-				assert.equal(store.get(["lamp"]), false)
+				assertEqual(store.get(["lamp"]), false)
 			})
 
 			it("should probably generalize to scans as well", () => {
@@ -1090,7 +1091,7 @@ export function databaseTestSuite(
 				assert.throws(() => chet.commit())
 
 				// Most importantly, the total will never be incorrect.
-				assert.deepEqual(store.scan({ prefix: [] }), [
+				assertEqual(store.scan({ prefix: [] }), [
 					[["player", "chet", 0], null],
 					[["player", "meghan", 1], null],
 					[["total", 1], null],
@@ -1139,7 +1140,7 @@ export function databaseTestSuite(
 				transaction.commit()
 
 				const data = store.scan()
-				assert.deepEqual(data, items)
+				assertEqual(data, items)
 
 				let hoist: Writes | undefined
 				store.subscribe(
@@ -1177,7 +1178,7 @@ export function databaseTestSuite(
 				transaction.commit()
 
 				const data = store.scan()
-				assert.deepEqual(data, items)
+				assertEqual(data, items)
 
 				let hoist: Writes | undefined
 				store.subscribe({ prefix: ["a", "b"] }, (writes) => {
@@ -1212,7 +1213,7 @@ export function databaseTestSuite(
 				transaction.commit()
 
 				const data = store.scan()
-				assert.deepEqual(data, items)
+				assertEqual(data, items)
 
 				let hoist: Writes | undefined
 				store.subscribe({ prefix: ["a", "b"] }, (writes) => {
@@ -1247,7 +1248,7 @@ export function databaseTestSuite(
 				transaction.commit()
 
 				const data = store.scan()
-				assert.deepEqual(data, items)
+				assertEqual(data, items)
 
 				// Note that these queries are *basically* the same.
 				// { gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
@@ -1293,18 +1294,126 @@ export function databaseTestSuite(
 		})
 
 		describe("subspace", () => {
-			type Person = { id: string; name: string; age: number }
-			type Schema =
-				| [["person", string], Person]
-				| [["personByName", string, string], Person]
-				| [["personByAge", number, string], Person]
+			it("get/exists/scan works", () => {
+				type Person = { id: string; name: string; age: number }
+				type Schema =
+					| [["person", string], Person]
+					| [["personByName", string, string], Person]
+					| [["personByAge", number, string], Person]
 
-			const store = createStorage<Schema>(randomId())
+				const store = createStorage<Schema>(randomId())
 
-			const writePerson = transactionalQuery<Schema>()((tx, person: Person) => {
-				tx.set(["person", person.id], person)
-				tx.set(["personByName", person.name, person.id], person)
-				tx.set(["personByAge", person.age, person.id], person)
+				const writePerson = transactionalQuery<Schema>()(
+					(tx, person: Person) => {
+						tx.set(["person", person.id], person)
+						tx.set(["personByName", person.name, person.id], person)
+						tx.set(["personByAge", person.age, person.id], person)
+					}
+				)
+
+				writePerson(store, { id: "1", name: "Chet", age: 31 })
+				writePerson(store, { id: "2", name: "Meghan", age: 30 })
+				writePerson(store, { id: "3", name: "Tanishq", age: 22 })
+
+				const personByAge = store.subspace(["personByAge"])
+				assertEqual(
+					personByAge.scan().map(([tuple, value]) => tuple[0]),
+					[22, 30, 31]
+				)
+				assertEqual(personByAge.get([22, "3"]).name, "Tanishq")
+				assertEqual(personByAge.exists([31, "1"]), true)
+				assertEqual(personByAge.exists([31, "2"]), false)
+			})
+
+			it("writes work", () => {
+				type Schema = [["a", number], number]
+				const store = createStorage<Schema>(randomId())
+
+				store.commit({
+					set: [
+						[["a", 1], 1],
+						[["a", 2], 2],
+					],
+				})
+
+				const a = store.subspace(["a"])
+				const tx = a.transact().set([3], 3)
+				assertEqual(tx.get([1]), 1)
+				assertEqual(tx.get([3]), 3)
+				tx.commit()
+
+				assertEqual(a.scan(), [
+					[[1], 1],
+					[[2], 2],
+					[[3], 3],
+				])
+			})
+
+			it("writes work in a nested subspace", () => {
+				type Schema = [["a", "a", number], number]
+				const store = createStorage<Schema>(randomId())
+
+				store.commit({
+					set: [
+						[["a", "a", 1], 1],
+						[["a", "a", 2], 2],
+					],
+				})
+
+				const a = store.subspace(["a"])
+				const aa = a.subspace(["a"])
+				const tx = aa.transact().set([3], 3)
+				assertEqual(tx.get([1]), 1)
+				assertEqual(tx.get([3]), 3)
+				tx.commit()
+
+				assertEqual(aa.scan(), [
+					[[1], 1],
+					[[2], 2],
+					[[3], 3],
+				])
+			})
+
+			it("can create nested subspace inside a transaction", () => {
+				type Schema = [["a", "a", number], number]
+				const store = createStorage<Schema>(randomId())
+
+				store.commit({
+					set: [
+						[["a", "a", 1], 1],
+						[["a", "a", 2], 2],
+					],
+				})
+
+				const a = store.subspace(["a"])
+				const tx = a.transact()
+				tx.set(["a", 3], 3)
+				const aa = tx.subspace(["a"])
+				aa.set([4], 4)
+				aa.commit()
+
+				assertEqual(a.scan(), [
+					[["a", 1], 1],
+					[["a", 2], 2],
+					[["a", 3], 3],
+					[["a", 4], 4],
+				])
+			})
+
+			it("scan args types work", () => {
+				type Schema = [["a", number], number]
+				const store = createStorage<Schema>(randomId())
+
+				store.commit({
+					set: [
+						[["a", 1], 1],
+						[["a", 2], 2],
+					],
+				})
+
+				const a = store.subspace(["a"])
+
+				assertEqual(a.scan({ gt: [1] }), [[[2], 2]])
 			})
 		})
 
@@ -1332,13 +1441,13 @@ export function databaseTestSuite(
 					transaction.commit()
 
 					const data = store.scan()
-					assert.deepEqual(data, items)
+					assertEqual(data, items)
 
 					store.close()
 
 					const store2 = createStorage(id)
 					const data2 = store2.scan()
-					assert.deepEqual(data2, items)
+					assertEqual(data2, items)
 				})
 			})
 		}
