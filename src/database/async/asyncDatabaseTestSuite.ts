@@ -6,6 +6,7 @@ import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, MAX, MIN, Writes } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
+import { Assert } from "../typeHelpers"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
@@ -1463,6 +1464,125 @@ export function asyncDatabaseTestSuite(
 				const a = store.subspace(["a"])
 
 				assertEqual(await a.scan({ gt: [1] }), [{ key: [2], value: 2 }])
+			})
+		})
+
+		describe("subschema", () => {
+			it("types work", () => {
+				type SubSchema1 = { key: ["a", number]; value: number }
+				type SubSchema2 = { key: ["b", string]; value: string }
+				type Schema = SubSchema1 | SubSchema2
+				const store = createStorage<Schema>(randomId())
+
+				function module0(db: AsyncTupleDatabaseClientApi<Schema>) {
+					const a1 = () => db.get(["a", 1])
+					type A1 = Assert<ReturnType<typeof a1>, Promise<number | undefined>>
+
+					const a2 = () => db.get(["b", ""])
+					type A2 = Assert<ReturnType<typeof a2>, Promise<string | undefined>>
+
+					const a3 = () => db.scan({ prefix: ["a"] })
+					type A3 = Assert<ReturnType<typeof a3>, Promise<SubSchema1[]>>
+
+					const a4 = () => db.scan({ prefix: ["b"] })
+					type A4 = Assert<ReturnType<typeof a4>, Promise<SubSchema2[]>>
+
+					const a5 = () => db.scan({ prefix: [] })
+					type A5 = Assert<ReturnType<typeof a5>, Promise<Schema[]>>
+
+					const a6 = () => db.subspace(["a"])
+					type A6 = Assert<
+						ReturnType<typeof a6>,
+						AsyncTupleDatabaseClientApi<{
+							key: [number]
+							value: number
+						}>
+					>
+
+					const a7 = () => db.subspace(["b"])
+					type A7 = Assert<
+						ReturnType<typeof a7>,
+						AsyncTupleDatabaseClientApi<{
+							key: [string]
+							value: string
+						}>
+					>
+
+					const a8 = () => db.transact()
+					type A8 = Assert<
+						ReturnType<typeof a8>,
+						AsyncTupleTransactionApi<Schema>
+					>
+				}
+				function module1(db: AsyncTupleDatabaseClientApi<SubSchema1>) {
+					const a1 = () => db.get(["a", 1])
+					type A1 = Assert<ReturnType<typeof a1>, Promise<number | undefined>>
+
+					const a3 = () => db.scan({ prefix: ["a"] })
+					type A3 = Assert<ReturnType<typeof a3>, Promise<SubSchema1[]>>
+
+					// TODO: this is leaky! Maybe its best to use subspaces!
+					const a5 = () => db.scan({ prefix: [] })
+					type A5 = Assert<ReturnType<typeof a5>, Promise<SubSchema1[]>>
+
+					const a6 = () => db.subspace(["a"])
+					type A6 = Assert<
+						ReturnType<typeof a6>,
+						AsyncTupleDatabaseClientApi<{
+							key: [number]
+							value: number
+						}>
+					>
+
+					const a8 = () => db.transact()
+					type A8 = Assert<
+						ReturnType<typeof a8>,
+						AsyncTupleTransactionApi<SubSchema1>
+					>
+				}
+				function module2(db: AsyncTupleDatabaseClientApi<SubSchema2>) {
+					const a2 = () => db.get(["b", ""])
+					type A2 = Assert<ReturnType<typeof a2>, Promise<string | undefined>>
+
+					const a4 = () => db.scan({ prefix: ["b"] })
+					type A4 = Assert<ReturnType<typeof a4>, Promise<SubSchema2[]>>
+
+					// TODO: this is leaky!
+					const a5 = () => db.scan({ prefix: [] })
+					type A5 = Assert<ReturnType<typeof a5>, Promise<SubSchema2[]>>
+
+					const a7 = () => db.subspace(["b"])
+					type A7 = Assert<
+						ReturnType<typeof a7>,
+						AsyncTupleDatabaseClientApi<{
+							key: [string]
+							value: string
+						}>
+					>
+				}
+
+				module0(store)
+				// @ts-expect-error
+				module1(store)
+				// @ts-expect-error
+				module2(store)
+			})
+
+			it("types work", () => {
+				type SubSchema1 = { key: ["a", number]; value: number }
+				type SubSchema2 = { key: ["b", string]; value: string }
+				type SubSchema3 = { key: ["c", boolean]; value: boolean }
+
+				type Schema = SubSchema1 | SubSchema2
+				const store = createStorage<Schema>(randomId())
+
+				function module1(db: AsyncTupleDatabaseClientApi<SubSchema3>) {}
+				function module2(db: AsyncTupleDatabaseClientApi<SubSchema3>) {}
+
+				// @ts-expect-error
+				module1(store)
+				// @ts-expect-error
+				module2(store)
 			})
 		})
 
