@@ -16,7 +16,7 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 	 */
 	constructor(public db: level.LevelDB) {}
 
-	async scan(args: ScanStorageArgs): Promise<TupleValuePair[]> {
+	async scan(args: ScanStorageArgs = {}): Promise<TupleValuePair[]> {
 		return new Promise((resolve, reject) => {
 			const dbArgs: any = {}
 			if (args.gt !== undefined) dbArgs.gt = encodeTuple(args.gt)

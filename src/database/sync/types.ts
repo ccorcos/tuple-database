@@ -23,14 +23,14 @@ import {
 
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
-	scan: (args: ScanStorageArgs) => Identity<TupleValuePair[]>
+	scan: (args?: ScanStorageArgs) => Identity<TupleValuePair[]>
 	commit: (writes: Writes) => Identity<void>
 	close: () => Identity<void>
 }
 
 /** Wraps TupleStorageApi with reactivity and MVCC */
 export type TupleDatabaseApi = {
-	scan: (args: ScanStorageArgs, txId?: TxId) => Identity<TupleValuePair[]>
+	scan: (args?: ScanStorageArgs, txId?: TxId) => Identity<TupleValuePair[]>
 	commit: (writes: Writes, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	subscribe: (

@@ -1,13 +1,12 @@
 import sqlite from "better-sqlite3"
 import level from "level"
 import * as path from "path"
-import { asyncStorageTestSuite } from "../database/async/asyncStorageTestSuite"
+import { asyncDatabaseTestSuite } from "../database/async/asyncDatabaseTestSuite"
 import { AsyncTupleDatabase } from "../database/async/AsyncTupleDatabase"
 import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
-import { storageTestSuite } from "../database/sync/storageTestSuite"
+import { databaseTestSuite } from "../database/sync/databaseTestSuite"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { sortedValues } from "../test/fixtures"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { LevelTupleStorage } from "./LevelTupleStorage"
@@ -15,25 +14,22 @@ import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
 
 const tmpDir = path.resolve(__dirname, "/../../tmp")
 
-storageTestSuite(
+databaseTestSuite(
 	"TupleDatabaseClient(TupleDatabase(InMemoryTupleStorage))",
-	sortedValues,
 	() => new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage())),
 	false
 )
 
-storageTestSuite(
+databaseTestSuite(
 	"TupleDatabaseClient(TupleDatabase(FileTupleStorage))",
-	sortedValues,
 	(id) =>
 		new TupleDatabaseClient(
 			new TupleDatabase(new FileTupleStorage(path.join(tmpDir, id)))
 		)
 )
 
-storageTestSuite(
+databaseTestSuite(
 	"TupleDatabaseClient(TupleDatabase(SQLiteTupleStorage))",
-	sortedValues,
 	(id) =>
 		new TupleDatabaseClient(
 			new TupleDatabase(
@@ -42,17 +38,15 @@ storageTestSuite(
 		)
 )
 
-asyncStorageTestSuite(
+asyncDatabaseTestSuite(
 	"AsyncTupleDatabaseClient(TupleDatabase(InMemoryTupleStorage))",
-	sortedValues,
 	() =>
 		new AsyncTupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage())),
 	false
 )
 
-asyncStorageTestSuite(
+asyncDatabaseTestSuite(
 	"AsyncTupleDatabaseClient(AsyncTupleDatabase(InMemoryTupleStorage))",
-	sortedValues,
 	() =>
 		new AsyncTupleDatabaseClient(
 			new AsyncTupleDatabase(new InMemoryTupleStorage())
@@ -60,13 +54,13 @@ asyncStorageTestSuite(
 	false
 )
 
-asyncStorageTestSuite(
+asyncDatabaseTestSuite(
 	"AsyncTupleDatabaseClient(AsyncTupleDatabase(LevelTupleStorage))",
-	sortedValues,
 	(id) =>
 		new AsyncTupleDatabaseClient(
 			new AsyncTupleDatabase(
 				new LevelTupleStorage(level(path.join(tmpDir, id + ".db")))
 			)
-		)
+		),
+	true
 )

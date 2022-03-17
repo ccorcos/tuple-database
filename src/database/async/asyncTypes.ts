@@ -15,14 +15,14 @@ import {
 
 /** The low-level API for implementing new storage layers. */
 export type AsyncTupleStorageApi = {
-	scan: (args: ScanStorageArgs) => Promise<TupleValuePair[]>
+	scan: (args?: ScanStorageArgs) => Promise<TupleValuePair[]>
 	commit: (writes: Writes) => Promise<void>
 	close: () => Promise<void>
 }
 
 /** Wraps AsyncTupleStorageApi with reactivity and MVCC */
 export type AsyncTupleDatabaseApi = {
-	scan: (args: ScanStorageArgs, txId?: TxId) => Promise<TupleValuePair[]>
+	scan: (args?: ScanStorageArgs, txId?: TxId) => Promise<TupleValuePair[]>
 	commit: (writes: Writes, txId?: TxId) => Promise<void>
 	cancel: (txId: string) => Promise<void>
 	subscribe: (args: ScanStorageArgs, callback: Callback) => Promise<Unsubscribe>
