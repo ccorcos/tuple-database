@@ -16,10 +16,10 @@ import {
 	Writes,
 } from "../../storage/types"
 import {
-	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
+	ValueForTuple,
 } from "../typeHelpers"
 
 /** The low-level API for implementing new storage layers. */
@@ -61,7 +61,7 @@ export type TupleDatabaseClientApi<S extends TupleValuePair = TupleValuePair> =
 		get: <T extends S[0]>(
 			tuple: T,
 			txId?: TxId
-		) => Identity<FilterTupleValuePair<S, T>[1]>
+		) => Identity<ValueForTuple<S, T> | undefined>
 		exists: <T extends S[0]>(tuple: T, txId?: TxId) => Identity<boolean>
 
 		// Subspace
@@ -78,7 +78,7 @@ export type TupleTransactionApi<S extends TupleValuePair = TupleValuePair> = {
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S[0]>(tuple: T) => Identity<FilterTupleValuePair<S, T>[1]>
+	get: <T extends S[0]>(tuple: T) => Identity<ValueForTuple<S, T> | undefined>
 	exists: <T extends S[0]>(tuple: T) => Identity<boolean>
 
 	// WriteApis
@@ -105,7 +105,7 @@ export type ReadOnlyTupleDatabaseClientApi<
 	get: <T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	) => Identity<FilterTupleValuePair<S, T>[1]>
+	) => Identity<ValueForTuple<S, T> | undefined>
 	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Identity<boolean>
 	subspace: <P extends TuplePrefix<S[0]>>(
 		prefix: P

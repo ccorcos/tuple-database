@@ -87,7 +87,7 @@ const signup = transactionalQuery<Schema>()(
 
 		if (attends.exists([student, className])) return // Already signed up.
 
-		const remainingSeats = course.get([className])
+		const remainingSeats = course.get([className])!
 		if (remainingSeats <= 0) throw new Error("No remaining seats.")
 
 		const classes = attends.scan({ prefix: [student] })
@@ -105,7 +105,7 @@ const drop = transactionalQuery<Schema>()(
 
 		if (!attends.exists([student, className])) return // Not taking this class.
 
-		const remainingSeats = course.get([className])
+		const remainingSeats = course.get([className])!
 		course.set([className], remainingSeats + 1)
 		attends.remove([student, className])
 	}
@@ -147,7 +147,9 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - already signed up", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -158,32 +160,39 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup more than one", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
 		assert.equal(getClasses(db, student2).length, 0)
-		assert.equal(db.get(course.pack([class1])), 4)
-		assert.equal(db.get(course.pack([class2])), 4)
+
+		const course = db.subspace(["scheduling", "class"])
+
+		assert.equal(course.get([class1]), 4)
+		assert.equal(course.get([class2]), 4)
 
 		signup(db, student1, class1)
 		assert.equal(getClasses(db, student1).length, 1)
-		assert.equal(db.get(course.pack([class1])), 3)
+		assert.equal(course.get([class1]), 3)
 
 		signup(db, student1, class2)
 		assert.equal(getClasses(db, student1).length, 2)
-		assert.equal(db.get(course.pack([class2])), 3)
+		assert.equal(course.get([class2]), 3)
 
 		signup(db, student2, class2)
 
 		assert.equal(getClasses(db, student1).length, 2)
 		assert.equal(getClasses(db, student2).length, 1)
 
-		assert.equal(db.get(course.pack([class2])), 2)
+		assert.equal(course.get([class2]), 2)
 	})
 
 	it("drop", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -194,7 +203,9 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("drop - not taking this class", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		assert.equal(getClasses(db, student1).length, 0)
@@ -205,7 +216,9 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("signup - max attendance", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		signup(db, student1, class1)
@@ -213,13 +226,16 @@ describe("Class Scheduling Example", () => {
 		signup(db, student3, class1)
 		signup(db, student4, class1)
 
-		assert.equal(db.get(course.pack([class1])), 0)
+		const course = db.subspace(["scheduling", "class"])
 
+		assert.equal(course.get([class1]), 0)
 		assert.throws(() => signup(db, student5, class1))
 	})
 
 	it("signup - too many classes", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		signup(db, student1, class1)
@@ -234,7 +250,9 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("switchClasses", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		signup(db, student1, class1)
@@ -253,7 +271,9 @@ describe("Class Scheduling Example", () => {
 	})
 
 	it("availableClasses", () => {
-		const db = new TupleDatabase(new InMemoryTupleStorage())
+		const db = new TupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 		init(db)
 
 		assert.ok(availableClasses(db).includes(class1))

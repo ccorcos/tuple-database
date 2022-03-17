@@ -8,10 +8,10 @@ import {
 	Writes,
 } from "../../storage/types"
 import {
-	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
+	ValueForTuple,
 } from "../typeHelpers"
 
 /** The low-level API for implementing new storage layers. */
@@ -51,7 +51,7 @@ export type AsyncTupleDatabaseClientApi<
 	get: <T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	) => Promise<FilterTupleValuePair<S, T>[1]>
+	) => Promise<ValueForTuple<S, T> | undefined>
 	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Promise<boolean>
 
 	// Subspace
@@ -70,7 +70,7 @@ export type AsyncTupleTransactionApi<
 	scan: <P extends TuplePrefix<S[0]>>(
 		args?: ScanArgs<P>
 	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
-	get: <T extends S[0]>(tuple: T) => Promise<FilterTupleValuePair<S, T>[1]>
+	get: <T extends S[0]>(tuple: T) => Promise<ValueForTuple<S, T> | undefined>
 	exists: <T extends S[0]>(tuple: T) => Promise<boolean>
 
 	// WriteApis
@@ -97,7 +97,7 @@ export type ReadOnlyAsyncTupleDatabaseClientApi<
 	get: <T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	) => Promise<FilterTupleValuePair<S, T>[1]>
+	) => Promise<ValueForTuple<S, T> | undefined>
 	exists: <T extends S[0]>(tuple: T, txId?: TxId) => Promise<boolean>
 	subspace: <P extends TuplePrefix<S[0]>>(
 		prefix: P

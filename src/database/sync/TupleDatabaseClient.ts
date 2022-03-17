@@ -28,10 +28,10 @@ import {
 } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
 import {
-	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
+	ValueForTuple,
 } from "../typeHelpers"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
@@ -76,10 +76,10 @@ export class TupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 		return this.db.cancel(txId)
 	}
 
-	get = <T extends S[0]>(
+	get<T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	): Identity<FilterTupleValuePair<S, T>[1]> => {
+	): Identity<ValueForTuple<S, T> | undefined> {
 		// Not sure why these types aren't happy
 		const items = this.scan({ gte: tuple, lte: tuple as any }, txId)
 		if (items.length === 0) return
@@ -154,7 +154,7 @@ export class TupleTransaction<S extends TupleValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	get<T extends S[0]>(tuple: T): Identity<FilterTupleValuePair<S, T>[1]> {
+	get<T extends S[0]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -255,7 +255,7 @@ export class TupleTransactionSubspace<S extends TupleValuePair>
 		return this.tx.scan(storageScanArgs)
 	}
 
-	get<T extends S[0]>(tuple: T): Identity<FilterTupleValuePair<S, T>[1]> {
+	get<T extends S[0]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.get(fullTuple)
 	}

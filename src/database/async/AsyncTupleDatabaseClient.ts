@@ -20,10 +20,10 @@ import {
 } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
 import {
-	FilterTupleValuePair,
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
+	ValueForTuple,
 } from "../typeHelpers"
 import {
 	AsyncTupleDatabaseApi,
@@ -75,7 +75,7 @@ export class AsyncTupleDatabaseClient<S extends TupleValuePair = TupleValuePair>
 	async get<T extends S[0]>(
 		tuple: T,
 		txId?: TxId
-	): Promise<FilterTupleValuePair<S, T>[1]> {
+	): Promise<ValueForTuple<S, T> | undefined> {
 		// Not sure why these types aren't happy
 		const items = await this.scan({ gte: tuple, lte: tuple as any }, txId)
 		if (items.length === 0) return
@@ -150,7 +150,9 @@ export class AsyncTupleTransaction<S extends TupleValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	async get<T extends S[0]>(tuple: T): Promise<FilterTupleValuePair<S, T>[1]> {
+	async get<T extends S[0]>(
+		tuple: T
+	): Promise<ValueForTuple<S, T> | undefined> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -257,7 +259,9 @@ export class AsyncTupleTransactionSubspace<S extends TupleValuePair>
 		return this.tx.scan(storageScanArgs)
 	}
 
-	async get<T extends S[0]>(tuple: T): Promise<FilterTupleValuePair<S, T>[1]> {
+	async get<T extends S[0]>(
+		tuple: T
+	): Promise<ValueForTuple<S, T> | undefined> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.get(fullTuple)
 	}
