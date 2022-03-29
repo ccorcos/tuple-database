@@ -123,8 +123,8 @@ type A14 = Assert<
 
 // Using the DistributiveProp trick here too.
 export type SchemaSubspace<
-	T extends KeyValuePair,
-	P extends Tuple
+	P extends Tuple,
+	T extends KeyValuePair
 > = T extends unknown
 	? {
 			key: [...P, ...T["key"]]
@@ -133,6 +133,6 @@ export type SchemaSubspace<
 	: never
 
 type A15 = Assert<
-	SchemaSubspace<{ key: [1]; value: 1 } | { key: [2]; value: 2 }, ["int"]>,
+	SchemaSubspace<["int"], { key: [1]; value: 1 } | { key: [2]; value: 2 }>,
 	{ key: ["int", 1]; value: 1 } | { key: ["int", 2]; value: 2 }
 >

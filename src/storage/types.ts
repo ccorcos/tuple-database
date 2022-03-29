@@ -28,10 +28,10 @@ export type Tuple = Value[]
 
 export type KeyValuePair = { key: Tuple; value: any }
 
-// If keys were always encoded when they were stored, we could add a \x00 or \xFF byte to
-// the end of the encoded tuple key in order to do prefix queries. However, we don't want
-// to serialize data when it is stored and queried in memory, thus we need to have a MIN
-// and MAX abstraction such as this.
+// If keys were always encoded when they were stored on disk, we could add a \x00 or \xFF
+// byte to the end of the encoded tuple key in order to do prefix queries. However, we
+// don't want to serialize data when it is stored and queried in memory, thus we need to
+// have a MIN and MAX abstraction such as this.
 export const MIN = Symbol("min")
 export const MAX = Symbol("max")
 

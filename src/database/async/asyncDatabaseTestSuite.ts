@@ -1547,7 +1547,6 @@ export function asyncDatabaseTestSuite(
 					const a4 = () => db.scan({ prefix: ["b"] })
 					type A4 = Assert<ReturnType<typeof a4>, Promise<SubSchema2[]>>
 
-					// TODO: this is leaky!
 					const a5 = () => db.scan({ prefix: [] })
 					type A5 = Assert<ReturnType<typeof a5>, Promise<SubSchema2[]>>
 

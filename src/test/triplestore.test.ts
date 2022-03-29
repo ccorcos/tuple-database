@@ -36,7 +36,7 @@ function $(name: string) {
 	return new Variable(name)
 }
 
-type Expression = [string | Variable, string | Variable, Value | Variable]
+type Expression = [Fact[0] | Variable, Fact[1] | Variable, Fact[2] | Variable]
 
 type Binding = { [varName: string]: Value }
 
@@ -170,13 +170,13 @@ describe("Triplestore", () => {
 
 		assert.deepEqual(
 			query(db, [
-				[$("chet"), "name", "chet"],
-				[$("id"), "worksFor", $("chet")],
+				[$("chetId"), "name", "chet"],
+				[$("id"), "worksFor", $("chetId")],
 				[$("id"), "name", $("name")],
 			]),
 			[
-				{ name: "tk", id: "2", chet: "1" },
-				{ name: "joe", id: "3", chet: "1" },
+				{ name: "tk", id: "2", chetId: "1" },
+				{ name: "joe", id: "3", chetId: "1" },
 			]
 		)
 	})

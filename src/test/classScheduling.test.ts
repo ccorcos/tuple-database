@@ -136,7 +136,7 @@ describe("Class Scheduling Example", () => {
 
 	function createStorage() {
 		// The class scheduling application is just a subspace!
-		type Schema = SchemaSubspace<SchoolSchema, ["scheduling"]>
+		type Schema = SchemaSubspace<["scheduling"], SchoolSchema>
 		const db = new TupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
