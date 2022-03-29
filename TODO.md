@@ -1,5 +1,7 @@
 ## TODO
 
+
+
 - game counter app with history...
 
 - play with more triplestore ergonomics, order value, proxy objects.
