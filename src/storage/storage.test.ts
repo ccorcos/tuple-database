@@ -72,7 +72,7 @@ asyncDatabaseTestSuite(
 		const store = new AsyncTupleDatabaseClient(
 			new AsyncTupleDatabase(new InMemoryTupleStorage())
 		)
-		return store.subspace("myApp") as any
+		return store.subspace(["myApp"]) as any
 	},
 	false
 )

@@ -1358,7 +1358,7 @@ export function asyncDatabaseTestSuite(
 				await writePerson(store, { id: "2", name: "Meghan", age: 30 })
 				await writePerson(store, { id: "3", name: "Tanishq", age: 22 })
 
-				const personByAge = store.subspace("personByAge")
+				const personByAge = store.subspace(["personByAge"])
 				assertEqual(
 					(await personByAge.scan()).map(({ key }) => key[0]),
 					[22, 30, 31]
@@ -1379,7 +1379,7 @@ export function asyncDatabaseTestSuite(
 					],
 				})
 
-				const a = store.subspace("a")
+				const a = store.subspace(["a"])
 				const tx = a.transact().set([3], 3)
 				assertEqual(await tx.get([1]), 1)
 				assertEqual(await tx.get([3]), 3)
@@ -1403,8 +1403,8 @@ export function asyncDatabaseTestSuite(
 					],
 				})
 
-				const a = store.subspace("a")
-				const aa = a.subspace("a")
+				const a = store.subspace(["a"])
+				const aa = a.subspace(["a"])
 				const tx = aa.transact().set([3], 3)
 				assertEqual(await tx.get([1]), 1)
 				assertEqual(await tx.get([3]), 3)
@@ -1427,10 +1427,10 @@ export function asyncDatabaseTestSuite(
 					],
 				})
 
-				const a = store.subspace("a")
+				const a = store.subspace(["a"])
 				const tx = a.transact()
 				tx.set(["a", 3], 3)
-				const aa = tx.subspace("a")
+				const aa = tx.subspace(["a"])
 				aa.set([4], 4)
 
 				assertEqual(await aa.scan(), [
@@ -1461,7 +1461,7 @@ export function asyncDatabaseTestSuite(
 					],
 				})
 
-				const a = store.subspace("a")
+				const a = store.subspace(["a"])
 
 				assertEqual(await a.scan({ gt: [1] }), [{ key: [2], value: 2 }])
 			})
@@ -1490,7 +1490,7 @@ export function asyncDatabaseTestSuite(
 					const a5 = () => db.scan({ prefix: [] })
 					type A5 = Assert<ReturnType<typeof a5>, Promise<Schema[]>>
 
-					const a6 = () => db.subspace("a")
+					const a6 = () => db.subspace(["a"])
 					type A6 = Assert<
 						ReturnType<typeof a6>,
 						AsyncTupleDatabaseClientApi<{
@@ -1499,7 +1499,7 @@ export function asyncDatabaseTestSuite(
 						}>
 					>
 
-					const a7 = () => db.subspace("b")
+					const a7 = () => db.subspace(["b"])
 					type A7 = Assert<
 						ReturnType<typeof a7>,
 						AsyncTupleDatabaseClientApi<{
@@ -1525,7 +1525,7 @@ export function asyncDatabaseTestSuite(
 					const a5 = () => db.scan({ prefix: [] })
 					type A5 = Assert<ReturnType<typeof a5>, Promise<SubSchema1[]>>
 
-					const a6 = () => db.subspace("a")
+					const a6 = () => db.subspace(["a"])
 					type A6 = Assert<
 						ReturnType<typeof a6>,
 						AsyncTupleDatabaseClientApi<{
@@ -1550,7 +1550,7 @@ export function asyncDatabaseTestSuite(
 					const a5 = () => db.scan({ prefix: [] })
 					type A5 = Assert<ReturnType<typeof a5>, Promise<SubSchema2[]>>
 
-					const a7 = () => db.subspace("b")
+					const a7 = () => db.subspace(["b"])
 					type A7 = Assert<
 						ReturnType<typeof a7>,
 						AsyncTupleDatabaseClientApi<{
