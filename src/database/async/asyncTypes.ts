@@ -48,7 +48,7 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 
 		// Subspace
 		subspace: <P extends TuplePrefix<S["key"]>>(
-			prefix: P
+			...prefix: P
 		) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 		// Transaction
@@ -77,7 +77,7 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 
 	// Subspace
 	subspace: <P extends TuplePrefix<S["key"]>>(
-		prefix: P
+		...prefix: P
 	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
 }
 
@@ -95,7 +95,7 @@ export type ReadOnlyAsyncTupleDatabaseClientApi<
 	) => Promise<ValueForTuple<S, T> | undefined>
 	exists: <T extends S["key"]>(tuple: T, txId?: TxId) => Promise<boolean>
 	subspace: <P extends TuplePrefix<S["key"]>>(
-		prefix: P
+		...prefix: P
 	) => ReadOnlyAsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// subscribe?

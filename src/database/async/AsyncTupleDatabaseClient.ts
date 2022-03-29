@@ -86,7 +86,7 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 
 	// Subspace
 	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
+		...prefix: P
 	): AsyncTupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
 		return new AsyncTupleDatabaseClient(this.db, subspacePrefix)
@@ -232,7 +232,7 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 	}
 
 	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
+		...prefix: P
 	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
 		this.checkActive()
 		// TODO: types.
@@ -307,7 +307,7 @@ export class AsyncTupleTransactionSubspace<S extends KeyValuePair>
 	}
 
 	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
+		...prefix: P
 	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
 		return new AsyncTupleTransactionSubspace(this.tx, [
 			...this.subspacePrefix,
