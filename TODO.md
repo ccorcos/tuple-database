@@ -1,5 +1,9 @@
 ## TODO
 
+- subscribeQuery
+	- error when writing in a subscribe
+	- afterWrite callback for recompute
+	- make it work for async as well
 
 
 - game counter app with history...

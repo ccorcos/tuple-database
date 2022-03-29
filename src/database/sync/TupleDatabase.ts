@@ -30,7 +30,12 @@ export class TupleDatabase implements TupleDatabaseApi {
 		return this.reactivity.subscribe(args, callback)
 	}
 
+	private emitting = false
+
 	commit(writes: Writes, txId?: string) {
+		// Things can get out of sync if you write in a subscribe callback.
+		if (this.emitting) throw new Error("Write during emit.")
+
 		const emits = this.reactivity.computeReactivityEmits(writes)
 
 		if (txId) this.log.commit(txId)
@@ -39,7 +44,9 @@ export class TupleDatabase implements TupleDatabaseApi {
 		}
 		this.storage.commit(writes)
 
+		this.emitting = true
 		this.reactivity.emit(emits)
+		this.emitting = false
 	}
 
 	cancel(txId: string) {

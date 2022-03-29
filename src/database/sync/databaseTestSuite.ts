@@ -18,6 +18,8 @@ import { Assert } from "../typeHelpers"
 import { transactionalQuery } from "./transactionalQuery"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
+const isSync = true
+
 export function databaseTestSuite(
 	name: string,
 	createStorage: <S extends KeyValuePair = KeyValuePair>(
@@ -1031,48 +1033,49 @@ export function databaseTestSuite(
 				assertEqual(store.get(["lamp"]), false)
 			})
 
-			// NOTE: this test doesn't really make sense for the sync version...
-			it("transactionalQuery will retry on those errors", () => {
-				const id = randomId()
-				type Schema = { key: ["score"]; value: number }
-				const store = createStorage<Schema>(id)
+			if (!isSync) {
+				it("transactionalQuery will retry on those errors", () => {
+					const id = randomId()
+					type Schema = { key: ["score"]; value: number }
+					const store = createStorage<Schema>(id)
 
-				store.commit({ set: [{ key: ["score"], value: 0 }] })
+					store.commit({ set: [{ key: ["score"], value: 0 }] })
 
-				const sleep = (timeMs) =>
-					new Promise((resolve) => setTimeout(resolve, timeMs))
+					const sleep = (timeMs) =>
+						new Promise((resolve) => setTimeout(resolve, timeMs))
 
-				const incScore = transactionalQuery<Schema>()(
-					(tx, amount: number, sleepMs: number) => {
-						const score = tx.get(["score"])!
-						sleep(sleepMs)
-						tx.set(["score"], score + amount)
+					const incScore = transactionalQuery<Schema>()(
+						(tx, amount: number, sleepMs: number) => {
+							const score = tx.get(["score"])!
+							sleep(sleepMs)
+							tx.set(["score"], score + amount)
+						}
+					)
+
+					// 0 -> chet reads
+					// 1 -> meghan reads
+					// 2 -> chet writes
+					// 3 -> meghan writes -- conflict!
+					// 3 -> meghan reads -- retry
+					// 4 -> meghan writes -- success!
+
+					function chet() {
+						incScore(store, 10, 2)
+						assertEqual(store.get(["score"]), 10)
 					}
-				)
 
-				// 0 -> chet reads
-				// 1 -> meghan reads
-				// 2 -> chet writes
-				// 3 -> meghan writes -- conflict!
-				// 3 -> meghan reads -- retry
-				// 4 -> meghan writes -- success!
+					function meghan() {
+						sleep(1)
+						incScore(store, -1, 2)
+						assertEqual(store.get(["score"]), 9)
+					}
 
-				function chet() {
-					incScore(store, 10, 2)
-					assertEqual(store.get(["score"]), 10)
-				}
+					Promise.all([chet(), meghan()])
 
-				function meghan() {
-					sleep(1)
-					incScore(store, -1, 2)
+					// Final state.
 					assertEqual(store.get(["score"]), 9)
-				}
-
-				Promise.all([chet(), meghan()])
-
-				// Final state.
-				assertEqual(store.get(["score"]), 9)
-			})
+				})
+			}
 
 			it("should probably generalize to scans as well", () => {
 				const id = randomId()
@@ -1336,6 +1339,24 @@ export function databaseTestSuite(
 					remove: [],
 				} as Writes)
 			})
+
+			if (isSync) {
+				it("throws an error if you try to write in a subscribe callback", () => {
+					const store = createStorage(randomId())
+
+					let throws = false
+					store.subscribe({ prefix: ["a"] }, () => {
+						try {
+							store.transact().set(["b"], 2).commit()
+						} catch (error) {
+							throws = true
+						}
+					})
+
+					store.transact().set(["a", 1], 1).commit()
+					assert.ok(throws)
+				})
+			}
 		})
 
 		describe("subspace", () => {
@@ -1546,7 +1567,6 @@ export function databaseTestSuite(
 					const a4 = () => db.scan({ prefix: ["b"] })
 					type A4 = Assert<ReturnType<typeof a4>, Identity<SubSchema2[]>>
 
-					// TODO: this is leaky!
 					const a5 = () => db.scan({ prefix: [] })
 					type A5 = Assert<ReturnType<typeof a5>, Identity<SubSchema2[]>>
 
