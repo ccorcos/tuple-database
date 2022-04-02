@@ -1,10 +1,10 @@
+import { maybeWaitForPromises } from "../../helpers/maybeWaitForPromises"
 import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
 	getPrefixContainingBounds,
 	isTupleWithinBounds,
 } from "../../helpers/sortedTupleArray"
-import { waitForValues } from "../../helpers/waitForValues"
 import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
 import { MIN, ScanStorageArgs, Tuple, Writes } from "../../storage/types"
 import { TupleStorageApi } from "../sync/types"
@@ -22,12 +22,19 @@ export class AsyncReactivityTracker {
 	}
 
 	async emit(emits: ReactivityEmits) {
-		const entries = Array.from(emits.entries())
-		const promises = entries.map(([callback, writes]) => callback(writes))
+		let promises: any[] = []
+		for (const [callback, writes] of emits.entries()) {
+			try {
+				// Catch sync callbacks.
+				promises.push(callback(writes))
+			} catch (error) {
+				console.error(error)
+			}
+		}
 		// This trick allows us to return a Promise from a sync TupleDatabase#commit
 		// when there are async callbacks. And this allows us to create an async client
 		// on top of a sync client.
-		return waitForValues(promises)
+		return maybeWaitForPromises(promises)
 	}
 }
 

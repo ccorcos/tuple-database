@@ -1371,6 +1371,16 @@ export function asyncDatabaseTestSuite(
 				await store.transact().set(["a"], 2).commit()
 				assert.equal(value, 2)
 			})
+
+			it("errors in callbacks don't break the database", async () => {
+				const store = createStorage(randomId())
+
+				await store.subscribe({ prefix: ["a"] }, async () => {
+					throw new Error()
+				})
+				// Does not throw, calls console.error instead.
+				await store.transact().set(["a", 1], 1).commit()
+			})
 		})
 
 		describe("subspace", () => {
