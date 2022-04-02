@@ -1358,6 +1358,21 @@ export function databaseTestSuite(
 					remove: [],
 				} as Writes)
 			})
+
+			it("waits for emit callbacks before resolving commit", () => {
+				const store = createStorage(randomId())
+				store.commit({ set: [{ key: ["a"], value: 1 }] })
+
+				let value = store.get(["a"])
+				assert.equal(value, 1)
+
+				store.subscribe({ gte: ["a"], lte: ["a"] }, (writes) => {
+					value = store.get(["a"])
+				})
+
+				store.transact().set(["a"], 2).commit()
+				assert.equal(value, 2)
+			})
 		})
 
 		describe("subspace", () => {

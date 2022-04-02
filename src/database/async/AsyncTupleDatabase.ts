@@ -1,16 +1,20 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
-import { ReactivityTracker } from "../reactivityHelpers"
 import { TupleStorageApi } from "../sync/types"
-import { Callback, TxId, Unsubscribe } from "../types"
-import { AsyncTupleDatabaseApi, AsyncTupleStorageApi } from "./asyncTypes"
+import { TxId, Unsubscribe } from "../types"
+import { AsyncReactivityTracker } from "./AsyncReactivityTracker"
+import {
+	AsyncCallback,
+	AsyncTupleDatabaseApi,
+	AsyncTupleStorageApi,
+} from "./asyncTypes"
 
 export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 	constructor(private storage: TupleStorageApi | AsyncTupleStorageApi) {}
 
 	log = new ConcurrencyLog()
-	reactivity = new ReactivityTracker()
+	reactivity = new AsyncReactivityTracker()
 
 	async scan(args: ScanStorageArgs = {}, txId?: TxId): Promise<KeyValuePair[]> {
 		const { reverse, limit, ...bounds } = args
@@ -20,7 +24,7 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 
 	async subscribe(
 		args: ScanStorageArgs,
-		callback: Callback
+		callback: AsyncCallback
 	): Promise<Unsubscribe> {
 		return this.reactivity.subscribe(args, callback)
 	}
@@ -33,8 +37,12 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		await this.storage.commit(writes)
-
-		this.reactivity.emit(emits)
+		return this.reactivity.emit(emits)
+		// try {
+		// } catch (error) {
+		// 	// Don't break the database just because your callbacks are broken.
+		// 	console.error(error)
+		// }
 	}
 
 	async cancel(txId: string) {

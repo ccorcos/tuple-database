@@ -13,7 +13,7 @@ import {
 	TuplePrefix,
 	ValueForTuple,
 } from "../typeHelpers"
-import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
+import { ScanArgs, TxId, Unsubscribe } from "../types"
 
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
@@ -110,3 +110,7 @@ export type ReadOnlyTupleDatabaseClientApi<
 
 	// subscribe?
 }
+
+export type Callback<S extends KeyValuePair = KeyValuePair> = (
+	write: Writes<S>
+) => void | Identity<void>
