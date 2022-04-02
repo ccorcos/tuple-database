@@ -30,7 +30,7 @@ export class ReactivityTracker {
 type Listener = { callback: Callback; bounds: Bounds }
 
 function iterateTuplePrefixes(tuple: Tuple) {
-	const prefixes: Tuple[] = []
+	const prefixes: Tuple[] = [tuple]
 	for (let i = 0; i < tuple.length; i++) {
 		const prefix = tuple.slice(0, i)
 		prefixes.push(prefix)

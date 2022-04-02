@@ -1166,7 +1166,26 @@ export function asyncDatabaseTestSuite(
 		})
 
 		describe("Reactivity", () => {
-			it("works with set", async () => {
+			it("works with setting a value on existing key", async () => {
+				const store = createStorage(randomId())
+				await store.commit({
+					set: [{ key: ["a"], value: 1 }],
+				})
+
+				let hoist: Writes | undefined
+				await store.subscribe({ gte: ["a"], lte: ["a"] }, (writes) => {
+					hoist = writes
+				})
+
+				await store.transact().set(["a"], 1).commit()
+
+				assert.deepStrictEqual(hoist, {
+					set: [{ key: ["a"], value: 1 }],
+					remove: [],
+				} as Writes)
+			})
+
+			it("works with set key", async () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },
@@ -1204,7 +1223,7 @@ export function asyncDatabaseTestSuite(
 				} as Writes)
 			})
 
-			it("works with remove", async () => {
+			it("works with remove key", async () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },
