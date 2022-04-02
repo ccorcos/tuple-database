@@ -41,8 +41,15 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		await this.storage.commit(writes)
 
 		this.emitting = true
-		this.reactivity.emit(emits, txId || randomId())
+		const recomputes = this.reactivity.emit(emits, txId || randomId())
 		this.emitting = false
+
+		// If the callbacks are async, they may be recomputing values so its sensible to await
+		// those recomputations so we don't have to setTimeout(0) before the updates are reflected
+		// from any listeners.
+		thing: {
+			await Promise.all(recomputes)
+		}
 	}
 
 	async cancel(txId: string) {

@@ -23,9 +23,9 @@ export class ReactivityTracker {
 	emit(emits: ReactivityEmits, txId: string) {
 		// Include the txId so that we don't have to recompute things twice if there are
 		// multiple listeners that get fired for the same transaction.
-		for (const [callback, writes] of emits.entries()) {
+		return Array.from(emits.entries()).map(([callback, writes]) =>
 			callback(writes, txId)
-		}
+		)
 	}
 }
 

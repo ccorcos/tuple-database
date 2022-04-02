@@ -1419,7 +1419,7 @@ export function asyncDatabaseTestSuite(
 				compute = 0
 
 				await store.transact().set(["person", 1], "chester").commit()
-				if (!isSync) await new Promise((resolve) => setTimeout(resolve, 10))
+				// if (!isSync) await new Promise((resolve) => setTimeout(resolve, 10))
 
 				assert.deepEqual(peopleList, ["chester", "meghan"])
 				assert.deepEqual(compute, 1)
@@ -1438,7 +1438,7 @@ export function asyncDatabaseTestSuite(
 					.set(["list", 2, 1], null)
 					.commit()
 
-				if (!isSync) await new Promise((resolve) => setTimeout(resolve, 10))
+				// if (!isSync) await new Promise((resolve) => setTimeout(resolve, 10))
 
 				assert.deepEqual(peopleList, ["mego", "chet"])
 				assert.deepEqual(compute, 1)

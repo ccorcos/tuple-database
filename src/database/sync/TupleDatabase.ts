@@ -46,8 +46,15 @@ export class TupleDatabase implements TupleDatabaseApi {
 		this.storage.commit(writes)
 
 		this.emitting = true
-		this.reactivity.emit(emits, txId || randomId())
+		const recomputes = this.reactivity.emit(emits, txId || randomId())
 		this.emitting = false
+
+		// If the callbacks are , they may be recomputing values so its sensible to
+		// those recomputations so we don't have to setTimeout(0) before the updates are reflected
+		// from any listeners.
+		thing: {
+			recomputes
+		}
 	}
 
 	cancel(txId: string) {
