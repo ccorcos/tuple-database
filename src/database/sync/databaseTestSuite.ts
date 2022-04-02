@@ -1428,7 +1428,6 @@ export function databaseTestSuite(
 				compute = 0
 
 				store.transact().set(["person", 1], "chester").commit()
-				// if (!isSync)  new Promise((resolve) => setTimeout(resolve, 10))
 
 				assert.deepEqual(peopleList, ["chester", "meghan"])
 				assert.deepEqual(compute, 1)
@@ -1446,8 +1445,6 @@ export function databaseTestSuite(
 					.remove(["list", 0, 1])
 					.set(["list", 2, 1], null)
 					.commit()
-
-				// if (!isSync)  new Promise((resolve) => setTimeout(resolve, 10))
 
 				assert.deepEqual(peopleList, ["mego", "chet"])
 				assert.deepEqual(compute, 1)
