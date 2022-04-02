@@ -15,6 +15,7 @@ import { KeyValuePair, MAX, MIN, Writes } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { Assert } from "../typeHelpers"
+import { subscribeQuery } from "./subscribeQuery"
 import { transactionalQuery } from "./transactionalQuery"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
@@ -1070,7 +1071,7 @@ export function databaseTestSuite(
 						assertEqual(store.get(["score"]), 9)
 					}
 
-					Promise.all([chet(), meghan()])
+					;[chet(), meghan()]
 
 					// Final state.
 					assertEqual(store.get(["score"]), 9)
@@ -1382,6 +1383,112 @@ export function databaseTestSuite(
 				})
 				// Does not throw, calls console.error instead.
 				store.transact().set(["a", 1], 1).commit()
+			})
+		})
+
+		describe("subscribeQuery", () => {
+			it("works", () => {
+				type Schema =
+					| { key: ["person", number]; value: string }
+					| { key: ["list", number, number]; value: null }
+
+				const store = createStorage<Schema>(randomId())
+				store.commit({
+					set: [
+						{ key: ["person", 1], value: "chet" },
+						{ key: ["person", 2], value: "meghan" },
+						{ key: ["person", 3], value: "sean" },
+						{ key: ["list", 0, 1], value: null },
+						{ key: ["list", 1, 2], value: null },
+					],
+				})
+
+				let compute = 0
+				let peopleList: string[] = []
+
+				const { result, destroy } = subscribeQuery(
+					store,
+					(db) => {
+						compute++
+						const pairs = db.scan({ prefix: ["list"] })
+						const people = pairs.map(({ key }) =>
+							db.get(["person", key[2]])
+						) as string[]
+						return people
+					},
+					(newResult) => {
+						peopleList = newResult
+					}
+				)
+
+				peopleList = result
+
+				assert.deepEqual(peopleList, ["chet", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				store.transact().set(["person", 1], "chester").commit()
+
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				store.transact().set(["person", 3], "joe").commit()
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 0)
+
+				// Two changes at once, only one callback.
+				store
+					.transact()
+					.set(["person", 2], "mego")
+					.set(["person", 1], "chet")
+					.remove(["list", 0, 1])
+					.set(["list", 2, 1], null)
+					.commit()
+
+				assert.deepEqual(peopleList, ["mego", "chet"])
+				assert.deepEqual(compute, 1)
+			})
+
+			it("can transactionally read", () => {
+				const id = randomId()
+				type Schema = { key: [string]; value: number }
+				const store = createStorage<Schema>(id)
+
+				store.commit({
+					set: [
+						{ key: ["chet"], value: 1 },
+						{ key: ["meghan"], value: 1 },
+					],
+				})
+
+				const getTotal = transactionalQuery<Schema>()((tx) => {
+					const chet = tx.get(["chet"])
+					const meghan = tx.get(["meghan"])
+					return chet! + meghan!
+				})
+
+				let total: number
+				const { result, destroy } = subscribeQuery(
+					store,
+					(db) => getTotal(db),
+					(result) => {
+						total = result
+					}
+				)
+				total = result
+				assert.equal(total, 2)
+
+				store.commit({
+					set: [
+						{ key: ["chet"], value: 2 },
+						{ key: ["meghan"], value: 2 },
+					],
+				})
+				assert.equal(total, 4)
+
+				store.transact().set(["chet"], 3).commit()
+				assert.equal(total, 5)
 			})
 		})
 

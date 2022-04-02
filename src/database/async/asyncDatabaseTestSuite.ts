@@ -11,6 +11,7 @@ import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
+import { subscribeQueryAsync } from "./subscribeQueryAsync"
 import { transactionalAsyncQuery } from "./transactionalQueryAsync"
 
 const isSync = false
@@ -1380,6 +1381,112 @@ export function asyncDatabaseTestSuite(
 				})
 				// Does not throw, calls console.error instead.
 				await store.transact().set(["a", 1], 1).commit()
+			})
+		})
+
+		describe("subscribeQueryAsync", () => {
+			it("works", async () => {
+				type Schema =
+					| { key: ["person", number]; value: string }
+					| { key: ["list", number, number]; value: null }
+
+				const store = createStorage<Schema>(randomId())
+				await store.commit({
+					set: [
+						{ key: ["person", 1], value: "chet" },
+						{ key: ["person", 2], value: "meghan" },
+						{ key: ["person", 3], value: "sean" },
+						{ key: ["list", 0, 1], value: null },
+						{ key: ["list", 1, 2], value: null },
+					],
+				})
+
+				let compute = 0
+				let peopleList: string[] = []
+
+				const { result, destroy } = await subscribeQueryAsync(
+					store,
+					async (db) => {
+						compute++
+						const pairs = await db.scan({ prefix: ["list"] })
+						const people = (await Promise.all(
+							pairs.map(({ key }) => db.get(["person", key[2]]))
+						)) as string[]
+						return people
+					},
+					(newResult) => {
+						peopleList = newResult
+					}
+				)
+
+				peopleList = result
+
+				assert.deepEqual(peopleList, ["chet", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				await store.transact().set(["person", 1], "chester").commit()
+
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				await store.transact().set(["person", 3], "joe").commit()
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 0)
+
+				// Two changes at once, only one callback.
+				await store
+					.transact()
+					.set(["person", 2], "mego")
+					.set(["person", 1], "chet")
+					.remove(["list", 0, 1])
+					.set(["list", 2, 1], null)
+					.commit()
+
+				assert.deepEqual(peopleList, ["mego", "chet"])
+				assert.deepEqual(compute, 1)
+			})
+
+			it("can transactionally read", async () => {
+				const id = randomId()
+				type Schema = { key: [string]; value: number }
+				const store = createStorage<Schema>(id)
+
+				await store.commit({
+					set: [
+						{ key: ["chet"], value: 1 },
+						{ key: ["meghan"], value: 1 },
+					],
+				})
+
+				const getTotal = transactionalAsyncQuery<Schema>()(async (tx) => {
+					const chet = await tx.get(["chet"])
+					const meghan = await tx.get(["meghan"])
+					return chet! + meghan!
+				})
+
+				let total: number
+				const { result, destroy } = await subscribeQueryAsync(
+					store,
+					(db) => getTotal(db),
+					(result) => {
+						total = result
+					}
+				)
+				total = result
+				assert.equal(total, 2)
+
+				await store.commit({
+					set: [
+						{ key: ["chet"], value: 2 },
+						{ key: ["meghan"], value: 2 },
+					],
+				})
+				assert.equal(total, 4)
+
+				await store.transact().set(["chet"], 3).commit()
+				assert.equal(total, 5)
 			})
 		})
 

@@ -8,6 +8,7 @@ import {
 import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
 import { MIN, ScanStorageArgs, Tuple, Writes } from "../../storage/types"
 import { TupleStorageApi } from "../sync/types"
+import { TxId } from "../types"
 import { AsyncCallback } from "./asyncTypes"
 
 export class AsyncReactivityTracker {
@@ -21,12 +22,12 @@ export class AsyncReactivityTracker {
 		return getReactivityEmits(this.listenersDb, writes)
 	}
 
-	async emit(emits: ReactivityEmits) {
+	async emit(emits: ReactivityEmits, txId: TxId) {
 		let promises: any[] = []
 		for (const [callback, writes] of emits.entries()) {
 			try {
 				// Catch sync callbacks.
-				promises.push(callback(writes))
+				promises.push(callback(writes, txId))
 			} catch (error) {
 				console.error(error)
 			}

@@ -7,6 +7,7 @@ This file is generated from async/AsyncTupleDatabase.ts
 type Identity<T> = T
 
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
+import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
@@ -38,12 +39,10 @@ export class TupleDatabase implements TupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		this.storage.commit(writes)
-		return this.reactivity.emit(emits)
-		// try {
-		// } catch (error) {
-		// 	// Don't break the database just because your callbacks are broken.
-		// 	console.error(error)
-		// }
+
+		// Callbacks recieve a txId so we only need to recompute once for a single transaction
+		// when there might be multiple listeners fired at the same time.
+		return this.reactivity.emit(emits, txId || randomId())
 	}
 
 	cancel(txId: string) {

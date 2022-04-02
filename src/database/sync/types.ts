@@ -112,5 +112,6 @@ export type ReadOnlyTupleDatabaseClientApi<
 }
 
 export type Callback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>
+	write: Writes<S>,
+	txId: TxId
 ) => void | Identity<void>

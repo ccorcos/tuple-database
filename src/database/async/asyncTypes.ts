@@ -105,5 +105,6 @@ export type ReadOnlyAsyncTupleDatabaseClientApi<
 }
 
 export type AsyncCallback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>
+	write: Writes<S>,
+	txId: TxId
 ) => void | Promise<void>

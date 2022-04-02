@@ -26,6 +26,9 @@ function convertAsyncToSync(contents: string) {
 	// Maintain camelcase
 	contents = contents.replace(/async(.)/g, (x) => x.toLowerCase())
 
+	// Promise.all
+	contents = contents.replace(/Promise\.all/g, "")
+
 	// Remove async
 	contents = contents.replace(/[Aa]sync/g, "")
 	contents = contents.replace(/await/g, "")

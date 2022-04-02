@@ -1,4 +1,5 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
+import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
@@ -37,7 +38,10 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		await this.storage.commit(writes)
-		return this.reactivity.emit(emits)
+
+		// Callbacks recieve a txId so we only need to recompute once for a single transaction
+		// when there might be multiple listeners fired at the same time.
+		return this.reactivity.emit(emits, txId || randomId())
 	}
 
 	async cancel(txId: string) {
