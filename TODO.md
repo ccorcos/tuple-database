@@ -1,10 +1,5 @@
 ## TODO
 
-- subscribeQuery
-	- afterWrite callback for recompute
-	- make it work for async as well
-
-
 - game counter app with history...
 
 - play with more triplestore ergonomics, order value, proxy objects.
