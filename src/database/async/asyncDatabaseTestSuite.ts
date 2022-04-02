@@ -1186,7 +1186,7 @@ export function asyncDatabaseTestSuite(
 				} as Writes)
 			})
 
-			it("works with add key", async () => {
+			it("works with set key", async () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },

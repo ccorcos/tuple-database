@@ -1188,7 +1188,7 @@ export function databaseTestSuite(
 				} as Writes)
 			})
 
-			it("works with add key", () => {
+			it("works with set key", () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },
