@@ -7,6 +7,7 @@ This file is generated from async/AsyncTupleDatabase.ts
 type Identity<T> = T
 
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
+import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
@@ -38,7 +39,7 @@ export class TupleDatabase implements TupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		this.storage.commit(writes)
-		return this.reactivity.emit(emits)
+		return this.reactivity.emit(emits, txId || randomId())
 	}
 
 	cancel(txId: string) {

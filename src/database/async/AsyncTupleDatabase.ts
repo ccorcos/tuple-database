@@ -1,4 +1,5 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
+import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
@@ -37,7 +38,7 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		await this.storage.commit(writes)
-		return this.reactivity.emit(emits)
+		return this.reactivity.emit(emits, txId || randomId())
 	}
 
 	async cancel(txId: string) {

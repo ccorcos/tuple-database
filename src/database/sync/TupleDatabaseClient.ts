@@ -25,8 +25,8 @@ import {
 	TuplePrefix,
 	ValueForTuple,
 } from "../typeHelpers"
-import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
-import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
+import { ScanArgs, TxId, Unsubscribe } from "../types"
+import { Callback, TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	implements TupleDatabaseClientApi<S>
@@ -52,7 +52,7 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	): Identity<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write, txId) => {
-			callback(
+			return callback(
 				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
 					FilterTupleValuePairByPrefix<S, P>
 				>,

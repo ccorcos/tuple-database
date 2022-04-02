@@ -1,18 +1,20 @@
-import { randomId } from "../helpers/randomId"
+import { maybeWaitForPromises } from "../../helpers/maybeWaitForPromises"
+import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
 	getPrefixContainingBounds,
 	isTupleWithinBounds,
-} from "../helpers/sortedTupleArray"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { MIN, ScanStorageArgs, Tuple, Writes } from "../storage/types"
-import { TupleStorageApi } from "./sync/types"
-import { Callback } from "./types"
+} from "../../helpers/sortedTupleArray"
+import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
+import { MIN, ScanStorageArgs, Tuple, Writes } from "../../storage/types"
+import { TupleStorageApi } from "../sync/types"
+import { TxId } from "../types"
+import { AsyncCallback } from "./asyncTypes"
 
-export class ReactivityTracker {
+export class AsyncReactivityTracker {
 	private listenersDb = new InMemoryTupleStorage()
 
-	subscribe(args: ScanStorageArgs, callback: Callback) {
+	subscribe(args: ScanStorageArgs, callback: AsyncCallback) {
 		return subscribe(this.listenersDb, args, callback)
 	}
 
@@ -20,14 +22,24 @@ export class ReactivityTracker {
 		return getReactivityEmits(this.listenersDb, writes)
 	}
 
-	emit(emits: ReactivityEmits) {
+	async emit(emits: ReactivityEmits, txId: TxId) {
+		let promises: any[] = []
 		for (const [callback, writes] of emits.entries()) {
-			callback(writes)
+			try {
+				// Catch sync callbacks.
+				promises.push(callback(writes, txId))
+			} catch (error) {
+				console.error(error)
+			}
 		}
+		// This trick allows us to return a Promise from a sync TupleDatabase#commit
+		// when there are async callbacks. And this allows us to create an async client
+		// on top of a sync client.
+		return maybeWaitForPromises(promises)
 	}
 }
 
-type Listener = { callback: Callback; bounds: Bounds }
+type AsyncListener = { callback: AsyncCallback; bounds: Bounds }
 
 function iterateTuplePrefixes(tuple: Tuple) {
 	const prefixes: Tuple[] = [tuple]
@@ -43,7 +55,7 @@ function getListenersForTuplePrefix(
 	listenersDb: TupleStorageApi,
 	tuple: Tuple
 ) {
-	const listeners: Listener[] = []
+	const listeners: AsyncListener[] = []
 
 	// Look for listeners at each prefix of the tuple.
 	for (const prefix of iterateTuplePrefixes(tuple)) {
@@ -65,7 +77,7 @@ function getListenerCallbacksForTuple(
 	listenersDb: TupleStorageApi,
 	tuple: Tuple
 ) {
-	const callbacks: Callback[] = []
+	const callbacks: AsyncCallback[] = []
 
 	// Check that the tuple is within the absolute bounds of the query.
 	for (const listener of getListenersForTuplePrefix(listenersDb, tuple)) {
@@ -81,7 +93,7 @@ function getListenerCallbacksForTuple(
 	return callbacks
 }
 
-type ReactivityEmits = Map<Callback, Required<Writes>>
+type ReactivityEmits = Map<AsyncCallback, Required<Writes>>
 
 function getReactivityEmits(listenersDb: TupleStorageApi, writes: Writes) {
 	const emits: ReactivityEmits = new Map()
@@ -108,14 +120,14 @@ function getReactivityEmits(listenersDb: TupleStorageApi, writes: Writes) {
 function subscribe(
 	listenersDb: TupleStorageApi,
 	args: ScanStorageArgs,
-	callback: Callback
+	callback: AsyncCallback
 ) {
 	// this.log("db/subscribe", args)
 
 	const prefix = getPrefixContainingBounds(args)
 
 	const id = randomId()
-	const value: Listener = { callback, bounds: args }
+	const value: AsyncListener = { callback, bounds: args }
 
 	listenersDb.commit({ set: [{ key: [prefix, id], value }] })
 

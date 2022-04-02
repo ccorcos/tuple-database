@@ -1357,6 +1357,31 @@ export function asyncDatabaseTestSuite(
 					remove: [],
 				} as Writes)
 			})
+
+			it("waits for emit callbacks before resolving commit", async () => {
+				const store = createStorage(randomId())
+				await store.commit({ set: [{ key: ["a"], value: 1 }] })
+
+				let value = await store.get(["a"])
+				assert.equal(value, 1)
+
+				await store.subscribe({ gte: ["a"], lte: ["a"] }, async (writes) => {
+					value = await store.get(["a"])
+				})
+
+				await store.transact().set(["a"], 2).commit()
+				assert.equal(value, 2)
+			})
+
+			it("errors in callbacks don't break the database", async () => {
+				const store = createStorage(randomId())
+
+				await store.subscribe({ prefix: ["a"] }, async () => {
+					throw new Error()
+				})
+				// Does not throw, calls console.error instead.
+				await store.transact().set(["a", 1], 1).commit()
+			})
 		})
 
 		describe("subscribeQueryAsync", () => {
