@@ -1,4 +1,5 @@
 import { KeyValuePair } from "../../storage/types"
+import { TxId } from "../types"
 import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient"
 import {
 	AsyncTupleDatabaseClientApi,
@@ -7,6 +8,32 @@ import {
 
 const throwError = () => {
 	throw new Error()
+}
+
+class Queue<T> {
+	private items: T[] = []
+
+	constructor(private dequeue: (item: T) => Promise<void>) {}
+
+	private flushing: Promise<void> | undefined
+
+	private async attemptFlush() {
+		if (!this.flushing) this.flushing = this.flush()
+		return this.flushing
+	}
+
+	private async flush() {
+		while (this.items.length > 0) {
+			const item = this.items.shift()!
+			await this.dequeue(item)
+		}
+		this.flushing = undefined
+	}
+
+	public async enqueue(item: T) {
+		this.items.push(item)
+		await this.attemptFlush()
+	}
 }
 
 export async function subscribeQueryAsync<S extends KeyValuePair, T>(
@@ -23,29 +50,17 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 		listeners.clear()
 	}
 
-	// Use a queue to make sure we don't recompute at the same time.
 	let lastComputedTxId: string | undefined
-	const computeQueue: string[] = []
-	const flushQueue = async () => {
-		const txId = computeQueue.shift()
-		if (txId === undefined) return
-
+	const recomputeQueue = new Queue<TxId>(async (txId) => {
 		// Skip over duplicate emits.
-		if (txId === lastComputedTxId) return flushQueue()
+		if (txId === lastComputedTxId) return
 
 		// Recompute.
 		lastComputedTxId = txId
 		resetListeners()
 		const result = await compute()
 		callback(result)
-
-		// Keep recomputing til its empty.
-		return flushQueue()
-	}
-	const recompute = async (txId: string) => {
-		computeQueue.push(txId)
-		return flushQueue()
-	}
+	})
 
 	// Subscribe for every scan that gets called.
 	const listenDb = new AsyncTupleDatabaseClient<S>({
@@ -56,7 +71,7 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 				throw new Error("Not allowed to subscribe transactionally.")
 
 			const destroy = await db.subscribe(args, async (_writes, txId) =>
-				recompute(txId)
+				recomputeQueue.enqueue(txId)
 			)
 			listeners.add(destroy)
 
