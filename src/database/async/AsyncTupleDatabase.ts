@@ -38,6 +38,9 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		await this.storage.commit(writes)
+
+		// Callbacks recieve a txId so we only need to recompute once for a single transaction
+		// when there might be multiple listeners fired at the same time.
 		return this.reactivity.emit(emits, txId || randomId())
 	}
 
