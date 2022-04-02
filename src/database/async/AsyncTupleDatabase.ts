@@ -38,11 +38,6 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		}
 		await this.storage.commit(writes)
 		return this.reactivity.emit(emits)
-		// try {
-		// } catch (error) {
-		// 	// Don't break the database just because your callbacks are broken.
-		// 	console.error(error)
-		// }
 	}
 
 	async cancel(txId: string) {
