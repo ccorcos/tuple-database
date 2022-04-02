@@ -9,7 +9,7 @@ type Identity<T> = T
 import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { TupleDatabaseClient } from "./TupleDatabaseClient"
-import { ReadOnlyTupleDatabaseClientApi, TupleDatabaseClientApi } from "./types"
+import { TupleDatabaseClientApi } from "./types"
 
 const throwError = () => {
 	throw new Error()
@@ -43,7 +43,7 @@ class Queue<T> {
 
 export function subscribeQuery<S extends KeyValuePair, T>(
 	db: TupleDatabaseClientApi<S>,
-	fn: (db: ReadOnlyTupleDatabaseClientApi<S>) => Identity<T>,
+	fn: (db: TupleDatabaseClientApi<S>) => Identity<T>,
 	callback: (result: T) => void
 ): Identity<{ result: T; destroy: () => void }> {
 	const listeners = new Set<any>()
@@ -70,10 +70,10 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	// Subscribe for every scan that gets called.
 	const listenDb = new TupleDatabaseClient<S>({
 		scan: (args: any, txId) => {
-			if (txId)
-				// Maybe one day we can transactionally subscribe to a bunch of things. But
-				// for now, lets just avoid that...
-				throw new Error("Not allowed to subscribe transactionally.")
+			// if (txId)
+			// 	// Maybe one day we can transactionally subscribe to a bunch of things. But
+			// 	// for now, lets just avoid that...
+			// 	throw new Error("Not allowed to subscribe transactionally.")
 
 			const destroy = db.subscribe(args, (_writes, txId) =>
 				recomputeQueue.enqueue(txId)
@@ -83,9 +83,15 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 			const results = db.scan(args)
 			return results
 		},
-		// This is ReadOnly...
-		commit: throwError,
-		cancel: throwError,
+		cancel: (txId) => {
+			db.cancel(txId)
+		},
+		commit: (writes, txId) => {
+			if (writes.remove?.length || writes.set?.length)
+				throw new Error("No writing in a subscribeQuery.")
+			// Commit to resolve conflicts with transactional reads.
+			db.commit({}, txId)
+		},
 		subscribe: throwError,
 		close: throwError,
 	})

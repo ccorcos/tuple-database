@@ -1,10 +1,7 @@
 import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient"
-import {
-	AsyncTupleDatabaseClientApi,
-	ReadOnlyAsyncTupleDatabaseClientApi,
-} from "./asyncTypes"
+import { AsyncTupleDatabaseClientApi } from "./asyncTypes"
 
 const throwError = () => {
 	throw new Error()
@@ -38,7 +35,7 @@ class Queue<T> {
 
 export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	db: AsyncTupleDatabaseClientApi<S>,
-	fn: (db: ReadOnlyAsyncTupleDatabaseClientApi<S>) => Promise<T>,
+	fn: (db: AsyncTupleDatabaseClientApi<S>) => Promise<T>,
 	callback: (result: T) => void
 ): Promise<{ result: T; destroy: () => void }> {
 	const listeners = new Set<any>()
@@ -65,10 +62,10 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	// Subscribe for every scan that gets called.
 	const listenDb = new AsyncTupleDatabaseClient<S>({
 		scan: async (args: any, txId) => {
-			if (txId)
-				// Maybe one day we can transactionally subscribe to a bunch of things. But
-				// for now, lets just avoid that...
-				throw new Error("Not allowed to subscribe transactionally.")
+			// if (txId)
+			// 	// Maybe one day we can transactionally subscribe to a bunch of things. But
+			// 	// for now, lets just avoid that...
+			// 	throw new Error("Not allowed to subscribe transactionally.")
 
 			const destroy = await db.subscribe(args, async (_writes, txId) =>
 				recomputeQueue.enqueue(txId)
@@ -78,9 +75,15 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 			const results = await db.scan(args)
 			return results
 		},
-		// This is ReadOnly...
-		commit: throwError,
-		cancel: throwError,
+		cancel: async (txId) => {
+			await db.cancel(txId)
+		},
+		commit: async (writes, txId) => {
+			if (writes.remove?.length || writes.set?.length)
+				throw new Error("No writing in a subscribeQueryAsync.")
+			// Commit to resolve conflicts with transactional reads.
+			await db.commit({}, txId)
+		},
 		subscribe: throwError,
 		close: throwError,
 	})

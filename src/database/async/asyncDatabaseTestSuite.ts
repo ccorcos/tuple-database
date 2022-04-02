@@ -1447,6 +1447,47 @@ export function asyncDatabaseTestSuite(
 				assert.deepEqual(peopleList, ["mego", "chet"])
 				assert.deepEqual(compute, 1)
 			})
+
+			it("can transactionally read", async () => {
+				const id = randomId()
+				type Schema = { key: [string]; value: number }
+				const store = createStorage<Schema>(id)
+
+				await store.commit({
+					set: [
+						{ key: ["chet"], value: 1 },
+						{ key: ["meghan"], value: 1 },
+					],
+				})
+
+				const getTotal = transactionalAsyncQuery<Schema>()(async (tx) => {
+					const chet = await tx.get(["chet"])
+					const meghan = await tx.get(["meghan"])
+					return chet! + meghan!
+				})
+
+				let total: number
+				const { result, destroy } = await subscribeQueryAsync(
+					store,
+					(db) => getTotal(db),
+					(result) => {
+						total = result
+					}
+				)
+				total = result
+				assert.equal(total, 2)
+
+				await store.commit({
+					set: [
+						{ key: ["chet"], value: 2 },
+						{ key: ["meghan"], value: 2 },
+					],
+				})
+				assert.equal(total, 4)
+
+				await store.transact().set(["chet"], 3).commit()
+				assert.equal(total, 5)
+			})
 		})
 
 		describe("subspace", () => {
