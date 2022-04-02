@@ -5,7 +5,7 @@ import {
 	TuplePrefix,
 	ValueForTuple,
 } from "../typeHelpers"
-import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
+import { ScanArgs, TxId, Unsubscribe } from "../types"
 
 /** The low-level API for implementing new storage layers. */
 export type AsyncTupleStorageApi = {
@@ -19,7 +19,10 @@ export type AsyncTupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Promise<KeyValuePair[]>
 	commit: (writes: Writes, txId?: TxId) => Promise<void>
 	cancel: (txId: string) => Promise<void>
-	subscribe: (args: ScanStorageArgs, callback: Callback) => Promise<Unsubscribe>
+	subscribe: (
+		args: ScanStorageArgs,
+		callback: AsyncCallback
+	) => Promise<Unsubscribe>
 	close: () => Promise<void>
 }
 
@@ -35,7 +38,7 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 		) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
 		subscribe: <P extends TuplePrefix<S["key"]>>(
 			args: ScanArgs<P>,
-			callback: Callback<FilterTupleValuePairByPrefix<S, P>>
+			callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
 		) => Promise<Unsubscribe>
 		close: () => Promise<void>
 
@@ -100,3 +103,7 @@ export type ReadOnlyAsyncTupleDatabaseClientApi<
 
 	// subscribe?
 }
+
+export type AsyncCallback<S extends KeyValuePair = KeyValuePair> = (
+	write: Writes<S>
+) => void | Promise<void>

@@ -17,8 +17,9 @@ import {
 	TuplePrefix,
 	ValueForTuple,
 } from "../typeHelpers"
-import { Callback, ScanArgs, TxId, Unsubscribe } from "../types"
+import { ScanArgs, TxId, Unsubscribe } from "../types"
 import {
+	AsyncCallback,
 	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
@@ -44,11 +45,11 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 
 	async subscribe<P extends TuplePrefix<S["key"]>>(
 		args: ScanArgs<P>,
-		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
+		callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
 	): Promise<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write) => {
-			callback(
+			return callback(
 				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
 					FilterTupleValuePairByPrefix<S, P>
 				>

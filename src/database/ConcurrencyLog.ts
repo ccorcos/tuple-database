@@ -1,8 +1,7 @@
 import { mutableFilter } from "../helpers/mutableFilter"
 import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray"
 import { Tuple } from "../storage/types"
-
-export type TxId = string
+import { TxId } from "./types"
 
 type ReadItem = { type: "read"; bounds: Bounds; txId: TxId }
 type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }

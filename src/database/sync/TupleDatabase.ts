@@ -9,10 +9,10 @@ type Identity<T> = T
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
-import { ReactivityTracker } from "../reactivityHelpers"
 import { TupleStorageApi } from "../sync/types"
-import { Callback, TxId, Unsubscribe } from "../types"
-import { TupleDatabaseApi } from "./types"
+import { TxId, Unsubscribe } from "../types"
+import { ReactivityTracker } from "./ReactivityTracker"
+import { Callback, TupleDatabaseApi } from "./types"
 
 export class TupleDatabase implements TupleDatabaseApi {
 	constructor(private storage: TupleStorageApi) {}
@@ -38,8 +38,12 @@ export class TupleDatabase implements TupleDatabaseApi {
 			this.log.write(txId, tuple)
 		}
 		this.storage.commit(writes)
-
-		this.reactivity.emit(emits)
+		return this.reactivity.emit(emits)
+		// try {
+		// } catch (error) {
+		// 	// Don't break the database just because your callbacks are broken.
+		// 	console.error(error)
+		// }
 	}
 
 	cancel(txId: string) {

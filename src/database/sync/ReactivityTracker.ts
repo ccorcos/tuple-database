@@ -1,12 +1,21 @@
-import { randomId } from "../helpers/randomId"
+/*
+
+This file is generated from async/AsyncReactivityTracker.ts
+
+*/
+
+type Identity<T> = T
+
+import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
 	getPrefixContainingBounds,
 	isTupleWithinBounds,
-} from "../helpers/sortedTupleArray"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { MIN, ScanStorageArgs, Tuple, Writes } from "../storage/types"
-import { TupleStorageApi } from "./sync/types"
+} from "../../helpers/sortedTupleArray"
+import { waitForValues } from "../../helpers/waitForValues"
+import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
+import { MIN, ScanStorageArgs, Tuple, Writes } from "../../storage/types"
+import { TupleStorageApi } from "../sync/types"
 import { Callback } from "./types"
 
 export class ReactivityTracker {
@@ -21,9 +30,12 @@ export class ReactivityTracker {
 	}
 
 	emit(emits: ReactivityEmits) {
-		for (const [callback, writes] of emits.entries()) {
-			callback(writes)
-		}
+		const entries = Array.from(emits.entries())
+		const promises = entries.map(([callback, writes]) => callback(writes))
+		// This trick allows us to return a Promise from a sync TupleDatabase#commit
+		// when there are  callbacks. And this allows us to create an  client
+		// on top of a sync client.
+		return waitForValues(promises)
 	}
 }
 
