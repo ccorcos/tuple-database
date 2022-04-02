@@ -1357,24 +1357,6 @@ export function asyncDatabaseTestSuite(
 					remove: [],
 				} as Writes)
 			})
-
-			if (isSync) {
-				it("throws an error if you try to write in a subscribe callback", async () => {
-					const store = createStorage(randomId())
-
-					let throws = false
-					await store.subscribe({ prefix: ["a"] }, async () => {
-						try {
-							await store.transact().set(["b"], 2).commit()
-						} catch (error) {
-							throws = true
-						}
-					})
-
-					await store.transact().set(["a", 1], 1).commit()
-					assert.ok(throws)
-				})
-			}
 		})
 
 		describe("subscribeQueryAsync", () => {
