@@ -13,6 +13,7 @@ export type ScanArgs<T extends Tuple = Tuple> = {
 export type TxId = string
 
 export type Callback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>
+	write: Writes<S>,
+	txId: string
 ) => void
 export type Unsubscribe = () => void

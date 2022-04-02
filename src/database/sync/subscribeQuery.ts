@@ -6,7 +6,6 @@ This file is generated from async/subscribeQueryAsync.ts
 
 type Identity<T> = T
 
-import { debounce } from "lodash"
 import { KeyValuePair } from "../../storage/types"
 import { TupleDatabaseClient } from "./TupleDatabaseClient"
 import { ReadOnlyTupleDatabaseClientApi, TupleDatabaseClientApi } from "./types"
@@ -29,21 +28,39 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 		listeners.clear()
 	}
 
-	const recompute = debounce(
-		() => {
-			resetListeners()
-			const result = compute()
-			callback(result)
-		},
-		0,
-		{ leading: true, trailing: false }
-	)
+	// Use a queue to make sure we don't recompute at the same time.
+	let lastComputedTxId: string | undefined
+	const computeQueue: string[] = []
+	const flushQueue = () => {
+		const txId = computeQueue.shift()
+		if (txId === undefined) return
+
+		// Skip over duplicate emits.
+		if (txId === lastComputedTxId) return flushQueue()
+
+		// Recompute.
+		lastComputedTxId = txId
+		resetListeners()
+		const result = compute()
+		callback(result)
+
+		// Keep recomputing til its empty.
+		return flushQueue()
+	}
+	const recompute = (txId: string) => {
+		computeQueue.push(txId)
+		return flushQueue()
+	}
 
 	// Subscribe for every scan that gets called.
 	const listenDb = new TupleDatabaseClient<S>({
 		scan: (args: any, txId) => {
-			if (txId) throwError()
-			const destroy = db.subscribe(args, recompute)
+			if (txId)
+				// Maybe one day we can transactionally subscribe to a bunch of things. But
+				// for now, lets just avoid that...
+				throw new Error("Not allowed to subscribe transactionally.")
+
+			const destroy = db.subscribe(args, (_writes, txId) => recompute(txId))
 			listeners.add(destroy)
 
 			const results = db.scan(args)

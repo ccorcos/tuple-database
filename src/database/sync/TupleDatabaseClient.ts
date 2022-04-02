@@ -51,11 +51,12 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
 	): Identity<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
-		return this.db.subscribe(storageScanArgs, (write) => {
+		return this.db.subscribe(storageScanArgs, (write, txId) => {
 			callback(
 				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
 					FilterTupleValuePairByPrefix<S, P>
-				>
+				>,
+				txId
 			)
 		})
 	}
