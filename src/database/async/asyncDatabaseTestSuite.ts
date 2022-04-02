@@ -11,6 +11,7 @@ import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
+import { subscribeQueryAsync } from "./subscribeQueryAsync"
 import { transactionalAsyncQuery } from "./transactionalQueryAsync"
 
 const isSync = false
@@ -1166,7 +1167,26 @@ export function asyncDatabaseTestSuite(
 		})
 
 		describe("Reactivity", () => {
-			it("works with set", async () => {
+			it("works with setting a value on existing key", async () => {
+				const store = createStorage(randomId())
+				await store.commit({
+					set: [{ key: ["a"], value: 1 }],
+				})
+
+				let hoist: Writes | undefined
+				await store.subscribe({ gte: ["a"], lte: ["a"] }, (writes) => {
+					hoist = writes
+				})
+
+				await store.transact().set(["a"], 1).commit()
+
+				assert.deepStrictEqual(hoist, {
+					set: [{ key: ["a"], value: 1 }],
+					remove: [],
+				} as Writes)
+			})
+
+			it("works with add key", async () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },
@@ -1204,7 +1224,7 @@ export function asyncDatabaseTestSuite(
 				} as Writes)
 			})
 
-			it("works with remove", async () => {
+			it("works with remove key", async () => {
 				const store = createStorage(randomId())
 				const items: KeyValuePair[] = [
 					{ key: ["a", "a", "a"], value: 1 },
@@ -1355,6 +1375,74 @@ export function asyncDatabaseTestSuite(
 					assert.ok(throws)
 				})
 			}
+		})
+
+		describe("subscribeQueryAsync", () => {
+			it("works", async () => {
+				type Schema =
+					| { key: ["person", number]; value: string }
+					| { key: ["list", number, number]; value: null }
+
+				const store = createStorage<Schema>(randomId())
+				await store.commit({
+					set: [
+						{ key: ["person", 1], value: "chet" },
+						{ key: ["person", 2], value: "meghan" },
+						{ key: ["person", 3], value: "sean" },
+						{ key: ["list", 0, 1], value: null },
+						{ key: ["list", 1, 2], value: null },
+					],
+				})
+
+				let compute = 0
+				let peopleList: string[] = []
+
+				const { result, destroy } = await subscribeQueryAsync(
+					store,
+					async (db) => {
+						compute++
+						const pairs = await db.scan({ prefix: ["list"] })
+						const people = (await Promise.all(
+							pairs.map(({ key }) => db.get(["person", key[2]]))
+						)) as string[]
+						return people
+					},
+					(newResult) => {
+						peopleList = newResult
+					}
+				)
+
+				peopleList = result
+
+				assert.deepEqual(peopleList, ["chet", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				await store.transact().set(["person", 1], "chester").commit()
+				if (!isSync) await new Promise((resolve) => setTimeout(resolve, 1))
+
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 1)
+				compute = 0
+
+				await store.transact().set(["person", 3], "joe").commit()
+				assert.deepEqual(peopleList, ["chester", "meghan"])
+				assert.deepEqual(compute, 0)
+
+				// Two changes at once, only one callback.
+				await store
+					.transact()
+					.set(["person", 2], "mego")
+					.set(["person", 1], "chet")
+					.remove(["list", 0, 1])
+					.set(["list", 2, 1], null)
+					.commit()
+
+				if (!isSync) await new Promise((resolve) => setTimeout(resolve, 1))
+
+				assert.deepEqual(peopleList, ["mego", "chet"])
+				assert.deepEqual(compute, 1)
+			})
 		})
 
 		describe("subspace", () => {
