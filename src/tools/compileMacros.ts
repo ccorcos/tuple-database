@@ -21,6 +21,8 @@ function convertAsyncToSync(contents: string) {
 		"TupleStorageApi"
 	)
 
+	contents = contents.replace("const isSync = false", "const isSync = true")
+
 	// Maintain camelcase
 	contents = contents.replace(/async(.)/g, (x) => x.toLowerCase())
 
