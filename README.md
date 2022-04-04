@@ -124,6 +124,26 @@ The next level up is the database layer. `TupleDatabase` and `AsyncTupleDatabase
 
 The highest level layer is the `TupleDatabaseClient` and `AsyncTupleDatabaseClient`. These layers implement some convenient syntax (`get(tuple)`, `exists(tuple)`, `transact()`, `subspace(prefix)`) as well as TypeScript typed schemas. This is the layer you will almost always be working with. When you construct a client, it accepts a `TupleDatabaseApi` (or `AsyncTupleDatabaseApi`) rather than the actual class which allows you to implement this API across process boundaries. For example, you might have the `AsyncTupleDatabase` in the main process of an Electron app with a `AsyncTupleDatabaseClient` in each of your renderer processes communicating over IPC bridge that implements `AsyncTupleDatabaseApi`.
 
+## Helpers
+
+It is conenient to have "labeled" indexes so that we don't have to work with tuple indexes and ambigious types. For example:
+
+```ts
+type Schema =
+	| {key: ["person", {id: string}], value: Person}
+	| {key: ["personByName", {name: string}, {id: string}], value: Person}
+	| {key: ["personByAge", {age: number}, {id: string}], value: Person}
+```
+
+Note that this will still sort the same as those objects get encoded as ordered dictionaries.
+
+And how we have some nice convenent functions:
+
+```ts
+const result = db.scan({prefix: ["personByName"]}).map(({key}) => namedTupleToObect(key))
+// typeof result === {name: string, id: string}[]
+```
+
 # Motivation
 
 Databases are complicated. And as with most complicated things, you might find yourself battling the tool more than battling the problem you're trying to solve.
