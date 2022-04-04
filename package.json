@@ -40,6 +40,12 @@
     "react": "^17.0.1",
     "react-dom": "^17.0.1"
   },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {"optional": true},
+    "level": {"optional": true},
+    "react": {"optional": true},
+    "react-dom": {"optional": true}
+  },
   "dependencies": {
     "elen": "^1.0.10",
     "fractional-indexing": "^1.2.1",
