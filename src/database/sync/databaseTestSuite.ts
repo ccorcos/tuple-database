@@ -1385,7 +1385,7 @@ export function databaseTestSuite(
 				store.transact().set(["a", 1], 1).commit()
 			})
 
-			it("No writing inside an emit", () => {
+			it.skip("No writing inside an emit", () => {
 				const store = createStorage(randomId())
 
 				let called = false

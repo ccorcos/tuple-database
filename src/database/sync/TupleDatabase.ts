@@ -7,7 +7,6 @@ This file is generated from async/AsyncTupleDatabase.ts
 type Identity<T> = T
 
 import { afterMaybePromise } from "../../helpers/afterMaybePromise"
-import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
 import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
@@ -37,8 +36,9 @@ export class TupleDatabase implements TupleDatabaseApi {
 
 	commit(writes: Writes, txId?: string) {
 		// Note: commit is called for transactional reads as well!
-		if (this.emitting && !isEmptyWrites(writes))
-			throw new Error("No writing during an emit.")
+		// TODO: not sure if this is a good idea...
+		// if (this.emitting && !isEmptyWrites(writes))
+		// 	throw new Error("No writing during an emit.")
 
 		const emits = this.reactivity.computeReactivityEmits(writes)
 

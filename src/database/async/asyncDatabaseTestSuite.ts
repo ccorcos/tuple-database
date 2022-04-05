@@ -1383,7 +1383,7 @@ export function asyncDatabaseTestSuite(
 				await store.transact().set(["a", 1], 1).commit()
 			})
 
-			it("No writing inside an emit", async () => {
+			it.skip("No writing inside an emit", async () => {
 				const store = createStorage(randomId())
 
 				let called = false
