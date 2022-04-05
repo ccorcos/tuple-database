@@ -1,4 +1,4 @@
-export function maybeWaitForPromises(values: any[]): any {
+export function maybePromiseAll(values: any[]): any {
 	if (values.some((value) => value instanceof Promise))
 		return Promise.all(
 			values.map((value) => {

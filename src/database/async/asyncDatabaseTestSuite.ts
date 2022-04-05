@@ -1382,6 +1382,26 @@ export function asyncDatabaseTestSuite(
 				// Does not throw, calls console.error instead.
 				await store.transact().set(["a", 1], 1).commit()
 			})
+
+			it("No writing inside an emit", async () => {
+				const store = createStorage(randomId())
+
+				let called = false
+				let throws = false
+				await store.subscribe({ prefix: ["a"] }, async () => {
+					called = true
+					try {
+						await store.commit({ set: [{ key: ["b"], value: 2 }] })
+					} catch (error) {
+						throws = true
+					}
+				})
+				// Does not throw, calls console.error instead.
+				await store.transact().set(["a", 1], 1).commit()
+
+				assert.equal(called, true)
+				assert.equal(throws, true)
+			})
 		})
 
 		describe("subscribeQueryAsync", () => {

@@ -6,7 +6,7 @@ This file is generated from async/AsyncReactivityTracker.ts
 
 type Identity<T> = T
 
-import { maybeWaitForPromises } from "../../helpers/maybeWaitForPromises"
+import { maybePromiseAll } from "../../helpers/maybeWaitForPromises"
 import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
@@ -43,7 +43,7 @@ export class ReactivityTracker {
 		// This trick allows us to return a Promise from a sync TupleDatabase#commit
 		// when there are  callbacks. And this allows us to create an  client
 		// on top of a sync client.
-		return maybeWaitForPromises(promises)
+		return maybePromiseAll(promises)
 	}
 }
 

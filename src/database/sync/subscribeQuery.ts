@@ -6,6 +6,7 @@ This file is generated from async/subscribeQueryAsync.ts
 
 type Identity<T> = T
 
+import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { TupleDatabaseClient } from "./TupleDatabaseClient"
@@ -87,7 +88,7 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 			db.cancel(txId)
 		},
 		commit: (writes, txId) => {
-			if (writes.remove?.length || writes.set?.length)
+			if (!isEmptyWrites(writes))
 				throw new Error("No writing in a subscribeQuery.")
 			// Commit to resolve conflicts with transactional reads.
 			db.commit({}, txId)

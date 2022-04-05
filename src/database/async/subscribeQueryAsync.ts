@@ -1,3 +1,4 @@
+import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient"
@@ -79,7 +80,7 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 			await db.cancel(txId)
 		},
 		commit: async (writes, txId) => {
-			if (writes.remove?.length || writes.set?.length)
+			if (!isEmptyWrites(writes))
 				throw new Error("No writing in a subscribeQueryAsync.")
 			// Commit to resolve conflicts with transactional reads.
 			await db.commit({}, txId)

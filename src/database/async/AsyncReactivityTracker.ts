@@ -1,4 +1,4 @@
-import { maybeWaitForPromises } from "../../helpers/maybeWaitForPromises"
+import { maybePromiseAll } from "../../helpers/maybeWaitForPromises"
 import { randomId } from "../../helpers/randomId"
 import {
 	Bounds,
@@ -35,7 +35,7 @@ export class AsyncReactivityTracker {
 		// This trick allows us to return a Promise from a sync TupleDatabase#commit
 		// when there are async callbacks. And this allows us to create an async client
 		// on top of a sync client.
-		return maybeWaitForPromises(promises)
+		return maybePromiseAll(promises)
 	}
 }
 

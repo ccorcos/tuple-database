@@ -6,6 +6,8 @@ This file is generated from async/AsyncTupleDatabase.ts
 
 type Identity<T> = T
 
+import { afterMaybePromise } from "../../helpers/afterMaybePromise"
+import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
 import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
@@ -31,7 +33,13 @@ export class TupleDatabase implements TupleDatabaseApi {
 		return this.reactivity.subscribe(args, callback)
 	}
 
+	private emitting = false
+
 	commit(writes: Writes, txId?: string) {
+		// Note: commit is called for transactional reads as well!
+		if (this.emitting && !isEmptyWrites(writes))
+			throw new Error("No writing during an emit.")
+
 		const emits = this.reactivity.computeReactivityEmits(writes)
 
 		if (txId) this.log.commit(txId)
@@ -40,9 +48,15 @@ export class TupleDatabase implements TupleDatabaseApi {
 		}
 		this.storage.commit(writes)
 
+		this.emitting = true
 		// Callbacks recieve a txId so we only need to recompute once for a single transaction
 		// when there might be multiple listeners fired at the same time.
-		return this.reactivity.emit(emits, txId || randomId())
+		return afterMaybePromise(
+			this.reactivity.emit(emits, txId || randomId()),
+			() => {
+				this.emitting = false
+			}
+		)
 	}
 
 	cancel(txId: string) {
