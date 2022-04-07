@@ -29,7 +29,7 @@ function useRerender() {
 /** Useful for managing UI state for React with a TupleDatabase. */
 export function useTupleDatabase<S extends KeyValuePair, T, A extends any[]>(
 	db: TupleDatabaseClientApi<S>,
-	fn: (db: TupleDatabaseClientApi<S>, ...A) => T,
+	fn: (db: TupleDatabaseClientApi<S>, ...arg: A) => T,
 	args: A
 ) {
 	const rerender = useRerender()
