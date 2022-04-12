@@ -1,6 +1,6 @@
 ## TODO
 
-- game counter app with history...
+- queue up commits to wait til after previous emits to prevent infinite loop issues. though also warn about it.
 
 - play with more triplestore ergonomics, order value, proxy objects.
 	keep it simple for now though, no need to EXPLAIN or baked in indexes yet.
