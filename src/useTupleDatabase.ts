@@ -23,7 +23,19 @@ function shallowEqual(a: any, b: any) {
 
 function useRerender() {
 	const [state, setState] = useState(0)
-	return () => setState((x) => x + 1)
+
+	const mounted = useRef(true)
+	useEffect(
+		() => () => {
+			mounted.current = false
+		},
+		[]
+	)
+
+	return () => {
+		if (!mounted.current) return
+		setState((x) => x + 1)
+	}
 }
 
 /** Useful for managing UI state for React with a TupleDatabase. */
