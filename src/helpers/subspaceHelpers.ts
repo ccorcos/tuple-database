@@ -81,7 +81,7 @@ export function removePrefixFromTupleValuePairs(
 
 export function normalizeSubspaceScanArgs(
 	subspacePrefix: Tuple,
-	args: ScanArgs
+	args: ScanArgs<Tuple, any>
 ): ScanStorageArgs {
 	const prefix = args.prefix
 		? [...subspacePrefix, ...args.prefix]

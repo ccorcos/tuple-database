@@ -32,12 +32,12 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 		// Types
 		commit: (writes: Writes<S>, txId?: TxId) => Promise<void>
 		cancel: (txId: string) => Promise<void>
-		scan: <P extends TuplePrefix<S["key"]>>(
-			args?: ScanArgs<P>,
+		scan: <T extends S["key"], P extends TuplePrefix<T>>(
+			args?: ScanArgs<T, P>,
 			txId?: TxId
 		) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
-		subscribe: <P extends TuplePrefix<S["key"]>>(
-			args: ScanArgs<P>,
+		subscribe: <T extends S["key"], P extends TuplePrefix<T>>(
+			args: ScanArgs<T, P>,
 			callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
 		) => Promise<Unsubscribe>
 		close: () => Promise<void>
@@ -60,8 +60,8 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 
 export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	// Same as AsyncTupleDatabaseClientApi without the txId argument.
-	scan: <P extends TuplePrefix<S["key"]>>(
-		args?: ScanArgs<P>
+	scan: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>
 	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
 	get: <T extends S["key"]>(
 		tuple: T
@@ -88,8 +88,8 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 export type ReadOnlyAsyncTupleDatabaseClientApi<
 	S extends KeyValuePair = KeyValuePair
 > = {
-	scan: <P extends TuplePrefix<S["key"]>>(
-		args?: ScanArgs<P>,
+	scan: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>,
 		txId?: TxId
 	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
 	get: <T extends S["key"]>(

@@ -408,6 +408,55 @@ export function databaseTestSuite(
 			])
 		})
 
+		it("scan prefix gte/lte with schema types", () => {
+			type Schema =
+				| { key: ["a", "a", "a"]; value: 1 }
+				| { key: ["a", "a", "b"]; value: 2 }
+				| { key: ["a", "a", "c"]; value: 3 }
+				| { key: ["a", "b", "a"]; value: 4 }
+				| { key: ["a", "b", "b"]; value: 5 }
+				| { key: ["a", "b", "c"]; value: 6 }
+				| { key: ["a", "b", "d"]; value: 6.5 }
+				| { key: ["a", "c", "a"]; value: 7 }
+				| { key: ["a", "c", "b"]; value: 8 }
+				| { key: ["a", "c", "c"]; value: 9 }
+
+			const store = createStorage<Schema>(randomId())
+
+			const items: Schema[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+			const data = store.scan()
+			assertEqual(data, items)
+
+			const result = store.scan({
+				prefix: ["a", "b"],
+				gte: ["b"],
+				lte: ["d"],
+			})
+
+			assertEqual(result, [
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+			])
+		})
+
 		it("scan gte", () => {
 			const store = createStorage(randomId())
 
@@ -448,6 +497,55 @@ export function databaseTestSuite(
 			const store = createStorage(randomId())
 
 			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+			const data = store.scan()
+			assertEqual(data, items)
+
+			const result = store.scan({
+				gte: ["a", "a", "c"],
+				lte: ["a", "c", MAX],
+			})
+
+			assertEqual(result, [
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("scan gte/lte with schema types", () => {
+			type Schema =
+				| { key: ["a", "a", "a"]; value: 1 }
+				| { key: ["a", "a", "b"]; value: 2 }
+				| { key: ["a", "a", "c"]; value: 3 }
+				| { key: ["a", "b", "a"]; value: 4 }
+				| { key: ["a", "b", "b"]; value: 5 }
+				| { key: ["a", "b", "c"]; value: 6 }
+				| { key: ["a", "c", "a"]; value: 7 }
+				| { key: ["a", "c", "b"]; value: 8 }
+				| { key: ["a", "c", "c"]; value: 9 }
+
+			const store = createStorage<Schema>(randomId())
+
+			const items: Schema[] = [
 				{ key: ["a", "a", "a"], value: 1 },
 				{ key: ["a", "a", "b"], value: 2 },
 				{ key: ["a", "a", "c"], value: 3 },

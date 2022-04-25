@@ -36,8 +36,8 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		public subspacePrefix: Tuple = []
 	) {}
 
-	scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {},
+	scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {},
 		txId?: TxId
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -46,8 +46,8 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	subscribe<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P>,
+	subscribe<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P>,
 		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
 	): Identity<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -75,7 +75,8 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		txId?: TxId
 	): Identity<ValueForTuple<S, T> | undefined> {
 		// Not sure why these types aren't happy
-		const items = this.scan({ gte: tuple, lte: tuple as any }, txId)
+		// @ts-ignore
+		const items = this.scan<T, []>({ gte: tuple, lte: tuple }, txId)
 		if (items.length === 0) return
 		if (items.length > 1) throw new Error("Get expects only one value.")
 		const pair = items[0]
@@ -84,7 +85,8 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 
 	exists<T extends S["key"]>(tuple: T, txId?: TxId): Identity<boolean> {
 		// Not sure why these types aren't happy
-		const items = this.scan({ gte: tuple, lte: tuple as any }, txId)
+		// @ts-ignore
+		const items = this.scan({ gte: tuple, lte: tuple }, txId)
 		if (items.length === 0) return false
 		return items.length >= 1
 	}
@@ -126,8 +128,8 @@ export class TupleTransaction<S extends KeyValuePair>
 		if (this.canceled) throw new Error("Transaction already canceled")
 	}
 
-	scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {}
+	scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
 
@@ -242,8 +244,8 @@ export class TupleTransactionSubspace<S extends KeyValuePair>
 		public subspacePrefix: Tuple
 	) {}
 
-	scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {}
+	scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = this.tx.scan(storageScanArgs)

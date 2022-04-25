@@ -33,8 +33,8 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		public subspacePrefix: Tuple = []
 	) {}
 
-	async scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {},
+	async scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {},
 		txId?: TxId
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -43,8 +43,8 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
-	async subscribe<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P>,
+	async subscribe<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P>,
 		callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
 	): Promise<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
@@ -72,7 +72,8 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		txId?: TxId
 	): Promise<ValueForTuple<S, T> | undefined> {
 		// Not sure why these types aren't happy
-		const items = await this.scan({ gte: tuple, lte: tuple as any }, txId)
+		// @ts-ignore
+		const items = await this.scan<T, []>({ gte: tuple, lte: tuple }, txId)
 		if (items.length === 0) return
 		if (items.length > 1) throw new Error("Get expects only one value.")
 		const pair = items[0]
@@ -81,7 +82,8 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 
 	async exists<T extends S["key"]>(tuple: T, txId?: TxId): Promise<boolean> {
 		// Not sure why these types aren't happy
-		const items = await this.scan({ gte: tuple, lte: tuple as any }, txId)
+		// @ts-ignore
+		const items = await this.scan({ gte: tuple, lte: tuple }, txId)
 		if (items.length === 0) return false
 		return items.length >= 1
 	}
@@ -123,8 +125,8 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 		if (this.canceled) throw new Error("Transaction already canceled")
 	}
 
-	async scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {}
+	async scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {}
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
 
@@ -250,8 +252,8 @@ export class AsyncTupleTransactionSubspace<S extends KeyValuePair>
 		public subspacePrefix: Tuple
 	) {}
 
-	async scan<P extends TuplePrefix<S["key"]>>(
-		args: ScanArgs<P> = {}
+	async scan<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {}
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = await this.tx.scan(storageScanArgs)

@@ -2,7 +2,6 @@
 
 - useTupleDatabase should not rerender after the component unmounts.
 - queue up commits to wait til after previous emits to prevent infinite loop issues. though also warn about it.
-- gt + prefix types are wrong.
 
 
 
