@@ -7,6 +7,7 @@ This file is generated from async/subscribeQueryAsync.ts
 type Identity<T> = T
 
 import { isEmptyWrites } from "../../helpers/isEmptyWrites"
+import { Queue } from "../../helpers/Queue"
 import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { TupleDatabaseClient } from "./TupleDatabaseClient"
@@ -14,32 +15,6 @@ import { TupleDatabaseClientApi } from "./types"
 
 const throwError = () => {
 	throw new Error()
-}
-
-class Queue<T> {
-	private items: T[] = []
-
-	constructor(private dequeue: (item: T) => Identity<void>) {}
-
-	private flushing: Identity<void> | undefined
-
-	private attemptFlush() {
-		if (!this.flushing) this.flushing = this.flush()
-		return this.flushing
-	}
-
-	private flush() {
-		while (this.items.length > 0) {
-			const item = this.items.shift()!
-			this.dequeue(item)
-		}
-		this.flushing = undefined
-	}
-
-	public enqueue(item: T) {
-		this.items.push(item)
-		this.attemptFlush()
-	}
 }
 
 export function subscribeQuery<S extends KeyValuePair, T>(
@@ -57,7 +32,8 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	}
 
 	let lastComputedTxId: string | undefined
-	const recomputeQueue = new Queue<TxId>((txId) => {
+
+	const recompute = (txId: TxId) => {
 		// Skip over duplicate emits.
 		if (txId === lastComputedTxId) return
 
@@ -66,7 +42,9 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 		resetListeners()
 		const result = compute()
 		callback(result)
-	})
+	}
+
+	const recomputeQueue = new Queue()
 
 	// Subscribe for every scan that gets called.
 	const listenDb = new TupleDatabaseClient<S>({
@@ -77,7 +55,7 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 			// 	throw new Error("Not allowed to subscribe transactionally.")
 
 			const destroy = db.subscribe(args, (_writes, txId) =>
-				recomputeQueue.enqueue(txId)
+				recomputeQueue.enqueue(() => recompute(txId))
 			)
 			listeners.add(destroy)
 
