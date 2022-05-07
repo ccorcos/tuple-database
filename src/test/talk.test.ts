@@ -5,12 +5,18 @@ import level from "level"
 import { after, describe, it } from "mocha"
 import { ConcurrencyLog } from "../database/ConcurrencyLog"
 import { ReactivityTracker } from "../database/sync/ReactivityTracker"
+import { Assert, SchemaSubspace } from "../database/typeHelpers"
 import { binarySearch } from "../helpers/binarySearch"
 import { encodeTuple } from "../helpers/codec"
 import { compare } from "../helpers/compare"
 import { compareTuple } from "../helpers/compareTuple"
 import { scan } from "../helpers/sortedTupleArray"
-import { TupleDatabase } from "../main"
+import {
+	AsyncTupleDatabaseClient,
+	transactionalAsyncQuery,
+	TupleDatabase,
+	TupleDatabaseClient,
+} from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
@@ -325,6 +331,117 @@ describe.only("talk", () => {
 
 			log.commit("tx2")
 			assert.throws(() => log.commit("tx1"))
+		})
+	})
+
+	describe("Database client", () => {
+		it("has schema types", () => {
+			type Schema =
+				| { key: ["score", string]; value: number }
+				| { key: ["total"]; value: number }
+
+			const db = new TupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			// Convenient "prefix" argument.
+			const scores = db.scan({ prefix: ["score"] }).map(({ value }) => value)
+			type WellTyped = Assert<typeof scores, number[]>
+		})
+
+		it("has subspaces", () => {
+			type GameSchema =
+				| { key: ["score", string]; value: number }
+				| { key: ["total"]; value: number }
+
+			type Schema =
+				| { key: ["games", string]; value: null }
+				| SchemaSubspace<["game", string], GameSchema>
+
+			const db = new TupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			// Get a list of games.
+			const gameIds = db.scan({ prefix: ["games"] }).map(({ key }) => key[1])
+
+			// Narrow in on a specific game.
+			const gameId: string = "game1"
+			const gameDb = db.subspace(["game", gameId])
+
+			// Get is also a convenience that uses prefix and returns the first value.
+			const total = gameDb.get(["total"])
+			type WellTyped = Assert<typeof total, number | undefined>
+		})
+
+		// Useful for multiple windows, for example.
+		it("works across processes", async () => {
+			const db = new TupleDatabase(new InMemoryTupleStorage())
+
+			const db2 = new AsyncTupleDatabaseClient({
+				scan: async (...args) => db.scan(...args),
+				commit: async (...args) => db.commit(...args),
+				cancel: async (...args) => db.cancel(...args),
+				close: async (...args) => db.close(...args),
+				// Note: this requires a socket, not just RPC.
+				subscribe: async (args, callback) => db.subscribe(args, callback),
+			})
+
+			db.commit({ set: [{ key: ["a"], value: 1 }] })
+			assert.equal(await db2.get(["a"]), 1)
+		})
+
+		it("transaction conveniences", async () => {
+			type Schema =
+				| { key: ["score", string]; value: number }
+				| { key: ["total"]; value: number }
+
+			const db = new AsyncTupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			example1: {
+				const tx = db.transact()
+				tx.set(["score", "chet"], 1)
+				tx.set(["score", "meghan"], 2)
+				tx.set(["total"], 3)
+				await tx.commit()
+			}
+
+			example2: {
+				const tx = db.transact()
+				tx.set(["score", "chet"], 2)
+				tx.set(["total"], 4)
+				// Reading through a transaction will return an updates result.
+				assert.equal(await tx.get(["total"]), 4)
+				tx.cancel()
+			}
+
+			example3: {
+				const updateTotal = transactionalAsyncQuery<Schema>()(async (tx) => {
+					const result = await tx.scan({ prefix: ["score"] })
+					const total = result
+						.map(({ value }) => value)
+						.reduce((a, b) => a + b, 0)
+					tx.set(["total"], total)
+				})
+
+				const setScore = transactionalAsyncQuery<Schema>()(
+					async (tx, person: string, score: number) => {
+						tx.set(["score", person], score)
+						await updateTotal(tx)
+					}
+				)
+
+				await setScore(db, "joe", 15)
+
+				assert.deepEqual(await db.scan(), [
+					{ key: ["score", "chet"], value: 1 },
+					{ key: ["score", "joe"], value: 15 },
+					{ key: ["score", "meghan"], value: 2 },
+					{ key: ["total"], value: 18 },
+				])
+			}
 		})
 	})
 })
