@@ -13,7 +13,11 @@ import { compareTuple } from "../helpers/compareTuple"
 import { scan } from "../helpers/sortedTupleArray"
 import {
 	AsyncTupleDatabaseClient,
+	namedTupleToObject,
+	ReadOnlyTupleDatabaseClientApi,
+	subscribeQuery,
 	transactionalAsyncQuery,
+	transactionalQuery,
 	TupleDatabase,
 	TupleDatabaseClient,
 } from "../main"
@@ -444,4 +448,187 @@ describe.only("talk", () => {
 			}
 		})
 	})
+
+	describe("Example", () => {
+		it("example 1", () => {
+			// many-to-many relationships
+			// indexing queries, across joins
+			// reactivity.
+
+			type Page = { id: string; tags: string[]; content: string }
+			type Tag = { id: string; title: string }
+
+			type Schema =
+				| { key: ["page", { pageId: string }]; value: Page }
+				| { key: ["tag", { tagId: string }]; value: Tag }
+				| {
+						key: ["pagesByTag", { tagId: string }, { pageId: string }]
+						value: null
+				  }
+				| {
+						key: ["tagsByPage", { pageId: string }, { tagId: string }]
+						value: null
+				  }
+				| {
+						key: ["tagsByTitle", { title: string }, { tagId: string }]
+						value: null
+				  }
+
+			const db = new TupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			const indexPage = transactionalQuery<Schema>()((tx, page: Page) => {
+				// Remove existing tags from the index.
+				const pageId = page.id
+				const tagIds = tx
+					.scan({ prefix: ["tagsByPage", { pageId }] })
+					.map(({ key }) => namedTupleToObject(key))
+					.map(({ tagId }) => tagId)
+
+				tagIds.forEach((tagId) => {
+					tx.remove(["pagesByTag", { tagId }, { pageId }])
+					tx.remove(["tagsByPage", { pageId }, { tagId }])
+				})
+
+				// Write new tags.
+				page.tags.forEach((tagId) => {
+					tx.set(["pagesByTag", { tagId }, { pageId }], null)
+					tx.set(["tagsByPage", { pageId }, { tagId }], null)
+				})
+			})
+
+			const writePage = transactionalQuery<Schema>()((tx, page: Page) => {
+				tx.set(["page", { pageId: page.id }], page)
+				indexPage(tx, page)
+			})
+
+			const writeTag = transactionalQuery<Schema>()((tx, tag: Tag) => {
+				const tagId = tag.id
+				const existingTag = tx.get(["tag", { tagId }])
+				if (existingTag && existingTag.title !== tag.title) {
+					tx.remove(["tagsByTitle", { title: existingTag.title }, { tagId }])
+				}
+
+				tx.set(["tag", { tagId }], tag)
+				tx.set(["tagsByTitle", { title: tag.title }, { tagId }], tag)
+			})
+
+			// Write some data.
+			writeTag(db, { id: "tag1", title: "Journal" })
+			writeTag(db, { id: "tag2", title: "Work" })
+			writePage(db, { id: "page1", content: "hello", tags: ["tag1", "tag2"] })
+			writePage(db, { id: "page2", content: "world", tags: ["tag1"] })
+
+			// Lets get all pages for a given tag.
+			const pageIds = db
+				.scan({ prefix: ["pagesByTag", { tagId: "tag1" }] })
+				.map(({ key }) => namedTupleToObject(key))
+				.map(({ pageId }) => pageId)
+
+			assert.deepEqual(pageIds, ["page1", "page2"])
+
+			const unsubscribe = db.subscribe(
+				{ prefix: ["pagesByTag", { tagId: "tag1" }] },
+				(writes) => {
+					// Reactivity just like before
+				}
+			)
+			after(unsubscribe)
+
+			// Now suppose you really don't want to write all these indexes yourself.
+			// You can still get reactivity...
+			const getPagesByTagTitle = (
+				db: ReadOnlyTupleDatabaseClientApi<Schema>,
+				title: string
+			) => {
+				const tagIds = db
+					.scan({ prefix: ["tagsByTitle", { title }] })
+					.map(({ key }) => namedTupleToObject(key))
+					.map(({ tagId }) => tagId)
+
+				const pageIds = tagIds
+					.map((tagId) => {
+						return db
+							.scan({ prefix: ["pagesByTag", { tagId }] })
+							.map(({ key }) => namedTupleToObject(key))
+							.map(({ pageId }) => pageId)
+					})
+					.reduce((a, b) => [...a, ...b], [])
+
+				return pageIds
+			}
+
+			const { result, destroy } = subscribeQuery(
+				db,
+				(db) => getPagesByTagTitle(db, "Journal"),
+				(pageIds) => {
+					// Updated pageIds
+				}
+			)
+			after(destroy)
+			assert.deepEqual(result, ["page1", "page2"])
+		})
+
+		it("example 2", () => {
+			type Schema =
+				| { key: ["objects", { id: string }]; value: any }
+				| {
+						key: [
+							"objectByProperty",
+							{ property: string },
+							{ value: any },
+							{ id: string }
+						]
+						value: null
+				  }
+
+			const db = new TupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			const removeObject = transactionalQuery<Schema>()((tx, id: string) => {
+				const obj = tx.get(["objects", { id }])
+				if (!obj) return
+
+				tx.remove(["objects", { id }])
+
+				for (const [property, value] of Object.entries(obj)) {
+					if (property === "id") continue
+					tx.remove(["objectByProperty", { property }, { value }, { id }])
+				}
+			})
+
+			const writeObject = transactionalQuery<Schema>()((tx, obj: any) => {
+				removeObject(tx, obj.id)
+
+				const id = obj.id
+				tx.set(["objects", { id }], obj)
+
+				for (const [property, value] of Object.entries(obj)) {
+					if (property === "id") continue
+					tx.set(["objectByProperty", { property }, { value }, { id }], null)
+				}
+			})
+
+			writeObject(db, { id: "1", name: "Chet", age: 31 })
+			writeObject(db, { id: "2", name: "Joe", age: 29 })
+			writeObject(db, { id: "3", name: "Ana", age: 29 })
+
+			const objIdsWithAge29 = db
+				.scan({
+					prefix: ["objectByProperty", { property: "age" }, { value: 29 }],
+				})
+				.map(({ key }) => namedTupleToObject(key))
+				.map(({ id }) => id)
+
+			assert.deepEqual(objIdsWithAge29, ["2", "3"])
+
+			// Could even have:
+			// | {key: ["query", {id: string}], value: Query}
+			// | {key: ["queryIndex", {queryId: string}, {objId: string}], value: null}
+		})
+	})
+
+	// Last example => triplestore.test.ts
 })
