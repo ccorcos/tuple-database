@@ -20,7 +20,7 @@ import { TxId } from "../types"
 import { Callback } from "./types"
 
 export class ReactivityTracker {
-	private listenersDb = new InMemoryTupleStorage()
+	listenersDb = new InMemoryTupleStorage()
 
 	subscribe(args: ScanStorageArgs, callback: Callback) {
 		return subscribe(this.listenersDb, args, callback)
