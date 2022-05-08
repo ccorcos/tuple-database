@@ -14,19 +14,30 @@ import { scan } from "../helpers/sortedTupleArray"
 import {
 	AsyncTupleDatabaseClient,
 	namedTupleToObject,
-	ReadOnlyTupleDatabaseClientApi,
-	subscribeQuery,
 	transactionalAsyncQuery,
 	transactionalQuery,
 	TupleDatabase,
 	TupleDatabaseClient,
+	TupleDatabaseClientApi,
 } from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
-import { MAX, Writes } from "../storage/types"
+import { MAX, MIN, Writes } from "../storage/types"
 
 describe.only("talk", () => {
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 	describe("tuple sorting", () => {
 		const items = [
 			["jonathan", "smith"],
@@ -43,7 +54,7 @@ describe.only("talk", () => {
 			])
 		})
 
-		it("doesn't concat the elements", () => {
+		it("doesn't simply concat the elements", () => {
 			const joined = [...items].map((tuple) => tuple.join(""))
 			joined.sort(compare)
 
@@ -53,6 +64,26 @@ describe.only("talk", () => {
 				"jonsmith",
 			])
 		})
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 
 		it("can be encoded into bytes while preserving order", () => {
 			const encoded = items.map((tuple) => tuple.join("\x00"))
@@ -64,6 +95,34 @@ describe.only("talk", () => {
 			])
 		})
 
+		// A take-home exercise.
+		it.skip("escape \x00 bytes in elements while maintaining order")
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+
 		it("numbers can't just be stringified", () => {
 			const encoded = [1, 2, 11, 12, 100].map((n) => n.toString())
 			encoded.sort(compare)
@@ -74,38 +133,43 @@ describe.only("talk", () => {
 			const encoded = [[1], ["hello", "world"], [true]].map(encodeTuple)
 			encoded.sort(compare)
 
-			// numbers > arrays > boolean
+			// numbers < arrays < boolean
 			assert.deepEqual(encoded, [
 				"e>;;410230\x00",
 				"fhello\x00fworld\x00",
 				"gtrue\x00",
 			])
 		})
-
-		// A take-home exercise.
-		it.skip("properly escapes \x00 bytes")
 	})
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 	describe("binary search", () => {
 		const items = [0, 1, 2, 3, 4, 5]
-		it("find before", () => {
-			const result = binarySearch(items, -1, compare)
-			assert.deepEqual(result, { closest: 0 })
 
-			// insert
-			const newItems = [...items]
-			newItems.splice(result.closest, 0, -1)
-			assert.deepEqual(newItems, [-1, 0, 1, 2, 3, 4, 5])
-		})
-		it("find after", () => {
-			const result = binarySearch(items, 10, compare)
-			assert.deepEqual(result, { closest: 6 })
-
-			// insert
-			const newItems = [...items]
-			newItems.splice(result.closest, 0, 10)
-			assert.deepEqual(newItems, [0, 1, 2, 3, 4, 5, 10])
-		})
 		it("find middle", () => {
 			const result = binarySearch(items, 1.5, compare)
 			assert.deepEqual(result, { closest: 2 })
@@ -115,6 +179,7 @@ describe.only("talk", () => {
 			newItems.splice(result.closest, 0, 1.5)
 			assert.deepEqual(newItems, [0, 1, 1.5, 2, 3, 4, 5])
 		})
+
 		it("find exact", () => {
 			const result = binarySearch(items, 5, compare)
 			assert.deepEqual(result, { found: 5 })
@@ -126,25 +191,88 @@ describe.only("talk", () => {
 		})
 	})
 
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
 	describe("scan", () => {
 		const items = [
 			["chet", "corcos"],
 			["charlotte", "whitney"],
-			["joe", "stevens"],
+			// ["j"]
+			// ["jon", MIN]
 			["jon", "smith"],
+			["jon", "stevens"],
+			// ["jon", MAX]
 			["jonathan", "smith"],
+			// ["k"]
 			["zoe", "brown"],
 		].sort(compareTuple)
 
 		it("works", () => {
 			const result = scan(items, { gte: ["j"], lt: ["k"] })
 			assert.deepEqual(result, [
-				["joe", "stevens"],
 				["jon", "smith"],
+				["jon", "stevens"],
 				["jonathan", "smith"],
 			])
 		})
+
+		it("scan prefix", () => {
+			const result = scan(items, { gt: ["jon", MIN], lt: ["jon", MAX] })
+			assert.deepEqual(result, [
+				["jon", "smith"],
+				["jon", "stevens"],
+			])
+		})
 	})
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 	describe("tuple-value pairs", () => {
 		const pairs: { key: string[]; value?: number }[] = [
@@ -161,8 +289,39 @@ describe.only("talk", () => {
 		})
 	})
 
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
 	describe("TupleStorageApi", () => {
-		it("works", () => {
+		it("InMemory Storage", () => {
 			const storage = new InMemoryTupleStorage()
 
 			storage.commit({
@@ -181,27 +340,39 @@ describe.only("talk", () => {
 			])
 		})
 
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+
 		fs.mkdirpSync(__dirname + "/../tmp")
-
-		it("SQLite Storage", () => {
-			const filePath = __dirname + "/../tmp/sqlite.db"
-			const storage = new SQLiteTupleStorage(sqlite(filePath))
-
-			storage.commit({
-				set: [
-					{ key: ["chet", "corcos"], value: 0 },
-					{ key: ["jon", "smith"], value: 2 },
-					{ key: ["jonathan", "smith"], value: 1 },
-				],
-			})
-
-			const result = storage.scan({ gte: ["j"], lt: ["k"] })
-
-			assert.deepEqual(result, [
-				{ key: ["jon", "smith"], value: 2 },
-				{ key: ["jonathan", "smith"], value: 1 },
-			])
-		})
 
 		it("LevelDb Storage", async () => {
 			const filePath = __dirname + "/../tmp/level.db"
@@ -224,13 +395,89 @@ describe.only("talk", () => {
 		})
 	})
 
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
+	it("SQLite Storage", () => {
+		const filePath = __dirname + "/../tmp/sqlite.db"
+		const storage = new SQLiteTupleStorage(sqlite(filePath))
+
+		storage.commit({
+			set: [
+				{ key: ["chet", "corcos"], value: 0 },
+				{ key: ["jon", "smith"], value: 2 },
+				{ key: ["jonathan", "smith"], value: 1 },
+			],
+		})
+
+		const result = storage.scan({ gte: ["j"], lt: ["k"] })
+
+		assert.deepEqual(result, [
+			{ key: ["jon", "smith"], value: 2 },
+			{ key: ["jonathan", "smith"], value: 1 },
+		])
+	})
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
 	describe("TupleDatabase", () => {
 		it("reactivity", () => {
 			const db = new TupleDatabase(new InMemoryTupleStorage())
 
 			let writes: Writes | undefined
 			const unsubscribe = db.subscribe(
-				{ gt: ["score"], lte: ["score", MAX] },
+				{ gt: ["score"], lt: ["score", MAX] },
 				(w) => {
 					writes = w
 				}
@@ -244,35 +491,29 @@ describe.only("talk", () => {
 			})
 		})
 
-		it("transactional", () => {
-			const db = new TupleDatabase(new InMemoryTupleStorage())
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 
-			db.commit({
-				set: [
-					{ key: ["score", "chet"], value: 2 },
-					{ key: ["score", "meghan"], value: 1 },
-				],
-			})
-
-			const chet = "tx1"
-			const meghan = "tx2"
-
-			// Meghan reads all the scores
-			const items = db.scan({ gt: ["score"], lte: ["score", MAX] }, meghan)
-			const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
-
-			// Chet writes a new score
-			db.commit({ set: [{ key: ["score", "chet"], value: 5 }] }, chet)
-
-			// Meghan writes the total
-			assert.throws(() => {
-				db.commit({ set: [{ key: ["total"], value: total }] }, meghan)
-			})
-		})
-	})
-
-	describe("Reactivity", () => {
-		it("works", () => {
+		it("ReactivityTracker", () => {
 			const reactivity = new ReactivityTracker()
 
 			const unsubscribe = reactivity.subscribe(
@@ -303,15 +544,80 @@ describe.only("talk", () => {
 			// 	 [(writes) => {}] => { set: [ { key: ["score", "chet"], value: 10 } ] }
 			// }
 		})
-	})
 
-	describe("Concurrency control", () => {
-		it("Only records writes with conflicting reads.", () => {
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+
+		it("transactional", () => {
+			const db = new TupleDatabase(new InMemoryTupleStorage())
+
+			db.commit({
+				set: [
+					{ key: ["score", "chet"], value: 2 },
+					{ key: ["score", "meghan"], value: 1 },
+				],
+			})
+
+			const chet = "tx1"
+			const meghan = "tx2"
+
+			// Meghan reads all the scores
+			const items = db.scan({ gt: ["score"], lte: ["score", MAX] }, meghan)
+			const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
+
+			// Chet writes a new score
+			db.commit({ set: [{ key: ["score", "chet"], value: 5 }] }, chet)
+
+			// Meghan writes the total
+			assert.throws(() => {
+				db.commit({ set: [{ key: ["total"], value: total }] }, meghan)
+			})
+		})
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+
+		it("ConcurrencyLog.", () => {
 			const log = new ConcurrencyLog()
 
 			// Someone reads all the scores and updates the total
 			log.read("tx1", { gt: ["score"], lte: ["score", MAX] })
-			log.write("tx1", ["total"])
 
 			// At the same time, someone writes a score.
 			log.write("tx2", ["score", "chet"])
@@ -333,10 +639,32 @@ describe.only("talk", () => {
 				},
 			])
 
+			// Check for conflicts.
 			log.commit("tx2")
 			assert.throws(() => log.commit("tx1"))
 		})
 	})
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 	describe("Database client", () => {
 		it("has schema types", () => {
@@ -348,15 +676,61 @@ describe.only("talk", () => {
 				new TupleDatabase(new InMemoryTupleStorage())
 			)
 
+			db.commit({
+				set: [
+					{ key: ["score", "chet"], value: 1 },
+					{ key: ["score", "meghan"], value: 2 },
+					{ key: ["total"], value: 3 },
+				],
+			})
+
 			// Convenient "prefix" argument.
-			const scores = db.scan({ prefix: ["score"] }).map(({ value }) => value)
-			type WellTyped = Assert<typeof scores, number[]>
+			const scores = db.scan({ prefix: ["score"] })
+
+			type WellTyped = Assert<
+				typeof scores,
+				{ key: ["score", string]; value: number }[]
+			>
 		})
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 
 		it("has subspaces", () => {
 			type GameSchema =
 				| { key: ["score", string]; value: number }
 				| { key: ["total"]; value: number }
+
+			function computeTotalScore(db: TupleDatabaseClientApi<GameSchema>) {
+				return db
+					.scan({ prefix: ["score"] })
+					.map(({ value }) => value)
+					.reduce((a, b) => a + b, 0)
+			}
 
 			type Schema =
 				| { key: ["games", string]; value: null }
@@ -366,17 +740,38 @@ describe.only("talk", () => {
 				new TupleDatabase(new InMemoryTupleStorage())
 			)
 
-			// Get a list of games.
-			const gameIds = db.scan({ prefix: ["games"] }).map(({ key }) => key[1])
-
 			// Narrow in on a specific game.
 			const gameId: string = "game1"
 			const gameDb = db.subspace(["game", gameId])
-
-			// Get is also a convenience that uses prefix and returns the first value.
-			const total = gameDb.get(["total"])
-			type WellTyped = Assert<typeof total, number | undefined>
+			const total = computeTotalScore(gameDb)
 		})
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 
 		// Useful for multiple windows, for example.
 		it("works across processes", async () => {
@@ -394,6 +789,33 @@ describe.only("talk", () => {
 			db.commit({ set: [{ key: ["a"], value: 1 }] })
 			assert.equal(await db2.get(["a"]), 1)
 		})
+
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 
 		it("transaction conveniences", async () => {
 			type Schema =
@@ -449,186 +871,361 @@ describe.only("talk", () => {
 		})
 	})
 
-	describe("Example", () => {
-		it("example 1", () => {
-			// many-to-many relationships
-			// indexing queries, across joins
-			// reactivity.
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
-			type Page = { id: string; tags: string[]; content: string }
-			type Tag = { id: string; title: string }
+	describe("Examples", () => {
+		it("Social App", () => {
+			type Person = { username: string; bio: string }
 
-			type Schema =
-				| { key: ["page", { pageId: string }]; value: Page }
-				| { key: ["tag", { tagId: string }]; value: Tag }
-				| {
-						key: ["pagesByTag", { tagId: string }, { pageId: string }]
-						value: null
-				  }
-				| {
-						key: ["tagsByPage", { pageId: string }, { tagId: string }]
-						value: null
-				  }
-				| {
-						key: ["tagsByTitle", { title: string }, { tagId: string }]
-						value: null
-				  }
-
-			const db = new TupleDatabaseClient<Schema>(
-				new TupleDatabase(new InMemoryTupleStorage())
-			)
-
-			const indexPage = transactionalQuery<Schema>()((tx, page: Page) => {
-				// Remove existing tags from the index.
-				const pageId = page.id
-				const tagIds = tx
-					.scan({ prefix: ["tagsByPage", { pageId }] })
-					.map(({ key }) => namedTupleToObject(key))
-					.map(({ tagId }) => tagId)
-
-				tagIds.forEach((tagId) => {
-					tx.remove(["pagesByTag", { tagId }, { pageId }])
-					tx.remove(["tagsByPage", { pageId }, { tagId }])
-				})
-
-				// Write new tags.
-				page.tags.forEach((tagId) => {
-					tx.set(["pagesByTag", { tagId }, { pageId }], null)
-					tx.set(["tagsByPage", { pageId }, { tagId }], null)
-				})
-			})
-
-			const writePage = transactionalQuery<Schema>()((tx, page: Page) => {
-				tx.set(["page", { pageId: page.id }], page)
-				indexPage(tx, page)
-			})
-
-			const writeTag = transactionalQuery<Schema>()((tx, tag: Tag) => {
-				const tagId = tag.id
-				const existingTag = tx.get(["tag", { tagId }])
-				if (existingTag && existingTag.title !== tag.title) {
-					tx.remove(["tagsByTitle", { title: existingTag.title }, { tagId }])
-				}
-
-				tx.set(["tag", { tagId }], tag)
-				tx.set(["tagsByTitle", { title: tag.title }, { tagId }], tag)
-			})
-
-			// Write some data.
-			writeTag(db, { id: "tag1", title: "Journal" })
-			writeTag(db, { id: "tag2", title: "Work" })
-			writePage(db, { id: "page1", content: "hello", tags: ["tag1", "tag2"] })
-			writePage(db, { id: "page2", content: "world", tags: ["tag1"] })
-
-			// Lets get all pages for a given tag.
-			const pageIds = db
-				.scan({ prefix: ["pagesByTag", { tagId: "tag1" }] })
-				.map(({ key }) => namedTupleToObject(key))
-				.map(({ pageId }) => pageId)
-
-			assert.deepEqual(pageIds, ["page1", "page2"])
-
-			const unsubscribe = db.subscribe(
-				{ prefix: ["pagesByTag", { tagId: "tag1" }] },
-				(writes) => {
-					// Reactivity just like before
-				}
-			)
-			after(unsubscribe)
-
-			// Now suppose you really don't want to write all these indexes yourself.
-			// You can still get reactivity...
-			const getPagesByTagTitle = (
-				db: ReadOnlyTupleDatabaseClientApi<Schema>,
-				title: string
-			) => {
-				const tagIds = db
-					.scan({ prefix: ["tagsByTitle", { title }] })
-					.map(({ key }) => namedTupleToObject(key))
-					.map(({ tagId }) => tagId)
-
-				const pageIds = tagIds
-					.map((tagId) => {
-						return db
-							.scan({ prefix: ["pagesByTag", { tagId }] })
-							.map(({ key }) => namedTupleToObject(key))
-							.map(({ pageId }) => pageId)
-					})
-					.reduce((a, b) => [...a, ...b], [])
-
-				return pageIds
+			type Post = {
+				id: string
+				username: string
+				timestamp: number
+				text: string
 			}
 
-			const { result, destroy } = subscribeQuery(
-				db,
-				(db) => getPagesByTagTitle(db, "Journal"),
-				(pageIds) => {
-					// Updated pageIds
-				}
-			)
-			after(destroy)
-			assert.deepEqual(result, ["page1", "page2"])
-		})
-
-		it("example 2", () => {
 			type Schema =
-				| { key: ["objects", { id: string }]; value: any }
+				| { key: ["person", { username: string }]; value: Person }
+				| { key: ["post", { id: string }]; value: Post }
+				| {
+						key: ["follows", { from: string }, { to: string }]
+						value: null
+				  }
+				| {
+						key: ["following", { to: string }, { from: string }]
+						value: null
+				  }
 				| {
 						key: [
-							"objectByProperty",
-							{ property: string },
-							{ value: any },
-							{ id: string }
+							"profile",
+							{ username: string },
+							{ timestamp: number },
+							{ postId: string }
+						]
+						value: null
+				  }
+				| {
+						key: [
+							"feed",
+							{ username: string },
+							{ timestamp: number },
+							{ postId: string }
 						]
 						value: null
 				  }
 
+			const addFollow = transactionalQuery<Schema>()(
+				(tx, from: string, to: string) => {
+					// Setup the follow relationships.
+					tx.set(["follows", { from }, { to }], null)
+					tx.set(["following", { to }, { from }], null)
+
+					// Get the followed user's posts.
+					tx.scan({ prefix: ["profile", { username: to }] })
+						.map(({ key }) => namedTupleToObject(key))
+						.forEach(({ timestamp, postId }) => {
+							// Write those posts to the user's feed.
+							tx.set(
+								["feed", { username: from }, { timestamp }, { postId }],
+								null
+							)
+						})
+				}
+			)
+
+			const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
+				tx.set(["post", { id: post.id }], post)
+
+				// Add to the user's profile
+				const { username, timestamp } = post
+				tx.set(
+					["profile", { username }, { timestamp }, { postId: post.id }],
+					null
+				)
+
+				// Find everyone who follows this username.
+				const followers = tx
+					.scan({ prefix: ["following", { to: username }] })
+					.map(({ key }) => namedTupleToObject(key))
+					.map(({ from }) => from)
+
+				// Write to their feed.
+				followers.forEach((username) => {
+					tx.set(
+						["feed", { username }, { timestamp }, { postId: post.id }],
+						null
+					)
+				})
+			})
+
+			const createPerson = transactionalQuery<Schema>()(
+				(tx, person: Person) => {
+					tx.set(["person", { username: person.username }], person)
+				}
+			)
+
+			// Lets try it out.
 			const db = new TupleDatabaseClient<Schema>(
 				new TupleDatabase(new InMemoryTupleStorage())
 			)
 
-			const removeObject = transactionalQuery<Schema>()((tx, id: string) => {
-				const obj = tx.get(["objects", { id }])
-				if (!obj) return
+			createPerson(db, { username: "chet", bio: "I like to build things." })
+			createPerson(db, { username: "elon", bio: "Let's go to mars." })
+			createPerson(db, { username: "meghan", bio: "" })
 
-				tx.remove(["objects", { id }])
-
-				for (const [property, value] of Object.entries(obj)) {
-					if (property === "id") continue
-					tx.remove(["objectByProperty", { property }, { value }, { id }])
-				}
+			// Chet makes a post.
+			createPost(db, {
+				id: "post1",
+				username: "chet",
+				timestamp: 1,
+				text: "post1",
+			})
+			createPost(db, {
+				id: "post2",
+				username: "meghan",
+				timestamp: 2,
+				text: "post2",
 			})
 
-			const writeObject = transactionalQuery<Schema>()((tx, obj: any) => {
-				removeObject(tx, obj.id)
+			// When meghan follows chet, the post should appear in her feed.
+			addFollow(db, "meghan", "chet")
 
-				const id = obj.id
-				tx.set(["objects", { id }], obj)
+			const feed = db.scan({ prefix: ["feed", { username: "meghan" }] })
+			assert.equal(feed.length, 1)
 
-				for (const [property, value] of Object.entries(obj)) {
-					if (property === "id") continue
-					tx.set(["objectByProperty", { property }, { value }, { id }], null)
-				}
+			// When chet makes another post, it should show up in meghan's feed.
+			createPost(db, {
+				id: "post3",
+				username: "chet",
+				timestamp: 3,
+				text: "post3",
 			})
 
-			writeObject(db, { id: "1", name: "Chet", age: 31 })
-			writeObject(db, { id: "2", name: "Joe", age: 29 })
-			writeObject(db, { id: "3", name: "Ana", age: 29 })
+			const feed2 = db.scan({ prefix: ["feed", { username: "meghan" }] })
+			assert.equal(feed2.length, 2)
+		})
 
-			const objIdsWithAge29 = db
-				.scan({
-					prefix: ["objectByProperty", { property: "age" }, { value: 29 }],
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+
+		it("End-user Database", () => {
+			type Value = string | number | boolean
+			type Fact = [string, string, Value]
+
+			type Obj = { id: string; [key: string]: Value | Value[] }
+
+			function objectToFacts(obj: Obj) {
+				const facts: Fact[] = []
+				const { id, ...rest } = obj
+				for (const [key, value] of Object.entries(rest)) {
+					if (Array.isArray(value)) {
+						for (const item of value) {
+							facts.push([id, key, item])
+						}
+					} else {
+						facts.push([id, key, value])
+					}
+				}
+				facts.sort(compareTuple)
+				return facts
+			}
+
+			// Represent objects that we're typically used to as triples.
+			assert.deepEqual(
+				objectToFacts({
+					id: "1",
+					name: "Chet",
+					age: 31,
+					tags: ["engineer", "musician"],
+				}),
+				[
+					["1", "age", 31],
+					["1", "name", "Chet"],
+					["1", "tags", "engineer"],
+					["1", "tags", "musician"],
+				]
+			)
+
+			// A user-defined query.
+			type Filter = { id: string; [prop: string]: Value }
+
+			type Schema =
+				// Index for fetching and displaying objects.
+				| { key: ["eav", ...Fact]; value: null }
+				// Index for looking up objects by property-value
+				| { key: ["ave", string, Value, string]; value: null }
+				// A list of user-defined filters.
+				| { key: ["filter", string]; value: Filter }
+				// And index for the given filter.
+				| { key: ["index", string, string]; value: null }
+
+			const writeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
+				const [e, a, v] = fact
+				tx.set(["eav", e, a, v], null)
+				tx.set(["ave", a, v, e], null)
+
+				// For each user-defined filter.
+				const filters = tx
+					.scan({ prefix: ["filter"] })
+					.map(({ value }) => value)
+
+				// Add this object id to the index if it passes the filter.
+				filters.forEach((filter) => {
+					// If this fact breaks a filter, then remove it.
+					if (filter[a] !== v) {
+						tx.remove(["index", filter.id, e])
+						return
+					}
+
+					// Make sure the whole filter passes.
+					for (const [key, value] of Object.entries(filter)) {
+						if (key === "id") continue
+						if (key === a) continue // already checked this.
+						if (!tx.exists(["eav", e, key, value])) return
+					}
+
+					// Add to the index for this filter.
+					tx.set(["index", filter.id, e], null)
 				})
-				.map(({ key }) => namedTupleToObject(key))
-				.map(({ id }) => id)
+			})
 
-			assert.deepEqual(objIdsWithAge29, ["2", "3"])
+			const writeObject = transactionalQuery<Schema>()((tx, obj: Obj) => {
+				for (const fact of objectToFacts(obj)) {
+					writeFact(tx, fact)
+				}
+			})
 
-			// Could even have:
-			// | {key: ["query", {id: string}], value: Query}
-			// | {key: ["queryIndex", {queryId: string}, {objId: string}], value: null}
+			const createFilter = transactionalQuery<Schema>()(
+				(tx, filter: Filter) => {
+					tx.set(["filter", filter.id], filter)
+
+					// Find objects that pass the filter.
+					const pairs = Object.entries(filter).filter(([key]) => key !== "id")
+					const [first, ...rest] = pairs
+
+					const ids = tx
+						// Find the objects that pass the first propery-value
+						.scan({ prefix: ["ave", ...first] })
+						.map(({ key }) => key[3])
+						// Make sure that it passes the rest of the filter too.
+						.filter((id) => {
+							for (const [key, value] of rest) {
+								if (!tx.exists(["eav", id, key, value])) return false
+							}
+							return true
+						})
+
+					// Write those ids to the index.
+					ids.forEach((id) => {
+						tx.set(["index", filter.id, id], null)
+					})
+				}
+			)
+
+			// Lets try it out.
+			const db = new TupleDatabaseClient<Schema>(
+				new TupleDatabase(new InMemoryTupleStorage())
+			)
+
+			writeObject(db, {
+				id: "person1",
+				name: "Chet",
+				age: 31,
+				tags: ["engineer", "musician"],
+			})
+
+			writeObject(db, {
+				id: "person2",
+				name: "Meghan",
+				age: 30,
+				tags: ["engineer", "botanist"],
+			})
+
+			writeObject(db, {
+				id: "person3",
+				name: "Saul",
+				age: 31,
+				tags: ["musician"],
+			})
+
+			createFilter(db, {
+				id: "filter1",
+				tags: "engineer",
+			})
+
+			const engineers = db
+				.scan({ prefix: ["index", "filter1" as string] })
+				.map(({ key }) => key[2])
+
+			assert.deepEqual(engineers, ["person1", "person2"])
+
+			createFilter(db, {
+				id: "filter2",
+				tags: "musician",
+				age: 31,
+			})
+
+			writeObject(db, {
+				id: "person4",
+				name: "Sean",
+				age: 31,
+				tags: ["musician", "botanist"],
+			})
+
+			const musicians = db
+				.scan({ prefix: ["index", "filter2" as string] })
+				.map(({ key }) => key[2])
+
+			assert.deepEqual(musicians, ["person1", "person3", "person4"])
 		})
 	})
-
-	// Last example => triplestore.test.ts
 })
