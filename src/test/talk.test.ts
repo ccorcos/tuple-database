@@ -900,7 +900,7 @@ describe.only("talk", () => {
 
 	describe("Examples", () => {
 		it("Social App", () => {
-			type Person = { username: string; bio: string }
+			type User = { username: string; bio: string }
 
 			type Post = {
 				id: string
@@ -910,7 +910,7 @@ describe.only("talk", () => {
 			}
 
 			type Schema =
-				| { key: ["person", { username: string }]; value: Person }
+				| { key: ["user", { username: string }]; value: User }
 				| { key: ["post", { id: string }]; value: Post }
 				| {
 						key: ["follows", { from: string }, { to: string }]
@@ -983,20 +983,18 @@ describe.only("talk", () => {
 				})
 			})
 
-			const createPerson = transactionalQuery<Schema>()(
-				(tx, person: Person) => {
-					tx.set(["person", { username: person.username }], person)
-				}
-			)
+			const createUser = transactionalQuery<Schema>()((tx, user: User) => {
+				tx.set(["user", { username: user.username }], user)
+			})
 
 			// Lets try it out.
 			const db = new TupleDatabaseClient<Schema>(
 				new TupleDatabase(new InMemoryTupleStorage())
 			)
 
-			createPerson(db, { username: "chet", bio: "I like to build things." })
-			createPerson(db, { username: "elon", bio: "Let's go to mars." })
-			createPerson(db, { username: "meghan", bio: "" })
+			createUser(db, { username: "chet", bio: "I like to build things." })
+			createUser(db, { username: "elon", bio: "Let's go to mars." })
+			createUser(db, { username: "meghan", bio: "" })
 
 			// Chet makes a post.
 			createPost(db, {
@@ -1120,6 +1118,10 @@ describe.only("talk", () => {
 
 				// Add this object id to the index if it passes the filter.
 				filters.forEach((filter) => {
+					if (!(a in filter)) {
+						return
+					}
+
 					// If this fact breaks a filter, then remove it.
 					if (filter[a] !== v) {
 						tx.remove(["index", filter.id, e])
@@ -1228,4 +1230,6 @@ describe.only("talk", () => {
 			assert.deepEqual(musicians, ["person1", "person3", "person4"])
 		})
 	})
+
+	// Example 3: Game Counter.
 })
