@@ -1,4 +1,42 @@
 
+Rethink:
+
+Write this all in the getting started Readme.
+
+### What are my unique set of requirements.
+
+- Local-first: embedded. single tenant.
+- Reactive queries.
+- Schemaless. (end-user database)
+- Arbitrary indexes - transaction composition.
+- Many-to-many relationships.
+- Run in-memory sync for UI state management.
+
+### What do I want you to learn?
+
+- This is database stores ordered tuples. Heavily inspired by FoundationDb.
+- There's a type schema in TypeScript.
+- You can define mutations in this transaction thing.
+- You can use this abstraction for simple things, like a game score counter.
+- Or complex things like an end user database. Or a social app.
+
+
+Benefits over others...
+- transactional composition
+- reactivity
+- typescript types /schemas
+- subspace composition.
+
+### How does it work?
+
+This is the video! How
+
+
+"Talks are most engaging when working backwards from the problem"
+
+
+
+
 # Part 1
 
 Hello,
@@ -30,7 +68,7 @@ I was the first engineering hire at Notion,
 and while building Notion, I learned a lot about databases,
 and learned a lot about what I want from a database.
 
-
+<!--
 
 Two of my interests that were driving my work at Notion:
 were end-user computing
@@ -50,7 +88,7 @@ Or collaborate on some creative artifact like an engineering drawing.
 From a technical standpoint, its' important to recognize
 that personal software doesn't require the inherent centralization
 or large multi-tenant database that is necessary for YouTube or a bank.
-
+ -->
 
 
 I have since moved on from Notion, and I've picked up a few more interests.
