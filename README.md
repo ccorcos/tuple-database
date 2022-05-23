@@ -1,7 +1,5 @@
 # Tuple Database
 
-For more information about what makes this database unique, see [Motivation](#Motivation).
-
 - Embedded database, designed for [Local-First Software](https://www.inkandswitch.com/local-first/).
 - All queries are reactive.
 - Schemaless -- schemas are enforced by the application, not the database.
@@ -9,6 +7,15 @@ For more information about what makes this database unique, see [Motivation](#Mo
 - Directly read/write indexes including the ability to index graph/relational queries.
 - Works with synchronous and asynchronous storage including SQLite or LevelDb.
 - Suitable for frontend state management using in-memory synchronous storage.
+
+**Table of Contents**
+- [Quick Start](#Quick-Start).
+- [Motivation](#Motivation).
+- [Background](#Background).
+- [Example 1: A Social App](#Example-1-A-Social-App)
+- [Example 2: Dynamic Properties and Dynamic Indexing](#Example-2-Dynamic-Properties-and-Dynamic-Indexing)
+- [Documentation](#Documentation).
+- [Comparison with FoundationDb](#Comparison-with-FoundationDb)
 
 # Quick Start
 
@@ -652,34 +659,17 @@ There are **three layers** to this database that you need to compose together.
 	const client = new AsyncTupleDatabaseClient(db)
 	```
 
-## Schema
+**This documentation is incomplete.** Please read through the background and other examples above.
 
-A schema is just a union type that must extend `{key: any[], value: any}`.
-
-You can pass the schema as a generic type argument when constructing a TupleDa
-
-
-
-
-## Helpers
-
-It is conenient to have "labeled" indexes so that we don't have to work with tuple indexes and ambigious types. For example:
-
-```ts
-type Schema =
-	| {key: ["person", {id: string}], value: Person}
-	| {key: ["personByName", {name: string}, {id: string}], value: Person}
-	| {key: ["personByAge", {age: number}, {id: string}], value: Person}
-```
-
-Note that this will still sort the same as those objects get encoded as ordered dictionaries.
-
-And how we have some nice convenent functions:
-
-```ts
-const result = db.scan({prefix: ["personByName"]}).map(({key}) => namedTupleToObect(key))
-// typeof result === {name: string, id: string}[]
-```
+Documentation TODOs:
+- `client.scan`
+- `client.get`
+- `client.exists`
+- `client.transact`
+- `client.subspace`
+- `transactionalQuery`
+- `subscribeQuery`
+- `useTupleDatabase`
 
 # Comparison with FoundationDb
 
@@ -707,3 +697,21 @@ AsyncTupleDatabase(SQLiteTupleStorage)):readRemoveWrite 9325.776041984558
 AsyncTupleDatabase(LevelTupleStorage)):initialize 61.02045822143555
 AsyncTupleDatabase(LevelTupleStorage)):readRemoveWrite 2224.8067083358765
 ```
+
+## How does Reactivity Work?
+
+TODO:
+- Spatial query
+- Segment tree
+- Interval tree
+- Range tree
+- Z-curve
+- Binary space partitioning
+- Calendar example
+
+## How does Concurreny Control work?
+
+TODO:
+- ConcurrencyLog
+- Read/write conflicts
+- Retries with transactionalQuery
