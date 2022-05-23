@@ -1,14 +1,14 @@
 # Tuple Database
 
-Some features of this database:
+For more information, see [Motivation](#Motivation).
 
-- ordered key-value store with JSON tuples as keys.
-- reactivity for all queries.
-- transactional reads and writes (aka multi-version concurrency control).
-- build with TypeScript and works in Node.js or the Browser.
-- works with synchronous and asynchronous storage making it well-suited for frontend state management.
-- a simple storage interface and with existing adapters for SQLite and LevelDb.
-
+- Embedded database, designed for [Local-First Software](https://www.inkandswitch.com/local-first/).
+- All queries are reactive.
+- Schemaless -- schemas are enforced by the application, not the database.
+- Transactional read/writes in TypeScript.
+- Directly read/write indexes including the ability to index graph/relational queries.
+- Works with synchronous and asynchronous storage including SQLite or LevelDb.
+- Suitable for frontend state management using in-memory synchronous storage.
 
 # Documentation
 
