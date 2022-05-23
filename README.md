@@ -302,126 +302,285 @@ The important thing to realize here is that all we've done is dropped down to a 
 And now that you understand how databases fundamentally uses tuples under the hood, we can talk about how we can use this abstraction to do much more than we can with SQL.
 
 
-# Example 1: Indexing Many-to-many Relationships
+# Example 1: A Social App
 
-Let's extend this "Contacts" app so the users can be "friends" with each other. Let's suppose this relationship is bidirectional.
-
-```ts
-
-type FriendIndex = {key: ["friends", {a: string}, {b: string}], value: null}
-
-type Schema = UserIndex | AgeIndex | NameIndex | FriendIndex
-
-// ...
-
-const setFriends = transactionalQuery<Schema>()((tx, a: string, b: string) => {
-	tx.set(["friends", {a}, {b}], null)
-	tx.set(["friends", {a: b}, {b: a}], null)
-})
-
-const removeFriends = transactionalQuery<Schema>()((tx, a: string, b: string) => {
-	tx.set(["friends", {a}, {b}], null)
-	tx.set(["friends", {a: b}, {b: a}], null)
-})
-
-function getFriends(db: ReadOnlyTupleDatabaseClientApi<Schema>, a: string) {
-	return db.scan({prefix: ["friends", {a}]})
-		.map(({key, value}) => key)
-		.map(namedTupleToObject)
-		.map(({a, b}) => b)
-}
-```
-
-This is simple enough.
-
-In SQL, there's a little bit of a dance we have to do. We'd have to create a "friends" table to represent this relationship.
-
-```sql
-CREATE TABLE friend {
-	a UUID,
-	b UUID,
-	PRIMARY KEY (a, b)
-}
-```
-
-And then we can look up friends fairly easily using that primary key index.
-
-```sql
-SELECT b FROM friend
-WHERE a = $a
-```
-
-The plot thickens when it comes time to filter friends based on other attributes.
-
-For example, suppose I want to know "who is my friend named $x?". In SQL, you'd do this with a JOIN.
-
-```sql
-SELECT b FROM friend
-JOIN user ON b = id
-WHERE a = $a
-AND first_name = $x
-```
-
-Now, if you're building an application that needs to display this view all the time, you may run into some scaling issues when users have millions of friends (such as Twitter). That's because when you `EXPLAIN` this query, you'll notice that SQL has to load all of your friends into memory just to filter them by name.
-
-The doozy here is that you cannot create an index to make this query faster in SQL! Instead, your only option is to add a `first_name` column to the `friend` table and make sure you write to both places whenever you change a user's name. It's a pain.
-
-But with `tuple-database`, you *can* construct an index for this query.
+Creating a social app with SQL is challenging because at some point you need to JOIN the followers table against the posts table and sort all those posts in memory by timestamp. This becomes incredibly expensive and SQL doesn't provide any means of solving this in a scalable way.
 
 ```ts
+type User = { username: string; bio: string }
 
-type FriendByNameIndex = {
-	key: ["friendsByName", {a: string}, {first_name: string}, {b: string}],
-	value: null
+type Post = {
+	id: string
+	username: string
+	timestamp: number
+	text: string
 }
 
-type Schema = UserIndex | AgeIndex | NameIndex | FriendIndex | FriendByNameIndex
+type Schema =
+	// Users by username as the primary key.
+	| { key: ["user", { username: string }]; value: User }
+	// Posts by primary key.
+	| { key: ["post", { id: string }]; value: Post }
+	// Answers the question: "Who's `from` following?"
+	| {
+			key: ["follows", { from: string }, { to: string }]
+			value: null
+		}
+	// Answers the question: "Who follows `to`?"
+	| {
+			key: ["following", { to: string }, { from: string }]
+			value: null
+		}
+	// A time-ordered list of a user's posts.
+	| {
+			key: ["profile", { username: string }, { timestamp: number }, { postId: string }]
+			value: null
+		}
+	// A time-ordered list of every post from every user that `username` follows.
+	| {
+			key: ["feed", { username: string }, { timestamp: number }, { postId: string }]
+			value: null
+		}
+```
 
-// ...
+From here, the magic all has to do with transactional read/writes to implement the desired logic:
 
-const setFriends = transactionalQuery<Schema>()((tx, a: string, b: string) => {
-	tx.set(["friends", {a}, {b}], null)
-	tx.set(["friends", {a: b}, {b: a}], null)
-	updateFriendsByName(tx, a, b)
+```ts
+const addFollow = transactionalQuery<Schema>()(
+	(tx, from: string, to: string) => {
+		// Setup the follow relationships.
+		tx.set(["follows", { from }, { to }], null)
+		tx.set(["following", { to }, { from }], null)
+
+		// Get the followed user's posts.
+		tx.scan({ prefix: ["profile", { username: to }] })
+			.map(({ key }) => namedTupleToObject(key))
+			.forEach(({ timestamp, postId }) => {
+				// Write those posts to the user's feed.
+				tx.set(["feed", { username: from }, { timestamp }, { postId }], null)
+			})
+	}
+)
+
+const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
+	tx.set(["post", { id: post.id }], post)
+
+	// Add to the user's profile
+	const { username, timestamp } = post
+	tx.set(["profile", { username }, { timestamp }, { postId: post.id }], null)
+
+	// Find everyone who follows this username.
+	const followers = tx
+		.scan({ prefix: ["following", { to: username }] })
+		.map(({ key }) => namedTupleToObject(key))
+		.map(({ from }) => from)
+
+	// Write to their feed.
+	followers.forEach((username) => {
+		tx.set(["feed", { username }, { timestamp }, { postId: post.id }], null)
+	})
 })
 
-const updateFriendsByName = transactionalQuery<Schema>()((tx, a: string, b: string) => {
-	const userA = tx.get(["user", {id: a}])
-	if (!userA) return
+const createUser = transactionalQuery<Schema>()((tx, user: User) => {
+	tx.set(["user", { username: user.username }], user)
+})
+```
 
-	const userB = tx.get(["user", {id: b}])
-	if (!userB) return
+We can demonstate that this works as you might expect:
 
-	tx.set(["friendsByName", {a}, {first_name: userB.first_name}, {b}], null)
-	tx.set(["friendsByName", {a: b}, {first_name: userA.first_name}, {b: a}], null)
+```ts
+const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+
+createUser(db, { username: "chet", bio: "I like to build things." })
+createUser(db, { username: "elon", bio: "Let's go to mars." })
+createUser(db, { username: "meghan", bio: "" })
+
+// Chet makes a post.
+createPost(db, { id: "post1", username: "chet", timestamp: 1, text: "post1" })
+// Meghan makes a post.
+createPost(db, { id: "post2", username: "meghan", timestamp: 2, text: "post2" })
+
+// When meghan follows chet, the post should appear in her feed.
+addFollow(db, "meghan", "chet")
+const feed = db.scan({ prefix: ["feed", { username: "meghan" }] })
+console.log(feed.length) // => 1
+
+// When chet makes another post, it should show up in meghan's feed.
+createPost(db, { id: "post3", username: "chet", timestamp: 3, text: "post3" })
+const feed2 = db.scan({ prefix: ["feed", { username: "meghan" }] })
+console.log(feed2.length) // => 2
+```
+
+Now, this is an odd example for a Local-First application. But the goal here is to show that the abstraction itself if powerful. And if you understand how this works, you can easily transfer this knowledge to FoundationDb to build a Twitter / Facebook competitor.
+
+# Example 2: Dynamic Properties and Dynamic Indexing
+
+In an application like Airtable or Notion, users have the ability to create custom properties as well as custom filters against those properties. One of the biggest challenges at these companies is indexing those user-defined queries to make the application more performant.
+
+This kind of problem is well-suited for `tuple-database` because it is schemaless and allows you to transactionally read/write arbitrary indexes.
+
+Suppose we represent "objects" as a set of 3-tuples called facts. This approach is popularized by RDF (the semantic web) and Datomic, also known as a triplestore.
+
+```ts
+type Value = string | number | boolean
+type Fact = [string, string, Value]
+
+type Obj = { id: string; [key: string]: Value | Value[] }
+
+function objectToFacts(obj: Obj) {
+	const facts: Fact[] = []
+	const { id, ...rest } = obj
+	for (const [key, value] of Object.entries(rest)) {
+		if (Array.isArray(value)) {
+			for (const item of value) {
+				facts.push([id, key, item])
+			}
+		} else {
+			facts.push([id, key, value])
+		}
+	}
+	facts.sort(compareTuple)
+	return facts
+}
+
+// Represent objects that we're typically used to as triples.
+objectToFacts({
+	id: "1",
+	name: "Chet",
+	age: 31,
+	tags: ["engineer", "musician"],
+})
+// => [
+// 	["1", "age", 31],
+// 	["1", "name", "Chet"],
+// 	["1", "tags", "engineer"],
+// 	["1", "tags", "musician"],
+// ]
+```
+
+Lets also suppose that a user-defined filter is just an object, kind of like a Mongo query. And the filter itself has an `id` to identify the filter within the user interface.
+
+```ts
+// A user-defined query.
+type Filter = { id: string; [prop: string]: Value }
+```
+
+Now the schema is pretty clever. And from here, I'll let you read the code and the comments:
+
+```ts
+type Schema =
+	// Index for fetching and displaying objects.
+	| { key: ["eav", ...Fact]; value: null }
+	// Index for looking up objects by property-value
+	| { key: ["ave", string, Value, string]; value: null }
+	// A list of user-defined filters.
+	| { key: ["filter", string]; value: Filter }
+	// And index for the given filter -- first string is a filter id, second is an object id.
+	| { key: ["index", string, string]; value: null }
+
+const writeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
+	const [e, a, v] = fact
+	tx.set(["eav", e, a, v], null)
+	tx.set(["ave", a, v, e], null)
+
+	// For each user-defined filter.
+	const filters = tx
+		.scan({ prefix: ["filter"] })
+		.map(({ value }) => value)
+
+	// Add this object id to the index if it passes the filter.
+	filters.forEach((filter) => {
+		if (!(a in filter)) {
+			return
+		}
+
+		// If this fact breaks a filter, then remove it.
+		if (filter[a] !== v) {
+			tx.remove(["index", filter.id, e])
+			return
+		}
+
+		// Make sure the whole filter passes.
+		for (const [key, value] of Object.entries(filter)) {
+			if (key === "id") continue
+			if (key === a) continue // already checked this.
+			if (!tx.exists(["eav", e, key, value])) return
+		}
+
+		// Add to the index for this filter.
+		tx.set(["index", filter.id, e], null)
+	})
 })
 
-const updateFirstName = transactionalQuery<Schema>()((tx, id: string, oldName: string, newName: string) => {
-	const friends = getFriends(tx, id)
-	for (const a of friends) {
-		tx.remove(["friendsByName", {a}, {first_name: oldName}, {b: id}])
-		tx.set(["friendsByName", {a}, {first_name: newName}, {b: id}], null)
+const writeObject = transactionalQuery<Schema>()((tx, obj: Obj) => {
+	for (const fact of objectToFacts(obj)) {
+		writeFact(tx, fact)
 	}
 })
 
-function upsertUser(tx: TupleDatabaseTransaction<Schema>, user: User) {
-	const existing = removeUser(tx, user.id)
-	insertUser(tx, user)
+const createFilter = transactionalQuery<Schema>()(
+	(tx, filter: Filter) => {
+		tx.set(["filter", filter.id], filter)
 
-	if (existing.first_name !== user.first_name) {
-		updateFirstName(user.id, existing.first_name, user.first_name)
+		// Find objects that pass the filter.
+		const pairs = Object.entries(filter).filter(([key]) => key !== "id")
+		const [first, ...rest] = pairs
+
+		const ids = tx
+			// Find the objects that pass the first propery-value
+			.scan({ prefix: ["ave", ...first] })
+			.map(({ key }) => key[3])
+			// Make sure that it passes the rest of the filter too.
+			.filter((id) => {
+				for (const [key, value] of rest) {
+					if (!tx.exists(["eav", id, key, value])) return false
+				}
+				return true
+			})
+
+		// Write those ids to the index.
+		ids.forEach((id) => {
+			tx.set(["index", filter.id, id], null)
+		})
 	}
-}
-
-
+)
 ```
 
+Now lets demonstate that this works as you'd expect:
 
+```ts
+const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
 
+// Create some objects.
+writeObject(db, { id: "person1", name: "Chet", age: 31, tags: ["engineer", "musician"] })
+writeObject(db, { id: "person2", name: "Meghan", age: 30, tags: ["engineer", "botanist"] })
+writeObject(db, { id: "person3", name: "Saul", age: 31, tags: ["musician"] })
 
+// Create a filter for engineers.
+createFilter(db, { id: "filter1", tags: "engineer" })
 
+// Check that the engineers filter index works:
+const engineers = db
+	.scan({ prefix: ["index", "filter1" as string] })
+	.map(({ key }) => key[2])
+console.log(engineers) // => ["person1", "person2"]
 
+// Lets create a new compound filter -- for tags and age.
+createFilter(db, { id: "filter2", tags: "musician", age: 31 })
 
+// Lets create another object and expect it to maintain the filter indexes.
+writeObject(db, { id: "person4", name: "Sean", age: 31, tags: ["musician", "botanist"] })
+
+// Check that the 31 year-old musicians filter works.
+const musicians = db
+	.scan({ prefix: ["index", "filter2" as string] })
+	.map(({ key }) => key[2])
+console.log(musicians) // => ["person1", "person3", "person4"]
+```
+
+While this code may seem contrived, I hope you can appreciate what it might look like using SQL. In fact, you couldn't do this with SQL without managing the DDL schema and dynamically changing the schema as data comes in.
+
+As software moves awake from baked-in schemas and towards flexible user-defined data modelling, this kind of flexibility is absolutely necessary from a database.
 
 # Documentation
 
@@ -493,6 +652,11 @@ There are **three layers** to this database that you need to compose together.
 	const client = new AsyncTupleDatabaseClient(db)
 	```
 
+## Schema
+
+A schema is just a union type that must extend `{key: any[], value: any}`.
+
+You can pass the schema as a generic type argument when constructing a TupleDa
 
 
 
