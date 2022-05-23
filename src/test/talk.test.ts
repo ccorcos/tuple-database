@@ -13,7 +13,6 @@ import { compareTuple } from "../helpers/compareTuple"
 import { scan } from "../helpers/sortedTupleArray"
 import {
 	AsyncTupleDatabaseClient,
-	namedTupleToObject,
 	transactionalAsyncQuery,
 	transactionalQuery,
 	TupleDatabase,
@@ -25,7 +24,7 @@ import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
 import { MAX, MIN, Writes } from "../storage/types"
 
-describe.only("talk", () => {
+describe("talk", () => {
 	//
 	//
 	//
@@ -900,132 +899,7 @@ describe.only("talk", () => {
 
 	describe("Examples", () => {
 		it("Social App", () => {
-type User = { username: string; bio: string }
-
-type Post = {
-	id: string
-	username: string
-	timestamp: number
-	text: string
-}
-
-type Schema =
-	| { key: ["user", { username: string }]; value: User }
-	| { key: ["post", { id: string }]; value: Post }
-	| {
-			key: ["follows", { from: string }, { to: string }]
-			value: null
-		}
-	| {
-			key: ["following", { to: string }, { from: string }]
-			value: null
-		}
-	| {
-			key: [
-				"profile",
-				{ username: string },
-				{ timestamp: number },
-				{ postId: string }
-			]
-			value: null
-		}
-	| {
-			key: [
-				"feed",
-				{ username: string },
-				{ timestamp: number },
-				{ postId: string }
-			]
-			value: null
-		}
-
-const addFollow = transactionalQuery<Schema>()(
-	(tx, from: string, to: string) => {
-		// Setup the follow relationships.
-		tx.set(["follows", { from }, { to }], null)
-		tx.set(["following", { to }, { from }], null)
-
-		// Get the followed user's posts.
-		tx.scan({ prefix: ["profile", { username: to }] })
-			.map(({ key }) => namedTupleToObject(key))
-			.forEach(({ timestamp, postId }) => {
-				// Write those posts to the user's feed.
-				tx.set(
-					["feed", { username: from }, { timestamp }, { postId }],
-					null
-				)
-			})
-	}
-)
-
-const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
-	tx.set(["post", { id: post.id }], post)
-
-	// Add to the user's profile
-	const { username, timestamp } = post
-	tx.set(
-		["profile", { username }, { timestamp }, { postId: post.id }],
-		null
-	)
-
-	// Find everyone who follows this username.
-	const followers = tx
-		.scan({ prefix: ["following", { to: username }] })
-		.map(({ key }) => namedTupleToObject(key))
-		.map(({ from }) => from)
-
-	// Write to their feed.
-	followers.forEach((username) => {
-		tx.set(
-			["feed", { username }, { timestamp }, { postId: post.id }],
-			null
-		)
-	})
-})
-
-const createUser = transactionalQuery<Schema>()((tx, user: User) => {
-	tx.set(["user", { username: user.username }], user)
-})
-
-// Lets try it out.
-const db = new TupleDatabaseClient<Schema>(
-	new TupleDatabase(new InMemoryTupleStorage())
-)
-
-createUser(db, { username: "chet", bio: "I like to build things." })
-createUser(db, { username: "elon", bio: "Let's go to mars." })
-createUser(db, { username: "meghan", bio: "" })
-
-// Chet makes a post.
-createPost(db, {
-	id: "post1",
-	username: "chet",
-	timestamp: 1,
-	text: "post1",
-})
-createPost(db, {
-	id: "post2",
-	username: "meghan",
-	timestamp: 2,
-	text: "post2",
-})
-
-// When meghan follows chet, the post should appear in her feed.
-addFollow(db, "meghan", "chet")
-
-const feed = db.scan({ prefix: ["feed", { username: "meghan" }] })
-assert.equal(feed.length, 1)
-
-// When chet makes another post, it should show up in meghan's feed.
-createPost(db, {
-	id: "post3",
-	username: "chet",
-	timestamp: 3,
-	text: "post3",
-})
-
-const feed2 = db.scan({ prefix: ["feed", { username: "meghan" }] })
-assert.equal(feed2.length, 2)
+			// => socialApp.test.ts
 		})
 
 		//

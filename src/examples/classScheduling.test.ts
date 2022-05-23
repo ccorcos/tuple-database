@@ -1,4 +1,5 @@
-// Based on FoundationDb tutorial: https://apple.github.io/foundationdb/class-scheduling.html
+// Based on the FoundationDb tutorial:
+// https://apple.github.io/foundationdb/class-scheduling.html
 
 import { strict as assert } from "assert"
 import { flatten, range } from "lodash"
