@@ -9,12 +9,12 @@
 - Suitable for frontend state management using in-memory synchronous storage.
 
 **Table of Contents**
-- [Quick Start](#Quick-Start).
-- [Motivation](#Motivation).
-- [Background](#Background).
+- [Quick Start](#Quick-Start)
+- [Motivation](#Motivation)
+- [Background](#Background)
 - [Example 1: A Social App](#Example-1-A-Social-App)
 - [Example 2: Dynamic Properties and Dynamic Indexing](#Example-2-Dynamic-Properties-and-Dynamic-Indexing)
-- [Documentation](#Documentation).
+- [Documentation](#Documentation)
 - [Comparison with FoundationDb](#Comparison-with-FoundationDb)
 
 # Quick Start
