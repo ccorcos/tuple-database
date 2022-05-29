@@ -1,13 +1,9 @@
 import { strict as assert } from "assert"
-import sqlite from "better-sqlite3"
-import * as fs from "fs-extra"
-import level from "level"
 import { after, describe, it } from "mocha"
 import { ConcurrencyLog } from "../database/ConcurrencyLog"
 import { ReactivityTracker } from "../database/sync/ReactivityTracker"
 import { Assert, SchemaSubspace } from "../database/typeHelpers"
 import { binarySearch } from "../helpers/binarySearch"
-import { encodeTuple } from "../helpers/codec"
 import { compare } from "../helpers/compare"
 import { compareTuple } from "../helpers/compareTuple"
 import { scan } from "../helpers/sortedTupleArray"
@@ -19,8 +15,6 @@ import {
 	TupleDatabaseClientApi,
 } from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { LevelTupleStorage } from "../storage/LevelTupleStorage"
-import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
 import { MAX, MIN, Writes } from "../storage/types"
 
 describe("talk", () => {
@@ -36,109 +30,6 @@ describe("talk", () => {
 	//
 	//
 	//
-	describe("tuple sorting", () => {
-		const items = [
-			["jonathan", "smith"],
-			["chet", "corcos"],
-			["jon", "smith"],
-		]
-
-		it("compares tuples element-wise", () => {
-			const sorted = [...items].sort(compareTuple)
-			assert.deepEqual(sorted, [
-				["chet", "corcos"],
-				["jon", "smith"],
-				["jonathan", "smith"],
-			])
-		})
-
-		it("doesn't simply concat the elements", () => {
-			const joined = [...items].map((tuple) => tuple.join(""))
-			joined.sort(compare)
-
-			assert.deepEqual(joined, [
-				"chetcorcos",
-				"jonathansmith", // changed order!
-				"jonsmith",
-			])
-		})
-
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-
-		it("can be encoded into bytes while preserving order", () => {
-			const encoded = items.map((tuple) => tuple.join("\x00"))
-			encoded.sort(compare)
-			assert.deepEqual(encoded, [
-				"chet\x00corcos",
-				"jon\x00smith",
-				"jonathan\x00smith",
-			])
-		})
-
-		// A take-home exercise.
-		it.skip("escape \x00 bytes in elements while maintaining order")
-
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-
-		it("numbers can't just be stringified", () => {
-			const encoded = [1, 2, 11, 12, 100].map((n) => n.toString())
-			encoded.sort(compare)
-			assert.deepEqual(encoded, ["1", "100", "11", "12", "2"])
-		})
-
-		it("can encode other kinds of values", () => {
-			const encoded = [[1], ["hello", "world"], [true]].map(encodeTuple)
-			encoded.sort(compare)
-
-			// numbers < arrays < boolean
-			assert.deepEqual(encoded, [
-				"e>;;410230\x00",
-				"fhello\x00fworld\x00",
-				"gtrue\x00",
-			])
-		})
-	})
 
 	//
 	//
@@ -318,81 +209,6 @@ describe("talk", () => {
 	//
 	//
 
-	describe("TupleStorageApi", () => {
-		it("InMemory Storage", () => {
-			const storage = new InMemoryTupleStorage()
-
-			storage.commit({
-				set: [
-					{ key: ["chet", "corcos"], value: 0 },
-					{ key: ["jon", "smith"], value: 2 },
-					{ key: ["jonathan", "smith"], value: 1 },
-				],
-			})
-
-			const result = storage.scan({ gte: ["j"], lt: ["k"] })
-
-			assert.deepEqual(result, [
-				{ key: ["jon", "smith"], value: 2 },
-				{ key: ["jonathan", "smith"], value: 1 },
-			])
-		})
-
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-
-		fs.mkdirpSync(__dirname + "/../tmp")
-
-		it("LevelDb Storage", async () => {
-			const filePath = __dirname + "/../tmp/level.db"
-			const storage = new LevelTupleStorage(level(filePath))
-
-			await storage.commit({
-				set: [
-					{ key: ["chet", "corcos"], value: 0 },
-					{ key: ["jon", "smith"], value: 2 },
-					{ key: ["jonathan", "smith"], value: 1 },
-				],
-			})
-
-			const result = await storage.scan({ gte: ["j"], lt: ["k"] })
-
-			assert.deepEqual(result, [
-				{ key: ["jon", "smith"], value: 2 },
-				{ key: ["jonathan", "smith"], value: 1 },
-			])
-		})
-	})
-
 	//
 	//
 	//
@@ -420,26 +236,6 @@ describe("talk", () => {
 	//
 	//
 	//
-
-	it("SQLite Storage", () => {
-		const filePath = __dirname + "/../tmp/sqlite.db"
-		const storage = new SQLiteTupleStorage(sqlite(filePath))
-
-		storage.commit({
-			set: [
-				{ key: ["chet", "corcos"], value: 0 },
-				{ key: ["jon", "smith"], value: 2 },
-				{ key: ["jonathan", "smith"], value: 1 },
-			],
-		})
-
-		const result = storage.scan({ gte: ["j"], lt: ["k"] })
-
-		assert.deepEqual(result, [
-			{ key: ["jon", "smith"], value: 2 },
-			{ key: ["jonathan", "smith"], value: 1 },
-		])
-	})
 
 	//
 	//
@@ -563,32 +359,6 @@ describe("talk", () => {
 		//
 		//
 		//
-
-		it("transactional", () => {
-			const db = new TupleDatabase(new InMemoryTupleStorage())
-
-			db.commit({
-				set: [
-					{ key: ["score", "chet"], value: 2 },
-					{ key: ["score", "meghan"], value: 1 },
-				],
-			})
-
-			const chet = "tx1"
-			const meghan = "tx2"
-
-			// Meghan reads all the scores
-			const items = db.scan({ gt: ["score"], lte: ["score", MAX] }, meghan)
-			const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
-
-			// Chet writes a new score
-			db.commit({ set: [{ key: ["score", "chet"], value: 5 }] }, chet)
-
-			// Meghan writes the total
-			assert.throws(() => {
-				db.commit({ set: [{ key: ["total"], value: total }] }, meghan)
-			})
-		})
 
 		//
 		//

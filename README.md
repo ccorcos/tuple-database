@@ -345,6 +345,27 @@ There's one method for reading and one method for writing.
 	}): KeyValuePair[]
 	```
 
+Here's a simple example of how the storage API works:
+
+```ts
+const storage = new InMemoryTupleStorage()
+
+storage.commit({
+	set: [
+		{ key: ["chet", "corcos"], value: 0 },
+		{ key: ["jon", "smith"], value: 2 },
+		{ key: ["jonathan", "smith"], value: 1 },
+	],
+})
+
+const result = storage.scan({ gte: ["j"], lt: ["k"] })
+
+assert.deepEqual(result, [
+	{ key: ["jon", "smith"], value: 2 },
+	{ key: ["jonathan", "smith"], value: 1 },
+])
+```
+
 There are several different options for the storage layer.
 
 1. InMemoryTupleStorage
@@ -352,22 +373,27 @@ There are several different options for the storage layer.
 	import { InMemoryTupleStorage } from "tuple-database"
 	const storage = new InMemoryTupleStorage()
 	```
+	I'd highly recommend [reading the code](./src/storage/InMemoryTupleStorage.ts) to understand how `InMemoryTupleStorage` works. It's really quite simple and just uses binary search to maintain an ordered associative array.
+
 2. FileTupleStorage
 	```ts
 	import { FileTupleStorage } from "tuple-database/storage/FileTupleStorage"
 	const storage = new FileTupleStorage(__dirname + "/app.db")
 	```
+
 3. LevelTupleStorage
 	```ts
 	import level from "level"
 	import { LevelTupleStorage } from "tuple-database/storage/LevelTupleStorage"
 	const storage = new LevelTupleStorage(level(__dirname + "/app.db"))
 	```
+
 4. SQLiteTupleStorage
 	```ts
 	import sqlite from "better-sqlite3"
 	import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
 	const storage = new SQLiteTupleStorage(sqlite(__dirname + "/app.db"))
+	```
 
 You can also create your own storage layer by implementing `TupleStorageApi` or `AsyncTupleStorageApi` interfaces.
 
@@ -420,27 +446,101 @@ Lastly, we use a single byte to encode the type of the value which allows us to 
 
 Please [read the source code](./src/helpers/codec.ts) for a better understanding of how this codec works. And check out the existing storage implementations to see how it is used.
 
-### `MIN` / `MAX` Symbol For Prefix Scanning
+### Prefix Scanning
 
 One tricky thing about the scan API is how to you get all tuples with a given prefix? Given a tuple of `[firstName, lastName]`, how do you look up everyone with first name "Jon"?
 
-- We can try something arbitrary like `scan({gt: ["Jon"], lte: ["Jon", "ZZZZ"]})`, but this will miss `["Jon", "ZZZZZZZZ"]`.
-- We can increment the byte so the upper bound is `Jom`. But this is trickier when it comes to numbers. What if we want a prefix of `1`? Would the upper bound be `1.000000000000001`?
+- We can try something arbitrary like `scan({gt: ["Jon"], lte: ["Jon", "ZZZZ"]})`, but this will miss a potential result: `["Jon", "ZZZZZZZZ"]`.
+- We can increment the byte so the upper bound is `["Jom"]`.
+	This wokrs, but this is trickier when it comes to numbers. What if we want a prefix of `[1]`? Would the upper bound be `[1.000000000000001]`?
 
-The solution I landed on was to introduce two special symbols.
+Ideally, we'd be able to specify a minimum and maximum value. It turns out this is pretty easy because of the way our types are ordered with `null` as the smallest value and `true` as the largest value.
 
+Thus we can get all tuples prefixed by `"Jon"` witht he following bounds: `scan({gt: ["Jon"], lt: ["Jon", true]})`.
 
-	// TODO: spread these out more so we can migrate things easier.
-	MIN: "a",
-	null: "b",
-	object: "c",
-	array: "d",
-	number: "e",
-	string: "f",
-	boolean: "g",
-	MAX: "z",
+And for convenience, we've exported `MIN` and `MAX` which are aliased `null` and `true` respectively. Thus, it is recommended to write `scan({gt: ["Jon"], lt: ["Jon", MAX]})`.
 
 
+## TupleDatabase
+
+`TupleDatabase` is the middle layer which implements reactivity and concurrency control.
+
+```ts
+import { InMemoryTupleStorage, TupleDatabase } from "tuple-database"
+const storage = new InMemoryTupleStorage()
+const db = new TupleDatabase(storage)
+```
+
+If you're using the an async storage layer, you'll need to use `AsyncTupleDatabase`.
+
+
+```ts
+import { InMemoryTupleStorage, AsyncTupleDatabase } from "tuple-database"
+const storage = new InMemoryTupleStorage()
+const db = new AsyncTupleDatabase(storage)
+```
+
+You will almost always be using this database through a `TupleDatabaseClient` so we won't talk about the TupleDatabase API here. Just understand that this layer is the central process for managing reactivity and concurrency.
+
+
+## TupleDatabaseClient
+
+`TupleDatabaseClient` is the highest level layer that you will primarily be using to interact with the database.
+
+The client layer provides convenient methods and types on top of the TupleDatabase.
+
+```ts
+import { TupleDatabaseClient, TupleDatabase, InMemoryTupleStorage } from "tuple-database"
+const storage = new InMemoryTupleStorage()
+const db = new TupleDatabase(storage)
+const client = new TupleDatabaseClient(db)
+```
+
+If you're using async storage, then you need to use an async client. However you can also use the async client with synchronous storage.
+
+```ts
+import { AsyncTupleDatabaseClient, AsyncTupleDatabase, InMemoryTupleStorage } from "tuple-database"
+const storage = new InMemoryTupleStorage()
+const db = new AsyncTupleDatabase(storage)
+const client = new AsyncTupleDatabaseClient(db)
+```
+
+### Schemas
+
+The client layer
+
+```ts
+type Schema =
+	| { key: ["score", string]; value: number }
+	| { key: ["total"]; value: number }
+
+const db = new TupleDatabaseClient<Schema>(
+	new TupleDatabase(new InMemoryTupleStorage())
+)
+
+db.commit({
+	set: [
+		{ key: ["score", "chet"], value: 1 },
+		{ key: ["score", "meghan"], value: 2 },
+		{ key: ["total"], value: 3 },
+	],
+})
+
+// Convenient "prefix" argument.
+const scores = db.scan({ prefix: ["score"] })
+
+type WellTyped = Assert<
+	typeof scores,
+	{ key: ["score", string]; value: number }[]
+>
+```
+
+
+
+
+
+
+HERE
 
 
 
@@ -450,52 +550,82 @@ The solution I landed on was to introduce two special symbols.
 
 
 
-	HERE
 
 
 
 
+### `client.scan`
+
+This is the same method as `storage.scan` but has a convenient `prefix` argument. Note that the prefix argument is prepended to the rest of the bounds.
+
+Thus `{prefix: ["a"], gt: ["b]}` will unravel unto `{gt: ["a", "b"], lte: ["a", MAX]}`
+
+### `client.get`
+
+This method will scan for a single tuple and return its value if it exists.
+
+### `client.transact`
+
+This is how you can transactionally read-write to the database.
+
+```ts
+const tx = client.transact()
+tx.set(tuple, value)
+tx.scan(bounds)
+tx.remove(tuple)
+tx.commit()
+```
+
+Note that when you read through the transaction, the results will be modified by any mutations in the transaction that are waiting to be committed.
+
+When there is a conflicting concurrent transaction, then `commit()` with throw a `ReadWriteConflictError`.
+
+Just to be clear, this is a clear example of how a conflict might happen.
+
+```ts
+const chet = client.transact()
+const meghan = client.transact()
+
+// Meghan sets her score, then updates the total
+Meghan: {
+	meghan.set(["score", "meghan"], 2)
+	const items = meghan.scan({ prefix: ["score"] })
+	const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
+	meghan.set(["total"], total)
+}
+
+Chet: {
+	// Meanwhile, Chet writes his score and updates the total.
+	chet.set(["score", "chet"], 5)
+	const items = meghan.scan({ prefix: ["score"] })
+	const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
+	meghan.set(["total"], total)
+}
+
+// Chet commits his writes first conflicting with Meghan's transaction.
+chet.commit()
+
+// Meghan commits but we get a conflict error.
+assert.throws(() => meghan.commit())
+```
+
+To better understand the underlying mechanics of how concurrency control works, please [read the Concurreny Control section](#Concurreny-Control) of this documentation.
+
+
+HERE
+
+
+### `transactionalQuery`
 
 
 
-- `TupleDatabase` is the middle layer which implements reactivity and concurrency control.
 
-	```ts
-	import { TupleDatabase } from "tuple-database"
-	const db = new TupleDatabase(storage)
-	```
+HERE
 
-	If you're using the an async storage layer, you'll need to use `AsyncTupleDatabase`.
-
-
-	```ts
-	import { AsyncTupleDatabase } from "tuple-database"
-	const db = new AsyncTupleDatabase(storage)
-	```
-
-- `TupleDatabaseClient` is the highest level layer that you will primarily be using to interact with the database.
-
-	The client layer provides convenient methods and types on top of the TupleDatabase.
-
-	```ts
-	import { TupleDatabaseClient } from "tuple-database"
-	const client = new TupleDatabaseClient(db)
-	```
-
-	If you're using async storage, then you need to use an async client. However you can also use the async client with synchronous storage.
-
-	```ts
-	import { AsyncTupleDatabaseClient } from "tuple-database"
-	const client = new AsyncTupleDatabaseClient(db)
-	```
 
 **This documentation is incomplete.** Please read through the background and other examples above.
 
 Documentation TODOs:
-- `client.scan`
-- `client.get`
-- `client.exists`
-- `client.transact`
 - `client.subspace`
 - `transactionalQuery`
 - `subscribeQuery`
@@ -533,7 +663,7 @@ AsyncTupleDatabase(LevelTupleStorage)):initialize 61.02045822143555
 AsyncTupleDatabase(LevelTupleStorage)):readRemoveWrite 2224.8067083358765
 ```
 
-## How does Reactivity Work?
+## Reactivity
 
 TODO:
 - Spatial query
@@ -544,7 +674,7 @@ TODO:
 - Binary space partitioning
 - Calendar example
 
-## How does Concurreny Control work?
+## Concurreny Control
 
 TODO:
 - ConcurrencyLog
