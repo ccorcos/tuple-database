@@ -61,7 +61,7 @@ function getListenersForTuplePrefix(
 	for (const prefix of iterateTuplePrefixes(tuple)) {
 		const results = listenersDb.scan({
 			gte: [prefix],
-			lt: [[...prefix, MIN]],
+			lte: [[...prefix, MIN]],
 		})
 
 		for (const { value } of results) {

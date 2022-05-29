@@ -1,5 +1,5 @@
 import { isPlainObject } from "lodash"
-import { MAX, MIN, Tuple, Value } from "../storage/types"
+import { Tuple, Value } from "../storage/types"
 import { encodingRank, encodingTypeOf } from "./codec"
 import { compare } from "./compare"
 import { UnreachableError } from "./Unreachable"
@@ -32,10 +32,6 @@ export function compareValue(a: Value, b: Value): number {
 				// class != class
 				return 1
 			}
-		} else if (at === "MAX") {
-			return 0
-		} else if (at === "MIN") {
-			return 0
 		} else if (at === "boolean") {
 			return compare(a as boolean, b as boolean)
 		} else if (at === "null") {
@@ -109,11 +105,7 @@ export function compareTuple(a: Tuple, b: Tuple) {
 }
 
 export function ValueToString(value: Value) {
-	if (value === MIN) {
-		return "MIN"
-	} else if (value === MAX) {
-		return "MAX"
-	} else if (value === null) {
+	if (value === null) {
 		return "null"
 	} else {
 		return JSON.stringify(value)

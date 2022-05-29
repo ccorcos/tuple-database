@@ -20,7 +20,7 @@ import { TxId } from "../types"
 import { Callback } from "./types"
 
 export class ReactivityTracker {
-	listenersDb = new InMemoryTupleStorage()
+	private listenersDb = new InMemoryTupleStorage()
 
 	subscribe(args: ScanStorageArgs, callback: Callback) {
 		return subscribe(this.listenersDb, args, callback)
@@ -69,7 +69,7 @@ function getListenersForTuplePrefix(
 	for (const prefix of iterateTuplePrefixes(tuple)) {
 		const results = listenersDb.scan({
 			gte: [prefix],
-			lt: [[...prefix, MIN]],
+			lte: [[...prefix, MIN]],
 		})
 
 		for (const { value } of results) {

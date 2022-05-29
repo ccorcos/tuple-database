@@ -2,21 +2,18 @@
 
 import * as elen from "elen"
 import { invert, isPlainObject, sortBy } from "lodash"
-import { MAX, MIN, Tuple, Value } from "../storage/types"
+import { Tuple, Value } from "../storage/types"
 import { compare } from "./compare"
 import { UnreachableError } from "./Unreachable"
 
-// MIN < null < object < array < number < string < boolean < uuid < MAX
+// null < object < array < number < string < boolean
 export const encodingByte = {
-	// TODO: spread these out more so we can migrate things easier.
-	MIN: "a",
 	null: "b",
 	object: "c",
 	array: "d",
 	number: "e",
 	string: "f",
 	boolean: "g",
-	MAX: "z",
 } as const
 
 export type EncodingType = keyof typeof encodingByte
@@ -27,12 +24,6 @@ export const encodingRank = sortBy(
 ).map(([key]) => key as EncodingType)
 
 export function encodeValue(value: Value) {
-	if (value === MAX) {
-		return encodingByte.MAX
-	}
-	if (value === MIN) {
-		return encodingByte.MIN
-	}
 	if (value === null) {
 		return encodingByte.null
 	}
@@ -55,12 +46,6 @@ export function encodeValue(value: Value) {
 }
 
 export function encodingTypeOf(value: Value): EncodingType {
-	if (value === MAX) {
-		return "MAX"
-	}
-	if (value === MIN) {
-		return "MIN"
-	}
 	if (value === null) {
 		return "null"
 	}
@@ -90,12 +75,6 @@ export function decodeValue(str: string): Value {
 	const encoding: EncodingType = decodeType[str[0]]
 	const rest = str.slice(1)
 
-	if (encoding === "MAX") {
-		return MAX
-	}
-	if (encoding === "MIN") {
-		return MIN
-	}
 	if (encoding === "null") {
 		return null
 	}

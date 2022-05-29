@@ -1,7 +1,6 @@
-import { MAX, MIN, Tuple } from "../storage/types"
+import { Tuple } from "../storage/types"
 
 export const sortedValues: Tuple = [
-	MIN,
 	null,
 	{},
 	{ a: 1 },
@@ -52,5 +51,4 @@ export const sortedValues: Tuple = [
 	"B",
 	false,
 	true,
-	MAX,
 ]
