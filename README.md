@@ -12,9 +12,8 @@
 - [Quick Start](#Quick-Start)
 - [Motivation](#Motivation)
 - [Background](#Background)
-- [Example 1: A Social App](#Example-1-A-Social-App)
-- [Example 2: Dynamic Properties and Dynamic Indexing](#Example-2-Dynamic-Properties-and-Dynamic-Indexing)
 - [Documentation](#Documentation)
+- [Examples](#Examples)
 - [Comparison with FoundationDb](#Comparison-with-FoundationDb)
 
 # Quick Start
@@ -218,7 +217,6 @@ To create some users and write to the database, we simply create a transaction a
 ```ts
 import { TupleDatabaseClient, TupleDatabase, InMemoryTupleStorage } from "tuple-database"
 
-// More about these 3 different layers later...
 const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
 
 function upsertUser(db: TupleDatabaseClient<Schema>, user: User) {
@@ -306,327 +304,159 @@ function getUsersWithLastName(db: TupleDatabaseClient<Schema>, lastName: string)
 
 The important thing to realize here is that all we've done is dropped down to a lower level of abstraction. The logic we've written here for the `tuple-database` code is *exactly* what any SQL database is doing under the hood.
 
-And now that you understand how databases fundamentally uses tuples under the hood, we can talk about how we can use this abstraction to do much more than we can with SQL.
+And now that you understand how databases fundamentally uses tuples under the hood, you can discover how this database can do much more than SQL by reading through the following examples:
 
-
-# Example 1: A Social App
-
-Creating a social app with SQL is challenging because at some point you need to JOIN the followers table against the posts table and sort all those posts in memory by timestamp. This becomes incredibly expensive and SQL doesn't provide any means of solving this in a scalable way.
-
-```ts
-type User = { username: string; bio: string }
-
-type Post = {
-	id: string
-	username: string
-	timestamp: number
-	text: string
-}
-
-type Schema =
-	// Users by username as the primary key.
-	| { key: ["user", { username: string }]; value: User }
-	// Posts by primary key.
-	| { key: ["post", { id: string }]; value: Post }
-	// Answers the question: "Who's `from` following?"
-	| {
-			key: ["follows", { from: string }, { to: string }]
-			value: null
-		}
-	// Answers the question: "Who follows `to`?"
-	| {
-			key: ["following", { to: string }, { from: string }]
-			value: null
-		}
-	// A time-ordered list of a user's posts.
-	| {
-			key: ["profile", { username: string }, { timestamp: number }, { postId: string }]
-			value: null
-		}
-	// A time-ordered list of every post from every user that `username` follows.
-	| {
-			key: ["feed", { username: string }, { timestamp: number }, { postId: string }]
-			value: null
-		}
-```
-
-From here, the magic all has to do with transactional read/writes to implement the desired logic:
-
-```ts
-const addFollow = transactionalQuery<Schema>()(
-	(tx, from: string, to: string) => {
-		// Setup the follow relationships.
-		tx.set(["follows", { from }, { to }], null)
-		tx.set(["following", { to }, { from }], null)
-
-		// Get the followed user's posts.
-		tx.scan({ prefix: ["profile", { username: to }] })
-			.map(({ key }) => namedTupleToObject(key))
-			.forEach(({ timestamp, postId }) => {
-				// Write those posts to the user's feed.
-				tx.set(["feed", { username: from }, { timestamp }, { postId }], null)
-			})
-	}
-)
-
-const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
-	tx.set(["post", { id: post.id }], post)
-
-	// Add to the user's profile
-	const { username, timestamp } = post
-	tx.set(["profile", { username }, { timestamp }, { postId: post.id }], null)
-
-	// Find everyone who follows this username.
-	const followers = tx
-		.scan({ prefix: ["following", { to: username }] })
-		.map(({ key }) => namedTupleToObject(key))
-		.map(({ from }) => from)
-
-	// Write to their feed.
-	followers.forEach((username) => {
-		tx.set(["feed", { username }, { timestamp }, { postId: post.id }], null)
-	})
-})
-
-const createUser = transactionalQuery<Schema>()((tx, user: User) => {
-	tx.set(["user", { username: user.username }], user)
-})
-```
-
-We can demonstate that this works as you might expect:
-
-```ts
-const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
-
-createUser(db, { username: "chet", bio: "I like to build things." })
-createUser(db, { username: "elon", bio: "Let's go to mars." })
-createUser(db, { username: "meghan", bio: "" })
-
-// Chet makes a post.
-createPost(db, { id: "post1", username: "chet", timestamp: 1, text: "post1" })
-// Meghan makes a post.
-createPost(db, { id: "post2", username: "meghan", timestamp: 2, text: "post2" })
-
-// When meghan follows chet, the post should appear in her feed.
-addFollow(db, "meghan", "chet")
-const feed = db.scan({ prefix: ["feed", { username: "meghan" }] })
-console.log(feed.length) // => 1
-
-// When chet makes another post, it should show up in meghan's feed.
-createPost(db, { id: "post3", username: "chet", timestamp: 3, text: "post3" })
-const feed2 = db.scan({ prefix: ["feed", { username: "meghan" }] })
-console.log(feed2.length) // => 2
-```
-
-Now, this is an odd example for a Local-First application. But the goal here is to show that the abstraction itself if powerful. And if you understand how this works, you can easily transfer this knowledge to FoundationDb to build a Twitter / Facebook competitor.
-
-# Example 2: Dynamic Properties and Dynamic Indexing
-
-In an application like Airtable or Notion, users have the ability to create custom properties as well as custom filters against those properties. One of the biggest challenges at these companies is indexing those user-defined queries to make the application more performant.
-
-This kind of problem is well-suited for `tuple-database` because it is schemaless and allows you to transactionally read/write arbitrary indexes.
-
-Suppose we represent "objects" as a set of 3-tuples called facts. This approach is popularized by RDF (the semantic web) and Datomic, also known as a triplestore.
-
-```ts
-type Value = string | number | boolean
-type Fact = [string, string, Value]
-
-type Obj = { id: string; [key: string]: Value | Value[] }
-
-function objectToFacts(obj: Obj) {
-	const facts: Fact[] = []
-	const { id, ...rest } = obj
-	for (const [key, value] of Object.entries(rest)) {
-		if (Array.isArray(value)) {
-			for (const item of value) {
-				facts.push([id, key, item])
-			}
-		} else {
-			facts.push([id, key, value])
-		}
-	}
-	facts.sort(compareTuple)
-	return facts
-}
-
-// Represent objects that we're typically used to as triples.
-objectToFacts({
-	id: "1",
-	name: "Chet",
-	age: 31,
-	tags: ["engineer", "musician"],
-})
-// => [
-// 	["1", "age", 31],
-// 	["1", "name", "Chet"],
-// 	["1", "tags", "engineer"],
-// 	["1", "tags", "musician"],
-// ]
-```
-
-Lets also suppose that a user-defined filter is just an object, kind of like a Mongo query. And the filter itself has an `id` to identify the filter within the user interface.
-
-```ts
-// A user-defined query.
-type Filter = { id: string; [prop: string]: Value }
-```
-
-Now the schema is pretty clever. And from here, I'll let you read the code and the comments:
-
-```ts
-type Schema =
-	// Index for fetching and displaying objects.
-	| { key: ["eav", ...Fact]; value: null }
-	// Index for looking up objects by property-value
-	| { key: ["ave", string, Value, string]; value: null }
-	// A list of user-defined filters.
-	| { key: ["filter", string]; value: Filter }
-	// And index for the given filter -- first string is a filter id, second is an object id.
-	| { key: ["index", string, string]; value: null }
-
-const writeFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
-	const [e, a, v] = fact
-	tx.set(["eav", e, a, v], null)
-	tx.set(["ave", a, v, e], null)
-
-	// For each user-defined filter.
-	const filters = tx
-		.scan({ prefix: ["filter"] })
-		.map(({ value }) => value)
-
-	// Add this object id to the index if it passes the filter.
-	filters.forEach((filter) => {
-		if (!(a in filter)) {
-			return
-		}
-
-		// If this fact breaks a filter, then remove it.
-		if (filter[a] !== v) {
-			tx.remove(["index", filter.id, e])
-			return
-		}
-
-		// Make sure the whole filter passes.
-		for (const [key, value] of Object.entries(filter)) {
-			if (key === "id") continue
-			if (key === a) continue // already checked this.
-			if (!tx.exists(["eav", e, key, value])) return
-		}
-
-		// Add to the index for this filter.
-		tx.set(["index", filter.id, e], null)
-	})
-})
-
-const writeObject = transactionalQuery<Schema>()((tx, obj: Obj) => {
-	for (const fact of objectToFacts(obj)) {
-		writeFact(tx, fact)
-	}
-})
-
-const createFilter = transactionalQuery<Schema>()(
-	(tx, filter: Filter) => {
-		tx.set(["filter", filter.id], filter)
-
-		// Find objects that pass the filter.
-		const pairs = Object.entries(filter).filter(([key]) => key !== "id")
-		const [first, ...rest] = pairs
-
-		const ids = tx
-			// Find the objects that pass the first propery-value
-			.scan({ prefix: ["ave", ...first] })
-			.map(({ key }) => key[3])
-			// Make sure that it passes the rest of the filter too.
-			.filter((id) => {
-				for (const [key, value] of rest) {
-					if (!tx.exists(["eav", id, key, value])) return false
-				}
-				return true
-			})
-
-		// Write those ids to the index.
-		ids.forEach((id) => {
-			tx.set(["index", filter.id, id], null)
-		})
-	}
-)
-```
-
-Now lets demonstate that this works as you'd expect:
-
-```ts
-const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
-
-// Create some objects.
-writeObject(db, { id: "person1", name: "Chet", age: 31, tags: ["engineer", "musician"] })
-writeObject(db, { id: "person2", name: "Meghan", age: 30, tags: ["engineer", "botanist"] })
-writeObject(db, { id: "person3", name: "Saul", age: 31, tags: ["musician"] })
-
-// Create a filter for engineers.
-createFilter(db, { id: "filter1", tags: "engineer" })
-
-// Check that the engineers filter index works:
-const engineers = db
-	.scan({ prefix: ["index", "filter1" as string] })
-	.map(({ key }) => key[2])
-console.log(engineers) // => ["person1", "person2"]
-
-// Lets create a new compound filter -- for tags and age.
-createFilter(db, { id: "filter2", tags: "musician", age: 31 })
-
-// Lets create another object and expect it to maintain the filter indexes.
-writeObject(db, { id: "person4", name: "Sean", age: 31, tags: ["musician", "botanist"] })
-
-// Check that the 31 year-old musicians filter works.
-const musicians = db
-	.scan({ prefix: ["index", "filter2" as string] })
-	.map(({ key }) => key[2])
-console.log(musicians) // => ["person1", "person3", "person4"]
-```
-
-While this code may seem contrived, I hope you can appreciate what it might look like using SQL. In fact, you couldn't do this with SQL without managing the DDL schema and dynamically changing the schema as data comes in.
-
-As software moves awake from baked-in schemas and towards flexible user-defined data modelling, this kind of flexibility is absolutely necessary from a database.
+- [Building a social app with indexed feeds.](./src/examples/socialApp.test.ts)
+- [Building an end-user database with dynamic properties and indexing.](./src/examples/endUserDatabase.test.ts)
 
 # Documentation
 
 There are **three layers** to this database that you need to compose together.
 
-- `TupleStorage` is the lowest level abstraction.
+## Terminology / Types
 
-	There are several different options for the storage layer.
+- A `Value` is any valid JSON.
+- A `Tuple` is an array of `Value`s.
+- A `key` is a `Tuple`.
+- A `KeyValuePair` is `{key: Tuple, value: any}`.
+	The `value` is `any` because in-memory storage doesn't have to serialize the value.
 
-	1. InMemoryTupleStorage
-		```ts
-		import { InMemoryTupleStorage } from "tuple-database"
-		const storage = new InMemoryTupleStorage()
-		```
-	2. FileTupleStorage
-		```ts
-		import { FileTupleStorage } from "tuple-database/storage/FileTupleStorage"
-		const storage = new FileTupleStorage(__dirname + "/app.db")
-		```
-	3. LevelTupleStorage
-		```ts
-		import level from "level"
-		import { LevelTupleStorage } from "tuple-database/storage/LevelTupleStorage"
-		const storage = new LevelTupleStorage(level(__dirname + "/app.db"))
-		```
-	4. SQLiteTupleStorage
-		```ts
-		import sqlite from "better-sqlite3"
-		import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
-		const storage = new SQLiteTupleStorage(sqlite(__dirname + "/app.db"))
+## TupleStorage
 
-	You can also create your own storage layer by implementing `TupleStorageApi` or `AsyncTupleStorageApi` interfaces.
+`TupleStorage` is the lowest level abstraction.
 
+There's one method for reading and one method for writing.
+
+- `write` for batch adding / removing key-value pairs:
 	```ts
-	import { TupleStorageApi } from "tuple-database"
-	class CustomTupleStorage implements TupleDatabaseApi {
-		/* ... */
-	}
+	write({
+		set?: KeyValuePair[],
+		remove?: Tuple[]
+	}):  void
 	```
+
+- `scan` for reading a range of key-value pairs:
+	```ts
+	scan({
+		gt?: Tuple, gte?: Tuple,
+		lt?: Tuple, lte?: Tuple,
+		reverse?: boolean,
+		limit?: number
+	}): KeyValuePair[]
+	```
+
+There are several different options for the storage layer.
+
+1. InMemoryTupleStorage
+	```ts
+	import { InMemoryTupleStorage } from "tuple-database"
+	const storage = new InMemoryTupleStorage()
+	```
+2. FileTupleStorage
+	```ts
+	import { FileTupleStorage } from "tuple-database/storage/FileTupleStorage"
+	const storage = new FileTupleStorage(__dirname + "/app.db")
+	```
+3. LevelTupleStorage
+	```ts
+	import level from "level"
+	import { LevelTupleStorage } from "tuple-database/storage/LevelTupleStorage"
+	const storage = new LevelTupleStorage(level(__dirname + "/app.db"))
+	```
+4. SQLiteTupleStorage
+	```ts
+	import sqlite from "better-sqlite3"
+	import { SQLiteTupleStorage } from "tuple-database/storage/SQLiteTupleStorage"
+	const storage = new SQLiteTupleStorage(sqlite(__dirname + "/app.db"))
+
+You can also create your own storage layer by implementing `TupleStorageApi` or `AsyncTupleStorageApi` interfaces.
+
+```ts
+import { TupleStorageApi } from "tuple-database"
+class CustomTupleStorage implements TupleDatabaseApi {
+	/* ... */
+}
+```
+
+### Sort Order
+
+Strings and numbers should be ordered as you might expect.
+
+- `"a"` < `"b"`
+- `"a"` < `"apple"`
+- `2` < `10`
+
+But since a `Value` is any valid JSON, we need to arbitrarily decide how to sort types. And we've arbitrarily decided that:
+
+```ts
+null < object < array < number < string < boolean
+```
+
+This every number is less than every string:
+- `12` < `"apple"`
+
+Arrays are "compound sorted", also called "composite keys". This is the same concept as "sort contacts by first *then* last name".
+- `["adam"]` < `["adam", "smith"]`
+- `["jon", "smith"]` < `["jonathan", "smith"]`
+
+	This is an important case to understand because we aren't simply concatenating the strings (`"jonathansmith"` < `"jonsmith"`), instead we are comparing component-wise.
+
+Objects are interpreted as ordered dictionaries -- an array of key-value pairs sorted by key.
+- `{b: 2, a: 1} => [["a", 1], ["b", 2]]`
+
+We have not discovered a particularly useful reason to use objects in the tuple key. Comparing objects like this just doesn't seem that valuable. We also arbitrarily chose to order objects as pairs rather than zipping (e.g. `{b: 2, a: 1} => [["a", "b"], [1, 2]]` ).
+
+That said, we often use objects with a single key as a "named key" for developer convenience since the ordering will be the same. For example, a key might be `["favoriteColor", {person: string}, {color: string}]` which is less ambiguous than `["favoriteColor", string, string]` for developers to work with.
+
+### Lexicographical Encoding
+
+The tuple storage layer operates at the level of tuples and values. But most existing ordered key-value storage options will only accept bytes as keys. And its non-trivial to convert a tuple into a byte-string that maintains a consistent order. For example `2` < `11` but `"2"` > `"11"`.
+
+For numbers, we use the [`elen` library](https://www.npmjs.com/package/elen) which encodes signed float64 numbers into strings.
+
+For arrays, we join elements using a null byte `\x00` and escape null bytes with `\x00 => \x01\x00` as well as escaping the escape bytes `\x01 => \x01\x01`.
+
+Lastly, we use a single byte to encode the type of the value which allows us to enforce the type order.
+
+Please [read the source code](./src/helpers/codec.ts) for a better understanding of how this codec works. And check out the existing storage implementations to see how it is used.
+
+### `MIN` / `MAX` Symbol For Prefix Scanning
+
+One tricky thing about the scan API is how to you get all tuples with a given prefix? Given a tuple of `[firstName, lastName]`, how do you look up everyone with first name "Jon"?
+
+- We can try something arbitrary like `scan({gt: ["Jon"], lte: ["Jon", "ZZZZ"]})`, but this will miss `["Jon", "ZZZZZZZZ"]`.
+- We can increment the byte so the upper bound is `Jom`. But this is trickier when it comes to numbers. What if we want a prefix of `1`? Would the upper bound be `1.000000000000001`?
+
+The solution I landed on was to introduce two special symbols.
+
+
+	// TODO: spread these out more so we can migrate things easier.
+	MIN: "a",
+	null: "b",
+	object: "c",
+	array: "d",
+	number: "e",
+	string: "f",
+	boolean: "g",
+	MAX: "z",
+
+
+
+
+
+
+
+
+
+
+
+	HERE
+
+
+
+
+
+
 
 - `TupleDatabase` is the middle layer which implements reactivity and concurrency control.
 
@@ -670,6 +500,11 @@ Documentation TODOs:
 - `transactionalQuery`
 - `subscribeQuery`
 - `useTupleDatabase`
+
+# Examples
+
+- [Building a social app with indexes feeds.](./src/examples/socialApp.test.ts)
+- [Building an end-user database with dynamic properties and indexing.](./src/examples/endUserDatabase.test.ts)
 
 # Comparison with FoundationDb
 
