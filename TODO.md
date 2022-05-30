@@ -1,5 +1,7 @@
 ## TODO
 
+- using ipc-peer over a socket for client across a process / network.
+
 - rtree for reactivity
 - migration abstraction for MIN/MAX
 
