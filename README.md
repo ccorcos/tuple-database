@@ -505,55 +505,6 @@ const db = new AsyncTupleDatabase(storage)
 const client = new AsyncTupleDatabaseClient(db)
 ```
 
-### Schemas
-
-The client layer
-
-```ts
-type Schema =
-	| { key: ["score", string]; value: number }
-	| { key: ["total"]; value: number }
-
-const db = new TupleDatabaseClient<Schema>(
-	new TupleDatabase(new InMemoryTupleStorage())
-)
-
-db.commit({
-	set: [
-		{ key: ["score", "chet"], value: 1 },
-		{ key: ["score", "meghan"], value: 2 },
-		{ key: ["total"], value: 3 },
-	],
-})
-
-// Convenient "prefix" argument.
-const scores = db.scan({ prefix: ["score"] })
-
-type WellTyped = Assert<
-	typeof scores,
-	{ key: ["score", string]; value: number }[]
->
-```
-
-
-
-
-
-
-HERE
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### `client.scan`
 
 This is the same method as `storage.scan` but has a convenient `prefix` argument. Note that the prefix argument is prepended to the rest of the bounds.
@@ -563,6 +514,71 @@ Thus `{prefix: ["a"], gt: ["b]}` will unravel unto `{gt: ["a", "b"], lte: ["a", 
 ### `client.get`
 
 This method will scan for a single tuple and return its value if it exists.
+
+### Typed Schema
+
+The client layer introduces Typescript types to describe the schema of the database. Note that this schema is not enforced at runtime and is simply a developer convenience -- this database fundamentally is schemaless.
+
+A schema is just a union type of `KeyValuePair`s. For example:
+
+```ts
+type Schema =
+	| { key: ["score", string]; value: number }
+	| { key: ["total"]; value: number }
+```
+
+And using this schema allows TypeScript to typecheck and infer types.
+
+```ts
+const client = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+
+const scores = client.scan({ prefix: ["score"] })
+
+// TypeScript will infer the result based on the prefix.
+// typeof scores = { key: ["score", string]; value: number }[]
+```
+
+### Subspace
+
+Subspaces represent the same database narrowed in on a specific prefix.
+
+```ts
+const gameDb = client.subspace(["score"])
+// typeof gameDb => TupleDatabaseClientApi<{ key: [string]; value: number }>
+
+const score = gameDb.get(["chet"])
+// typeof score = number
+```
+
+Subspaces are especially useful for composing logic for nested subspaces.
+
+For example, maybe defined a bunch of business logic for a specific schema, such as `setScore`.
+
+```ts
+type GameSchema =
+	| { key: ["score", string]; value: number }
+	| { key: ["total"]; value: number }
+
+function setScore(db: TupleDatabaseClientApi<GameSchema>, person: string, score: number) {
+	/* ... */
+}
+```
+
+Now suppose we decide that we want to be able to keep track of multiple games. Rather than make `setScore` aware of the `gameId`, we can simply use a subspace.
+
+```ts
+type Game = {id: string, name: string, players: string[]}
+
+type Schema =
+	| {key: ["game", string], value: Game}
+	| SchemaSubspace<["gameState", string], GameSchema>
+	// SchemaSubspace will prepend the given prefix to every key in the subspace schenma.
+
+const client = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+
+// Using a subspace to narrow in on a specific game to re-use the game state logic.
+setScore(client.subspace(["gameState", "game1"]), "chet", 2)
+```
 
 ### `client.transact`
 
@@ -611,28 +627,92 @@ assert.throws(() => meghan.commit())
 
 To better understand the underlying mechanics of how concurrency control works, please [read the Concurreny Control section](#Concurreny-Control) of this documentation.
 
-
-HERE
-
-
 ### `transactionalQuery`
 
+Whenever there is a `ReadWriteConflictError`, all we have to do is keep retrying the transaction until it works without a conflict. Thus is is important that this retry logic is idempotent. We have a convenient helper function for creating these idempotent transactions which will retry when there are conflicts and also has some convenient abstractions for composing transactions.
 
+```ts
+const setScore = transactionalQuery<GameSchema>()((tx, person: string, score: number) => {
+		tx.set(["score", person], score)
+		updateTotal(tx)
+})
 
+const updateTotal = transactionalQuery<GameSchema>()((tx) => {
+	const items = tx.scan({ prefix: ["score"] })
+	const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
+	tx.set(["total"], total)
+	return total
+})
 
-HERE
+setScore(client, "chet", 12)
+```
 
+You'll notice there seems to be an extra `()` in there: `transactionalQuery<GameSchema>()((tx, person: string, ...`. That's because we want to tell TypeScript the schema that we're working with, but we want TypeScript also to infer the rest of the arguments as well as the return value. So this is just a TypeScript idiosyncrasy.
 
-**This documentation is incomplete.** Please read through the background and other examples above.
+`transactionalQuery` can accept a client or a transation as its first argument. When the first argument is a client, then it will open and commit a transaction, and retry if there if a conflict. But if the first argument is a transaction, it will simply pass it through without commiting the transaction. This allows these transactional queries to be composed as you can see with `setScore` calling `updateTotal`.
 
-Documentation TODOs:
-- `client.subspace`
-- `transactionalQuery`
-- `subscribeQuery`
-- `useTupleDatabase`
+You can also see that `updateTotal` reads *through* the transaction. This means that it will see the updated score from `setScore` and compute the correct total.
+
+You can use `transactionalQuery` not just to writes, but also for transactional reads!
+
+### `client.subscribe`
+
+You can listen to any range of tuples and the callback argument will have a list of all sets and removes associated with that range.
+
+```ts
+
+const unsubscribe = client.subscribe({prefix: ["score"]},
+	(writes) => {
+		console.log(writes)
+		// => {
+		// 	set: [{ key: ["score", "chet"], value: 2 }],
+		// 	remove: [],
+		// }
+	}
+)
+
+setScore(client, "chet", 2)
+```
+
+Note that this will ignore any `limit` in your subscription. To efficiently listen to paginated updates, it is recommended to use key bounds instead of limits.
+
+### `subscribeQuery`
+
+Sometimes you need to listen to multiple ranges to derive some information. It can be cumbersome to use `client.subscribe` in these circumstances and for this we can use `subscribeQuery` which keeps track of all ranges and subscriptions for you.
+
+```ts
+function getScoreFractionOfTotal(db: ReadOnlyDatabaseClientApi<GameSchema>, person: string) {
+	const score = db.get(["score", person]) || 0
+	const total = db.get(["total"]) || 0
+	return score/total
+}
+
+const { result: initialResult, destroy } = subscribeQuery(
+	client,
+	getScoreFractionOfTotal,
+	["chet"],
+	(newResult) => {
+		// ...
+	}
+)
+```
+
+### `useTupleDatabase`
+
+If you're using React, we've wrapped up `subscribeQuery` into a hook you can use within your application
+
+```ts
+import { useTupleDatabase } from "tuple-database/useTupleDatabase"
+
+function App({gameDb, person}) {
+	const fraction = useTupleDatabase(gameDb, getScoreFractionOfTotal, [person])
+	// ...
+}
+```
 
 # Examples
 
+- [Using a database for frontend state management.](https://github.com/ccorcos/game-counter/blob/master/src/GameState.ts)
 - [Building a social app with indexes feeds.](./src/examples/socialApp.test.ts)
 - [Building an end-user database with dynamic properties and indexing.](./src/examples/endUserDatabase.test.ts)
 
@@ -665,18 +745,51 @@ AsyncTupleDatabase(LevelTupleStorage)):readRemoveWrite 2224.8067083358765
 
 ## Reactivity
 
-TODO:
-- Spatial query
-- Segment tree
-- Interval tree
-- Range tree
-- Z-curve
-- Binary space partitioning
-- Calendar example
+Reactivity is fundamentally a spatial query problem. We have a set of ranges (scan tuple bounds) `[min, max][]` and we want to find all the ranges that intersect with a value (each tuple in a write).
+
+You cannot efficiently solve this problem in a general way with a basic binary search tree. Instead, you need to use something like a [Segment tree](https://en.wikipedia.org/wiki/Segment_tree). In case the reader is unfamiliar with spatial indexes, a [Interval tree](https://en.wikipedia.org/wiki/Interval_tree) is a more general form of a segment tree allowing you to query with a range, returning overlapping ranges. But a [Range tree](https://en.wikipedia.org/wiki/Range_tree) (a.k.a. rtree) is the general solution for an arbitrary number of dimensions and is typically what is used in, for example, Postgres or SQLite.
+
+Spatial indexes is one of the reasons that calendars are hard to build! However, if you need to build an index for a calendar without access to an rtree index, an acceptible solution is called "space partitioning". And this gives us some insight into a little trick we can use for fairly efficient reactivity using a binary tree.
+
+When you subscribe to a range, e.g. `{gt: [1, 2, 3], lt: [1, 2, 4]}`, we look for a common prefix: `[1, 2]` and use that as a listener key. Then when we write some data, e.g. `[1, 2, 3, 4]`, we iterate through every prefix of that tuple: `[1]`, `[1, 2]`, `[1, 2, 3]` and we lookup listeners on those keys. If we find a listener, we double-check that it within the bounds before we emit and update.
+
+This is a fairly simple performant approach, but at some point, we're going to want to implement a proper rtree index anyways and we'll migrate this over. In the meantime, you can [check out the code](./src/database/async/AsyncReactivityTracker.ts) to get a better understanding of how it works.
 
 ## Concurreny Control
 
-TODO:
-- ConcurrencyLog
-- Read/write conflicts
-- Retries with transactionalQuery
+Concurreny control is surprisingly simple. Whenever we get a read or a write, we keep track of that in a ConcurrencyLog.
+
+Then on commit, we scan through the log looking for reads on this transaction, and looking for conflicting writes that happened after the read.
+
+```ts
+const log = new ConcurrencyLog()
+
+// Someone reads all the scores.
+log.read("tx1", { gt: ["score"], lte: ["score", MAX] })
+
+// At the same time, someone writes a score.
+log.write("tx2", ["score", "chet"])
+
+// Keeping track of concurrent reads/writes.
+assert.deepEqual(log.log, [
+	{
+		txId: "tx1",
+		type: "read",
+		bounds: {
+			gt: ["score"],
+			lte: ["score", MAX],
+		},
+	},
+	{
+		txId: "tx2",
+		type: "write",
+		tuple: ["score", "chet"],
+	},
+])
+
+// Check for conflicts.
+log.commit("tx2")
+assert.throws(() => log.commit("tx1"))
+```
+
+Most of the logic has to do with cleaning up the log to keep it from growing unbounded. But the [code is pretty simple](./src/database/ConcurrencyLog.ts). It's also worth mentioning that looking for conflicting writes can be formulated as a spatial query as well so we have some performance benefits here when we build an rtree index abstraction.
