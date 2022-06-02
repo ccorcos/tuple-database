@@ -1,4 +1,4 @@
-import { IDBPDatabase, openDB } from "idb"
+import { IDBPDatabase, openDB } from "idb/with-async-ittr"
 import { result } from "lodash"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 import { AsyncTupleStorageApi, ScanStorageArgs, Writes } from "../main"
@@ -7,7 +7,6 @@ import { KeyValuePair } from "./types"
 const version = 1
 
 const storeName = "tupledb"
-const keyIndex = "keyIndex"
 
 export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 	private db: Promise<IDBPDatabase<any>>
@@ -15,8 +14,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 	constructor(public dbName: string) {
 		this.db = openDB(dbName, version, {
 			upgrade(db) {
-				const store = db.createObjectStore(storeName)
-				store.createIndex(keyIndex, "key")
+				db.createObjectStore(storeName)
 			},
 		})
 	}
@@ -24,7 +22,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 	async scan(args?: ScanStorageArgs) {
 		const db = await this.db
 		const tx = db.transaction(storeName, "readonly")
-		const index = tx.store.index(keyIndex)
+		const index = tx.store // primary key
 
 		const lower = args?.gt || args?.gte
 		const lowerEq = Boolean(args?.gte)
@@ -38,15 +36,15 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 				range = IDBKeyRange.bound(
 					encodeTuple(lower),
 					encodeTuple(upper),
-					lowerEq,
-					upperEq
+					!lowerEq,
+					!upperEq
 				)
 			} else {
-				range = IDBKeyRange.upperBound(encodeTuple(upper), upperEq)
+				range = IDBKeyRange.upperBound(encodeTuple(upper), !upperEq)
 			}
 		} else {
 			if (lower) {
-				range = IDBKeyRange.lowerBound(encodeTuple(lower), lowerEq)
+				range = IDBKeyRange.lowerBound(encodeTuple(lower), !lowerEq)
 			} else {
 				range = null
 			}
@@ -72,7 +70,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		const db = await this.db
 		const tx = db.transaction(storeName, "readwrite")
 		for (const { key, value } of writes.set || []) {
-			tx.store.put(encodeTuple(key), value)
+			tx.store.put(value, encodeTuple(key))
 		}
 		for (const key of writes.remove || []) {
 			tx.store.delete(encodeTuple(key))
