@@ -416,7 +416,6 @@ There are several different options for the storage layer.
 	This holds the whole database in-memory and persists it to localStorage.
 
 	```ts
-	import sqlite from "better-sqlite3"
 	import { BrowserTupleStorage } from "tuple-database/storage/BrowserTupleStorage"
 	const storage = new BrowserTupleStorage("localStorageKey")
 	```
@@ -424,7 +423,6 @@ There are several different options for the storage layer.
 6. IndexedDbTupleStorage
 
 	```ts
-	import sqlite from "better-sqlite3"
 	import { IndexedDbTupleStorage } from "tuple-database/storage/IndexedDbTupleStorage"
 	const storage = new IndexedDbTupleStorage("objectStoreName")
 	```
