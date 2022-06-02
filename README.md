@@ -411,6 +411,25 @@ There are several different options for the storage layer.
 	const storage = new SQLiteTupleStorage(sqlite(__dirname + "/app.db"))
 	```
 
+5. BrowserTupleStorage
+
+	This holds the whole database in-memory and persists it to localStorage.
+
+	```ts
+	import sqlite from "better-sqlite3"
+	import { BrowserTupleStorage } from "tuple-database/storage/BrowserTupleStorage"
+	const storage = new BrowserTupleStorage("localStorageKey")
+	```
+
+6. IndexedDbTupleStorage
+
+	```ts
+	import sqlite from "better-sqlite3"
+	import { IndexedDbTupleStorage } from "tuple-database/storage/IndexedDbTupleStorage"
+	const storage = new IndexedDbTupleStorage("objectStoreName")
+	```
+
+
 You can also create your own storage layer by implementing `TupleStorageApi` or `AsyncTupleStorageApi` interfaces.
 
 ```ts
