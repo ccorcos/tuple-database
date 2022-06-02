@@ -1,12 +1,10 @@
 import sqlite from "better-sqlite3"
 import level from "level"
-import { describe, it } from "mocha"
 import * as path from "path"
 import { asyncDatabaseTestSuite } from "../database/async/asyncDatabaseTestSuite"
 import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
 import { databaseTestSuite } from "../database/sync/databaseTestSuite"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { randomId } from "../helpers/randomId"
 import { AsyncTupleDatabase, TupleDatabaseClient } from "../main"
 import { FileTupleStorage } from "./FileTupleStorage"
 import { IndexedDbTupleStorage } from "./IndexedDbTupleStorage"
@@ -76,14 +74,6 @@ asyncDatabaseTestSuite(
 		),
 	true
 )
-
-describe("asdf", () => {
-	it("works", async () => {
-		const store = new IndexedDbTupleStorage(randomId())
-		await store.commit({ set: [{ key: ["a"], value: 1 }] })
-		console.log(await store.scan())
-	})
-})
 
 // Test that the entire test suite works within a subspace.
 asyncDatabaseTestSuite(
