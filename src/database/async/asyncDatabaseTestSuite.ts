@@ -1891,5 +1891,130 @@ export function asyncDatabaseTestSuite(
 				})
 			})
 		}
+
+		it("scan reverse", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			assertEqual(await db.scan({ reverse: true }), [
+				{ key: [3], value: null },
+				{ key: [2], value: null },
+				{ key: [1], value: null },
+			])
+		})
+
+		it("scan limit", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			assertEqual(await db.scan({ limit: 1 }), [{ key: [1], value: null }])
+		})
+
+		it("scan reverse limit", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			assertEqual(await db.scan({ reverse: true, limit: 1 }), [
+				{ key: [3], value: null },
+			])
+		})
+
+		it("tx.scan reverse with pending write", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			const tx = db.transact()
+
+			tx.set([2.5], null)
+
+			assertEqual(await tx.scan({ reverse: true }), [
+				{ key: [3], value: null },
+				{ key: [2.5], value: null },
+				{ key: [2], value: null },
+				{ key: [1], value: null },
+			])
+		})
+
+		it("tx.scan limit", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			NoChange: {
+				const tx = db.transact()
+				tx.set([5], null)
+				assertEqual(await tx.scan({ limit: 1 }), [{ key: [1], value: null }])
+			}
+
+			YesChange: {
+				const tx = db.transact()
+				tx.set([0], null)
+				assertEqual(await tx.scan({ limit: 1 }), [{ key: [0], value: null }])
+			}
+		})
+
+		it("tx.scan limit reverse", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			YesChange: {
+				const tx = db.transact()
+				tx.set([5], null)
+				assertEqual(await tx.scan({ limit: 1, reverse: true }), [
+					{ key: [5], value: null },
+				])
+			}
+
+			NoChange: {
+				const tx = db.transact()
+				tx.set([0], null)
+				assertEqual(await tx.scan({ limit: 1, reverse: true }), [
+					{ key: [3], value: null },
+				])
+			}
+		})
+
+		// New tests here...
 	})
 }
