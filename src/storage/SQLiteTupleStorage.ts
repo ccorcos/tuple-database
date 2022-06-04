@@ -78,6 +78,9 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 			sqlQuery += where
 		}
 		sqlQuery += " order by key"
+		if (args.reverse) {
+			sqlQuery += " desc"
+		}
 		if (args.limit) {
 			sqlQuery += ` limit $limit`
 		}

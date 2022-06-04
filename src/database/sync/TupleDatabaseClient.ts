@@ -140,6 +140,7 @@ export class TupleTransaction<S extends KeyValuePair>
 		const sets = tv.scan(this.writes.set, storageScanArgs)
 		for (const { key: fullTuple, value } of sets) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
+			// Make sure we insert in reverse if the scan is in reverse.
 			tv.set(result, tuple, value, storageScanArgs.reverse)
 		}
 		const removes = t.scan(this.writes.remove, storageScanArgs)
@@ -148,7 +149,7 @@ export class TupleTransaction<S extends KeyValuePair>
 			tv.remove(result, tuple, storageScanArgs.reverse)
 		}
 
-		// Truncate the results to the limit again.
+		// Make sure to trunace the results if we added items to the result set.
 		if (storageScanArgs.limit) {
 			if (result.length > storageScanArgs.limit) {
 				result.splice(storageScanArgs.limit, result.length)

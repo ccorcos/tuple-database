@@ -1891,11 +1891,6 @@ export function databaseTestSuite(
 			})
 		}
 
-		// scan({reverse: true})
-		// scan({limit: 1})
-		// tx.scan({reverse: true})
-		// tx.scan({limit: 1})
-
 		it("scan reverse", () => {
 			const db = createStorage(randomId())
 
