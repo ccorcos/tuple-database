@@ -140,13 +140,21 @@ export class TupleTransaction<S extends KeyValuePair>
 		const sets = tv.scan(this.writes.set, storageScanArgs)
 		for (const { key: fullTuple, value } of sets) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
-			tv.set(result, tuple, value)
+			tv.set(result, tuple, value, storageScanArgs.reverse)
 		}
 		const removes = t.scan(this.writes.remove, storageScanArgs)
 		for (const fullTuple of removes) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
-			tv.remove(result, tuple)
+			tv.remove(result, tuple, storageScanArgs.reverse)
 		}
+
+		// Truncate the results to the limit again.
+		if (storageScanArgs.limit) {
+			if (result.length > storageScanArgs.limit) {
+				result.splice(storageScanArgs.limit, result.length)
+			}
+		}
+
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 
