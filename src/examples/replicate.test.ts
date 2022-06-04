@@ -1,55 +1,13 @@
 import { strict as assert } from "assert"
 import { after, describe, it } from "mocha"
-import { compareTuple } from "../helpers/compareTuple"
+import { transactionalQuery } from "../database/sync/transactionalQuery"
+import { TupleDatabase } from "../database/sync/TupleDatabase"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import {
-	InMemoryTupleStorage,
 	ReadOnlyTupleDatabaseClientApi,
-	transactionalQuery,
-	TupleDatabase,
-	TupleDatabaseClient,
 	TupleDatabaseClientApi,
-} from "../main"
-import { Fact, Value } from "./triplestore"
-
-// We're going to build off of the triplestore example.
-// So read triplestore.ts and triplestore.test.ts first.
-
-type Obj = { id: string; [key: string]: Value | Value[] }
-
-// Represent objects that we're typically used to as triples.
-function objectToFacts(obj: Obj) {
-	const facts: Fact[] = []
-	const { id, ...rest } = obj
-	for (const [key, value] of Object.entries(rest)) {
-		if (Array.isArray(value)) {
-			for (const item of value) {
-				facts.push([id, key, item])
-			}
-		} else {
-			facts.push([id, key, value])
-		}
-	}
-	facts.sort(compareTuple)
-	return facts
-}
-
-objectToFacts({
-	id: "1",
-	name: "Chet",
-	age: 31,
-	tags: ["engineer", "musician"],
-})
-
-// const writeObjectFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
-// 	writeFact(tx.subspace(["data"]), fact)
-// 	reindexFact(tx, fact)
-// })
-
-// const writeObject = transactionalQuery<Schema>()((tx, obj: Obj) => {
-// 	for (const fact of objectToFacts(obj)) {
-// 		writeObjectFact(tx, fact)
-// 	}
-// })
+} from "../database/sync/types"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 
 type LogSchema = { key: [number]; value: any }
 
@@ -142,3 +100,11 @@ describe("replicate", () => {
 		assert.deepEqual(to.scan(), r6)
 	})
 })
+
+/*
+
+TODO:
+- async
+- how to run indexing on the other side after syncing?
+
+*/
