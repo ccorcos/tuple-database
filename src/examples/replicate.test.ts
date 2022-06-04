@@ -14,6 +14,7 @@ import {
 	TupleDatabaseClientApi,
 } from "../database/sync/types"
 import { asyncThrottle } from "../helpers/asyncThrottle"
+import { SchemaSubspace } from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 
 type LogSchema = { key: [number]; value: any }
@@ -124,7 +125,8 @@ const appendLogAsync = transactionalQueryAsync<LogSchema>()(
 
 async function updateAsync(
 	from: AsyncTupleDatabaseClientApi<LogSchema>,
-	to: AsyncTupleDatabaseClientApi<LogSchema>
+	to: AsyncTupleDatabaseClientApi<LogSchema>,
+	indexer: (tx, items: LogSchema[]) => void | Promise<void>
 ) {
 	const currentLength = await getLogLengthAsync(to)
 	const desiredLength = await getLogLengthAsync(from)
@@ -133,14 +135,22 @@ async function updateAsync(
 
 	const missing = desiredLength - currentLength
 	const result = await from.scan({ reverse: true, limit: missing })
-	to.commit({ set: result })
+	result.reverse()
+
+	const tx = to.transact()
+	for (const item of result) {
+		tx.set(item.key, item.value)
+	}
+	await indexer(tx, result)
+	await tx.commit()
 }
 
 async function replicateAsync(
 	from: AsyncTupleDatabaseClientApi<LogSchema>,
-	to: AsyncTupleDatabaseClientApi<LogSchema>
+	to: AsyncTupleDatabaseClientApi<LogSchema>,
+	indexer: (tx, items: LogSchema[]) => void | Promise<void>
 ) {
-	const update = asyncThrottle(() => updateAsync(from, to))
+	const update = asyncThrottle(() => updateAsync(from, to, indexer))
 	const unsubscribe = await from.subscribe({}, update)
 	await update()
 	return unsubscribe
@@ -167,7 +177,7 @@ describe("replicateAsync", () => {
 		assert.deepEqual(await from.scan(), r3)
 		assert.deepEqual(await to.scan(), [])
 
-		after(await replicateAsync(from, to))
+		after(await replicateAsync(from, to, () => {}))
 
 		assert.deepEqual(await to.scan(), r3)
 
@@ -201,6 +211,89 @@ describe("replicateAsync", () => {
 		assert.deepEqual(await from.scan(), r6)
 		assert.deepEqual(await to.scan(), r6)
 	})
+
+	it("can index on both sides", async () => {
+		type Schema =
+			| SchemaSubspace<["log"], LogSchema>
+			| { key: ["total"]; value: string }
+
+		const from = new AsyncTupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
+		const to = new AsyncTupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
+
+		const append = transactionalQueryAsync<Schema>()(
+			async (tx, value: string) => {
+				await appendLogAsync(tx.subspace(["log"]), value)
+
+				const current = (await tx.get(["total"])) || ""
+				tx.set(["total"], current + value)
+			}
+		)
+
+		await append(from, "a")
+		await append(from, "b")
+		await append(from, "c")
+
+		const r3 = [
+			{ key: ["log", 1], value: "a" },
+			{ key: ["log", 2], value: "b" },
+			{ key: ["log", 3], value: "c" },
+			{ key: ["total"], value: "abc" },
+		]
+		assert.deepEqual(await from.scan(), r3)
+		assert.deepEqual(await to.scan(), [])
+
+		after(
+			await replicateAsync(
+				from.subspace(["log"]),
+				to.subspace(["log"]),
+				async (tx, items) => {
+					let total = (await tx.get(["total"])) || ""
+					for (const item of items) {
+						total += item.value
+					}
+					tx.set(["total"], total)
+				}
+			)
+		)
+
+		assert.deepEqual(await to.scan(), r3)
+
+		await append(from, "d")
+
+		const r4 = [
+			{ key: ["log", 1], value: "a" },
+			{ key: ["log", 2], value: "b" },
+			{ key: ["log", 3], value: "c" },
+			{ key: ["log", 4], value: "d" },
+			{ key: ["total"], value: "abcd" },
+		]
+		assert.deepEqual(await from.scan(), r4)
+		assert.deepEqual(await to.scan(), r4)
+
+		BATCH: {
+			const tx = from.transact()
+			await append(tx, "e")
+			await append(tx, "f")
+			await tx.commit()
+		}
+
+		const r6 = [
+			{ key: ["log", 1], value: "a" },
+			{ key: ["log", 2], value: "b" },
+			{ key: ["log", 3], value: "c" },
+			{ key: ["log", 4], value: "d" },
+			{ key: ["log", 5], value: "e" },
+			{ key: ["log", 6], value: "f" },
+			{ key: ["total"], value: "abcdef" },
+		]
+
+		assert.deepEqual(await from.scan(), r6)
+		assert.deepEqual(await to.scan(), r6)
+	})
 })
 
 /*
@@ -209,7 +302,7 @@ TODO:
 - asyncThrottle tests
 
 - how to run indexing on the other side after syncing?
-- handles throughput without tx conflict issues.
+	- handles throughput without tx conflict issues.
 
 
 */
