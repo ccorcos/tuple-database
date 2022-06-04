@@ -137,13 +137,22 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 		const sets = tv.scan(this.writes.set, storageScanArgs)
 		for (const { key: fullTuple, value } of sets) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
-			tv.set(result, tuple, value)
+			// Make sure we insert in reverse if the scan is in reverse.
+			tv.set(result, tuple, value, storageScanArgs.reverse)
 		}
 		const removes = t.scan(this.writes.remove, storageScanArgs)
 		for (const fullTuple of removes) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
-			tv.remove(result, tuple)
+			tv.remove(result, tuple, storageScanArgs.reverse)
 		}
+
+		// Make sure to trunace the results if we added items to the result set.
+		if (storageScanArgs.limit) {
+			if (result.length > storageScanArgs.limit) {
+				result.splice(storageScanArgs.limit, result.length)
+			}
+		}
+
 		return result as FilterTupleValuePairByPrefix<S, P>[]
 	}
 

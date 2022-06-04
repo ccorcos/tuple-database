@@ -76,4 +76,58 @@ describe("sortedTupleValuePairs", () => {
 			{ key: ["b", "b"], value: 6 },
 		])
 	})
+
+	const reversed = [...items].reverse()
+
+	it("set reverse", () => {
+		const data: KeyValuePair[] = []
+		for (const { key, value } of _.shuffle(items)) {
+			set(data, key, value, true)
+		}
+		assert.deepEqual(data, reversed)
+	})
+
+	it("remove reverse", () => {
+		First: {
+			const data: KeyValuePair[] = []
+
+			set(data, [1], null, true)
+			set(data, [2], null, true)
+			set(data, [3], null, true)
+
+			remove(data, [1], true)
+			assert.deepEqual(data, [
+				{ key: [3], value: null },
+				{ key: [2], value: null },
+			])
+		}
+
+		Middle: {
+			const data: KeyValuePair[] = []
+
+			set(data, [1], null, true)
+			set(data, [2], null, true)
+			set(data, [3], null, true)
+
+			remove(data, [2], true)
+			assert.deepEqual(data, [
+				{ key: [3], value: null },
+				{ key: [1], value: null },
+			])
+		}
+
+		Last: {
+			const data: KeyValuePair[] = []
+
+			set(data, [1], null, true)
+			set(data, [2], null, true)
+			set(data, [3], null, true)
+
+			remove(data, [1], true)
+			assert.deepEqual(data, [
+				{ key: [3], value: null },
+				{ key: [2], value: null },
+			])
+		}
+	})
 })
