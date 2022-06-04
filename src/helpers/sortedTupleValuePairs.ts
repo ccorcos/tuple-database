@@ -8,21 +8,46 @@ function compareTupleValuePair(a: KeyValuePair, b: KeyValuePair) {
 	return compareTuple(a.key, b.key)
 }
 
-export function set(data: KeyValuePair[], key: Tuple, value: any) {
-	return sortedList.set(data, { key, value }, compareTupleValuePair)
+function compareTupleValuePairReverse(a: KeyValuePair, b: KeyValuePair) {
+	return compareTuple(a.key, b.key) * -1
 }
 
-export function remove(data: KeyValuePair[], key: Tuple) {
-	return sortedList.remove(data, { key, value: null }, compareTupleValuePair)
+export function set(
+	data: KeyValuePair[],
+	key: Tuple,
+	value: any,
+	reverse = false
+) {
+	return sortedList.set(
+		data,
+		{ key, value },
+		reverse ? compareTupleValuePairReverse : compareTupleValuePair
+	)
 }
 
-export function get(data: KeyValuePair[], key: Tuple) {
-	const pair = sortedList.get(data, { key, value: null }, compareTupleValuePair)
+export function remove(data: KeyValuePair[], key: Tuple, reverse = false) {
+	return sortedList.remove(
+		data,
+		{ key, value: null },
+		reverse ? compareTupleValuePairReverse : compareTupleValuePair
+	)
+}
+
+export function get(data: KeyValuePair[], key: Tuple, reverse = false) {
+	const pair = sortedList.get(
+		data,
+		{ key, value: null },
+		reverse ? compareTupleValuePairReverse : compareTupleValuePair
+	)
 	if (pair !== undefined) return pair.value
 }
 
-export function exists(data: KeyValuePair[], key: Tuple) {
-	return sortedList.exists(data, { key, value: null }, compareTupleValuePair)
+export function exists(data: KeyValuePair[], key: Tuple, reverse = false) {
+	return sortedList.exists(
+		data,
+		{ key, value: null },
+		reverse ? compareTupleValuePairReverse : compareTupleValuePair
+	)
 }
 
 function normalizeTupleValuePairBounds(args: ScanArgs<Tuple, any>) {
