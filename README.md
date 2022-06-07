@@ -75,7 +75,7 @@
 	type Schema = UserIndex | AgeIndex | NameIndex
 	```
 
-3. Construct your database (see [Documenation](#Documentation) for more storage options).
+3. Construct your database (see [Documentation](#Documentation) for more storage options).
 
 	```ts
 	import {
