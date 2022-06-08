@@ -125,8 +125,7 @@ const appendLogAsync = transactionalQueryAsync<LogSchema>()(
 
 async function updateAsync(
 	from: AsyncTupleDatabaseClientApi<LogSchema>,
-	to: AsyncTupleDatabaseClientApi<LogSchema>,
-	indexer: (tx, items: LogSchema[]) => void | Promise<void>
+	to: AsyncTupleDatabaseClientApi<LogSchema>
 ) {
 	const currentLength = await getLogLengthAsync(to)
 	const desiredLength = await getLogLengthAsync(from)
@@ -141,16 +140,14 @@ async function updateAsync(
 	for (const item of result) {
 		tx.set(item.key, item.value)
 	}
-	await indexer(tx, result)
 	await tx.commit()
 }
 
 async function replicateAsync(
 	from: AsyncTupleDatabaseClientApi<LogSchema>,
-	to: AsyncTupleDatabaseClientApi<LogSchema>,
-	indexer: (tx, items: LogSchema[]) => void | Promise<void>
+	to: AsyncTupleDatabaseClientApi<LogSchema>
 ) {
-	const update = asyncThrottle(() => updateAsync(from, to, indexer))
+	const update = asyncThrottle(() => updateAsync(from, to))
 	const unsubscribe = await from.subscribe({}, update)
 	await update()
 	return unsubscribe
@@ -177,7 +174,7 @@ describe("replicateAsync", () => {
 		assert.deepEqual(await from.scan(), r3)
 		assert.deepEqual(await to.scan(), [])
 
-		after(await replicateAsync(from, to, () => {}))
+		after(await replicateAsync(from, to))
 
 		assert.deepEqual(await to.scan(), r3)
 
@@ -246,19 +243,7 @@ describe("replicateAsync", () => {
 		assert.deepEqual(await from.scan(), r3)
 		assert.deepEqual(await to.scan(), [])
 
-		after(
-			await replicateAsync(
-				from.subspace(["log"]),
-				to.subspace(["log"]),
-				async (tx, items) => {
-					let total = (await tx.get(["total"])) || ""
-					for (const item of items) {
-						total += item.value
-					}
-					tx.set(["total"], total)
-				}
-			)
-		)
+		after(await replicateAsync(from.subspace(["log"]), to.subspace(["log"])))
 
 		assert.deepEqual(await to.scan(), r3)
 
