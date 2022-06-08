@@ -16,7 +16,7 @@ import {
 } from "../database/sync/types"
 import { ScanArgs } from "../database/types"
 import { asyncThrottle } from "../helpers/asyncThrottle"
-import { ScanStorageArgs, SchemaSubspace, Tuple, TxId, Writes } from "../main"
+import { ScanStorageArgs, SchemaSubspace, Tuple, TxId, WriteOps } from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 
 type LogSchema = { key: [number]; value: any }
@@ -156,9 +156,6 @@ async function replicateAsync(
 }
 
 // What features do we need to make this easier?
-// - tx.id and tx.writes so you can re-compose transactions.
-// - Writes -> WriteOps
-// - ScanArgs<> vs ScanArgs?
 // - client.expose(subspace, indexer)
 
 function assertScanArgsPrefix(args: ScanStorageArgs, prefix: Tuple) {}
@@ -174,7 +171,7 @@ function exposeReplicateToAsync(
 		scan: (args?: ScanStorageArgs, txId?: TxId) => {
 			return client.scan(args as ScanArgs<[number], []> | undefined, txId)
 		},
-		commit: (writes: Writes, txId?: TxId) => {
+		commit: (writes: WriteOps, txId?: TxId) => {
 			if (writes.remove?.length)
 				throw new Error("No removing from append-only log.")
 
@@ -182,8 +179,8 @@ function exposeReplicateToAsync(
 				// TODO: Validate what writes are allowed here.
 				// Add the total indexer to this transaction here
 				const moreTx = client.transact(txId)
-				indexer(moreTx, writes.set)
-				moreTx.writes
+				// indexer(moreTx, writes.set)
+				// moreTx.writes
 			}
 			return db.commit(writes, txId)
 		},
@@ -264,16 +261,16 @@ describe("replicateAsync", () => {
 		const toDb = new TupleDatabase(new InMemoryTupleStorage())
 
 		const to = new AsyncTupleDatabaseClient<Schema>({
-			scan: toDb.scan,
-			commit: (writes: Writes, txId?: string) => {
+			scan: toDb.scan.bind(toDb),
+			commit: (writes: WriteOps, txId?: string) => {
 				// Validate what writes are allowed here.
 				// Add the total indexer to this transaction here
 
 				return toDb.commit(writes, txId)
 			},
-			cancel: toDb.cancel,
-			subscribe: toDb.subscribe,
-			close: toDb.close,
+			cancel: toDb.cancel.bind(toDb),
+			subscribe: toDb.subscribe.bind(toDb),
+			close: toDb.close.bind(toDb),
 		})
 
 		const append = transactionalQueryAsync<Schema>()(
