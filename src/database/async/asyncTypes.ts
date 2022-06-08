@@ -55,10 +55,13 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 		) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 		// Transaction
-		transact: (txId?: TxId) => AsyncTupleTransactionApi<S>
+		transact: (txId?: TxId) => AsyncTupleRootTransactionApi<S>
 	}
 
-export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+export type AsyncTupleRootTransactionApi<
+	S extends KeyValuePair = KeyValuePair
+> = {
+	// ReadApis
 	// Same as AsyncTupleDatabaseClientApi without the txId argument.
 	scan: <T extends S["key"], P extends TuplePrefix<T>>(
 		args?: ScanArgs<T, P>
@@ -68,6 +71,43 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => Promise<ValueForTuple<S, T> | undefined>
 	exists: <T extends S["key"]>(tuple: T) => Promise<boolean>
 
+	// Subspace
+	// Demotes to a non-root transaction so you cannot commit, cancel, or inspect
+	// the transaction.
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// WriteApis
+	set: <T extends S>(
+		tuple: T["key"],
+		value: T["value"]
+	) => AsyncTupleRootTransactionApi<S>
+	remove: (tuple: S["key"]) => AsyncTupleRootTransactionApi<S>
+	write: (writes: WriteOps<S>) => AsyncTupleRootTransactionApi<S>
+
+	// RootTransactionApis
+	commit: () => Promise<void>
+	cancel: () => Promise<void>
+	id: TxId
+}
+
+export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+	// ReadApis
+	// Same as AsyncTupleDatabaseClientApi without the txId argument.
+	scan: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>
+	) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S["key"]>(
+		tuple: T
+	) => Promise<ValueForTuple<S, T> | undefined>
+	exists: <T extends S["key"]>(tuple: T) => Promise<boolean>
+
+	// Subspace
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
 	// WriteApis
 	set: <T extends S>(
 		tuple: T["key"],
@@ -75,16 +115,6 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => AsyncTupleTransactionApi<S>
 	remove: (tuple: S["key"]) => AsyncTupleTransactionApi<S>
 	write: (writes: WriteOps<S>) => AsyncTupleTransactionApi<S>
-	commit: () => Promise<void>
-	cancel: () => Promise<void>
-
-	// Subspace
-	subspace: <P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
-
-	// Transaction
-	id: TxId
 }
 
 /** Useful for indicating that a function does not commit any writes. */

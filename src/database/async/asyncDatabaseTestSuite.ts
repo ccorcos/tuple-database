@@ -1724,16 +1724,17 @@ export function asyncDatabaseTestSuite(
 				])
 			})
 
-			it("not allowed to commit a transaction subspace", async () => {
-				type Schema = { key: ["a", "a", number]; value: number }
+			it("Root tuple transaction API conforms to non-root transaction api.", async () => {
+				type Schema = { key: [number]; value: number }
 				const store = createStorage<Schema>(randomId())
 
-				const a = store.subspace(["a"])
-				const tx = a.transact()
-				const aa = tx.subspace(["a"])
-				aa.set([4], 4)
+				function f(
+					tx: AsyncTupleTransactionApi<{ key: [number]; value: number }>
+				) {}
 
-				await assert.rejects(() => aa.commit())
+				const tx = store.transact()
+				f(tx)
+				f(tx.subspace([]))
 			})
 
 			it("scan args types work", async () => {

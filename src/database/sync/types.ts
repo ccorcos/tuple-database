@@ -62,10 +62,11 @@ export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 	) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// Transaction
-	transact: (txId?: TxId) => TupleTransactionApi<S>
+	transact: (txId?: TxId) => TupleRootTransactionApi<S>
 }
 
-export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+export type TupleRootTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+	// ReadApis
 	// Same as TupleDatabaseClientApi without the txId argument.
 	scan: <T extends S["key"], P extends TuplePrefix<T>>(
 		args?: ScanArgs<T, P>
@@ -75,6 +76,43 @@ export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => Identity<ValueForTuple<S, T> | undefined>
 	exists: <T extends S["key"]>(tuple: T) => Identity<boolean>
 
+	// Subspace
+	// Demotes to a non-root transaction so you cannot commit, cancel, or inspect
+	// the transaction.
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// WriteApis
+	set: <T extends S>(
+		tuple: T["key"],
+		value: T["value"]
+	) => TupleRootTransactionApi<S>
+	remove: (tuple: S["key"]) => TupleRootTransactionApi<S>
+	write: (writes: WriteOps<S>) => TupleRootTransactionApi<S>
+
+	// RootTransactionApis
+	commit: () => Identity<void>
+	cancel: () => Identity<void>
+	id: TxId
+}
+
+export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+	// ReadApis
+	// Same as TupleDatabaseClientApi without the txId argument.
+	scan: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>
+	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S["key"]>(
+		tuple: T
+	) => Identity<ValueForTuple<S, T> | undefined>
+	exists: <T extends S["key"]>(tuple: T) => Identity<boolean>
+
+	// Subspace
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
 	// WriteApis
 	set: <T extends S>(
 		tuple: T["key"],
@@ -82,16 +120,6 @@ export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => TupleTransactionApi<S>
 	remove: (tuple: S["key"]) => TupleTransactionApi<S>
 	write: (writes: WriteOps<S>) => TupleTransactionApi<S>
-	commit: () => Identity<void>
-	cancel: () => Identity<void>
-
-	// Subspace
-	subspace: <P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
-
-	// Transaction
-	id: TxId
 }
 
 /** Useful for indicating that a function does not commit any writes. */

@@ -22,6 +22,7 @@ import {
 	AsyncCallback,
 	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
+	AsyncTupleRootTransactionApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
 
@@ -97,9 +98,9 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Transaction
-	transact(txId?: TxId): AsyncTupleTransactionApi<S> {
+	transact(txId?: TxId): AsyncTupleRootTransactionApi<S> {
 		const id = txId || randomId()
-		return new AsyncTupleTransaction(this.db, this.subspacePrefix, id)
+		return new AsyncTupleRootTransaction(this.db, this.subspacePrefix, id)
 	}
 
 	async close() {
@@ -107,8 +108,8 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 }
 
-export class AsyncTupleTransaction<S extends KeyValuePair>
-	implements AsyncTupleTransactionApi<S>
+export class AsyncTupleRootTransaction<S extends KeyValuePair>
+	implements AsyncTupleRootTransactionApi<S>
 {
 	constructor(
 		private db: AsyncTupleDatabaseApi | TupleDatabaseApi,
@@ -201,7 +202,7 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 	set<T extends S>(
 		tuple: T["key"],
 		value: T["value"]
-	): AsyncTupleTransactionApi<S> {
+	): AsyncTupleRootTransactionApi<S> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		t.remove(this.writes.remove, fullTuple)
@@ -209,7 +210,7 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	remove(tuple: S["key"]): AsyncTupleTransactionApi<S> {
+	remove(tuple: S["key"]): AsyncTupleRootTransactionApi<S> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		tv.remove(this.writes.set, fullTuple)
@@ -217,7 +218,7 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	write(writes: WriteOps<S>): AsyncTupleTransactionApi<S> {
+	write(writes: WriteOps<S>): AsyncTupleRootTransactionApi<S> {
 		this.checkActive()
 
 		// If you're calling this function, then the order of these opertions
@@ -249,21 +250,17 @@ export class AsyncTupleTransaction<S extends KeyValuePair>
 	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
 		this.checkActive()
 		// TODO: types.
-		return new AsyncTupleTransactionSubspace(this as any, prefix)
+		return new AsyncTupleSubspaceTransaction(this as any, prefix)
 	}
 }
 
-export class AsyncTupleTransactionSubspace<S extends KeyValuePair>
+export class AsyncTupleSubspaceTransaction<S extends KeyValuePair>
 	implements AsyncTupleTransactionApi<S>
 {
 	constructor(
 		private tx: AsyncTupleTransactionApi<any>,
 		public subspacePrefix: Tuple
 	) {}
-
-	get id() {
-		return this.tx.id
-	}
 
 	async scan<T extends S["key"], P extends TuplePrefix<T>>(
 		args: ScanArgs<T, P> = {}
@@ -315,18 +312,10 @@ export class AsyncTupleTransactionSubspace<S extends KeyValuePair>
 		return this
 	}
 
-	async commit() {
-		throw new Error("Not allowed to commit from within a transaction subspace.")
-	}
-
-	async cancel() {
-		throw new Error("Not allowed cancel from within a transaction subspace.")
-	}
-
 	subspace<P extends TuplePrefix<S["key"]>>(
 		prefix: P
 	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
-		return new AsyncTupleTransactionSubspace(this.tx, [
+		return new AsyncTupleSubspaceTransaction(this.tx, [
 			...this.subspacePrefix,
 			...prefix,
 		])
