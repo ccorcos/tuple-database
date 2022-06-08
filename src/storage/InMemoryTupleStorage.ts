@@ -1,6 +1,6 @@
 import { TupleStorageApi } from "../database/sync/types"
 import * as tv from "../helpers/sortedTupleValuePairs"
-import { KeyValuePair, ScanStorageArgs, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
 
 export class InMemoryTupleStorage implements TupleStorageApi {
 	data: KeyValuePair[]
@@ -13,7 +13,7 @@ export class InMemoryTupleStorage implements TupleStorageApi {
 		return tv.scan(this.data, args)
 	}
 
-	commit(writes: Writes) {
+	commit(writes: WriteOps) {
 		// Indexers run inside the tx so we don't need to do that here.
 		// And because of that, the order here should not matter.
 		const { set, remove } = writes

@@ -31,7 +31,7 @@ export function remove<T>(list: T[], item: T, cmp: Compare<T>) {
 	}
 }
 
-export type ScanArgs<T> = {
+type ScanArgs<T> = {
 	gt?: T
 	gte?: T
 	lt?: T

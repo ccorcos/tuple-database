@@ -1,5 +1,10 @@
 ## TODO
 
+- client.expose(subspace, indexer)
+
+- keep track of transactions and expire them after a timeout
+- keep track of committed transactions too and expire after timeout?
+
 - using ipc-peer over a socket for client across a process / network.
 
 - rtree for reactivity

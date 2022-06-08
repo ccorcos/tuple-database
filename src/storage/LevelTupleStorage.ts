@@ -7,7 +7,7 @@ import {
 	encodeTuple,
 	encodeValue,
 } from "../helpers/codec"
-import { KeyValuePair, ScanStorageArgs, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
 
 export class LevelTupleStorage implements AsyncTupleStorageApi {
 	/**
@@ -43,7 +43,7 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 		})
 	}
 
-	async commit(writes: Writes): Promise<void> {
+	async commit(writes: WriteOps): Promise<void> {
 		const ops = [
 			...(writes.remove || []).map(
 				(tuple) =>

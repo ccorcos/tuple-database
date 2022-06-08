@@ -3,15 +3,15 @@ import { describe, it } from "mocha"
 import { MAX } from "../storage/types"
 import {
 	normalizeSubspaceScanArgs,
-	prependPrefixToWrites,
-	removePrefixFromWrites,
+	prependPrefixToWriteOps,
+	removePrefixFromWriteOps,
 } from "./subspaceHelpers"
 
 describe("subspaceHelpers", () => {
 	describe("prependPrefixToWrites", () => {
 		it("works", () => {
 			assert.deepEqual(
-				prependPrefixToWrites(["x"], {
+				prependPrefixToWriteOps(["x"], {
 					set: [
 						{ key: ["a"], value: 1 },
 						{ key: ["b"], value: 2 },
@@ -32,7 +32,7 @@ describe("subspaceHelpers", () => {
 	describe("removePrefixFromWrites", () => {
 		it("works", () => {
 			assert.deepEqual(
-				removePrefixFromWrites(["x"], {
+				removePrefixFromWriteOps(["x"], {
 					set: [
 						{ key: ["x", "a"], value: 1 },
 						{ key: ["x", "b"], value: 2 },
@@ -50,7 +50,7 @@ describe("subspaceHelpers", () => {
 		})
 		it("throws if its the wrong prefix", () => {
 			assert.throws(() => {
-				removePrefixFromWrites(["y"], {
+				removePrefixFromWriteOps(["y"], {
 					set: [
 						{ key: ["x", "a"], value: 1 },
 						{ key: ["x", "b"], value: 2 },

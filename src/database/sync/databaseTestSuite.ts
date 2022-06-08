@@ -11,7 +11,7 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, MAX, MIN, Writes } from "../../storage/types"
+import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { Assert } from "../typeHelpers"
@@ -933,6 +933,17 @@ export function databaseTestSuite(
 			assertEqual(store.get([1]), undefined)
 		})
 
+		it("root transaction can be recomposed", () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.set([1], 2)
+
+			const tx2 = store.transact(tx.id, tx.writes)
+			tx2.commit()
+
+			assertEqual(store.scan(), [{ key: [1], value: 2 }])
+		})
+
 		it.skip("cancelled transaction cannot conflict with other transactions")
 
 		describe("application-level indexing", () => {
@@ -1273,7 +1284,7 @@ export function databaseTestSuite(
 					set: [{ key: ["a"], value: 1 }],
 				})
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				store.subscribe({ gte: ["a"], lte: ["a"] }, (writes) => {
 					hoist = writes
 				})
@@ -1283,7 +1294,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a"], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("works with set key", () => {
@@ -1308,7 +1319,7 @@ export function databaseTestSuite(
 				const data = store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
 					(writes) => {
@@ -1321,7 +1332,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a", "b", 1], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("works with remove key", () => {
@@ -1346,7 +1357,7 @@ export function databaseTestSuite(
 				const data = store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				store.subscribe({ prefix: ["a", "b"] }, (writes) => {
 					hoist = writes
 				})
@@ -1356,7 +1367,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [],
 					remove: [["a", "b", "a"]],
-				} as Writes)
+				})
 			})
 
 			it("works when overwriting a value to an existing key", () => {
@@ -1381,7 +1392,7 @@ export function databaseTestSuite(
 				const data = store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				store.subscribe({ prefix: ["a", "b"] }, (writes) => {
 					hoist = writes
 				})
@@ -1391,7 +1402,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a", "b", "a"], value: 99 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("should use prefix correctly and filter bounds", () => {
@@ -1421,7 +1432,7 @@ export function databaseTestSuite(
 				// { gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
 				// But the second one has better reactivity performance due to the shared prefix.
 
-				let hoist1: Writes | undefined
+				let hoist1: WriteOps | undefined
 				store.subscribe(
 					{ gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
 					(writes) => {
@@ -1429,7 +1440,7 @@ export function databaseTestSuite(
 					}
 				)
 
-				let hoist2: Writes | undefined
+				let hoist2: WriteOps | undefined
 				store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
 					(writes) => {
@@ -1437,7 +1448,7 @@ export function databaseTestSuite(
 					}
 				)
 
-				let hoist3: Writes | undefined
+				let hoist3: WriteOps | undefined
 				store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MAX] },
 					(writes) => {
@@ -1455,7 +1466,7 @@ export function databaseTestSuite(
 				assert.deepStrictEqual(hoist3, {
 					set: [{ key: ["a", "c", 1], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("waits for emit callbacks before resolving commit", () => {
@@ -1703,7 +1714,9 @@ export function databaseTestSuite(
 
 				const a = store.subspace(["a"])
 				const tx = a.transact()
+
 				tx.set(["a", 3], 3)
+
 				const aa = tx.subspace(["a"])
 				aa.set([4], 4)
 
@@ -1714,7 +1727,7 @@ export function databaseTestSuite(
 					{ key: [4], value: 4 },
 				])
 
-				aa.commit()
+				tx.commit()
 
 				assertEqual(a.scan(), [
 					{ key: ["a", 1], value: 1 },
@@ -1722,6 +1735,17 @@ export function databaseTestSuite(
 					{ key: ["a", 3], value: 3 },
 					{ key: ["a", 4], value: 4 },
 				])
+			})
+
+			it("root tuple transaction API conforms to non-root transaction api.", () => {
+				type Schema = { key: [number]; value: number }
+				const store = createStorage<Schema>(randomId())
+
+				function f(tx: TupleTransactionApi<{ key: [number]; value: number }>) {}
+
+				const tx = store.transact()
+				f(tx)
+				f(tx.subspace([]))
 			})
 
 			it("scan args types work", () => {

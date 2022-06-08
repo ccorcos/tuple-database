@@ -1,6 +1,11 @@
 import { isEqual, omitBy } from "lodash"
 import { ScanArgs } from "../database/types"
-import { KeyValuePair, ScanStorageArgs, Tuple, Writes } from "../storage/types"
+import {
+	KeyValuePair,
+	ScanStorageArgs,
+	Tuple,
+	WriteOps,
+} from "../storage/types"
 import { normalizeTupleBounds } from "./sortedTupleArray"
 
 export function prependPrefixToTuple(prefix: Tuple, tuple: Tuple): Tuple {
@@ -29,7 +34,10 @@ function prependPrefixToTupleValuePairs(
 	return pairs.map((pair) => prependPrefixToTupleValuePair(prefix, pair))
 }
 
-export function prependPrefixToWrites(prefix: Tuple, writes: Writes): Writes {
+export function prependPrefixToWriteOps(
+	prefix: Tuple,
+	writes: WriteOps
+): WriteOps {
 	const set = writes.set
 		? prependPrefixToTupleValuePairs(prefix, writes.set)
 		: undefined
@@ -41,7 +49,10 @@ export function prependPrefixToWrites(prefix: Tuple, writes: Writes): Writes {
 	return { set, remove }
 }
 
-export function removePrefixFromWrites(prefix: Tuple, writes: Writes): Writes {
+export function removePrefixFromWriteOps(
+	prefix: Tuple,
+	writes: WriteOps
+): WriteOps {
 	const set = writes.set
 		? removePrefixFromTupleValuePairs(prefix, writes.set)
 		: undefined

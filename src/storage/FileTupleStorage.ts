@@ -1,6 +1,6 @@
 import * as fs from "fs-extra"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { KeyValuePair, Writes } from "./types"
+import { KeyValuePair, WriteOps } from "./types"
 
 function parseFile(str: string): KeyValuePair[] {
 	if (str === "") {
@@ -32,7 +32,7 @@ export class FileTupleStorage extends InMemoryTupleStorage {
 		this.cache = cache
 	}
 
-	commit(writes: Writes) {
+	commit(writes: WriteOps) {
 		super.commit(writes)
 		this.cache.set(this.data)
 	}

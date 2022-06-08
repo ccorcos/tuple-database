@@ -6,7 +6,7 @@ This file is generated from async/asyncTypes.ts
 
 type Identity<T> = T
 
-import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
@@ -18,14 +18,14 @@ import { ScanArgs, TxId, Unsubscribe } from "../types"
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Identity<KeyValuePair[]>
-	commit: (writes: Writes) => Identity<void>
+	commit: (writes: WriteOps) => Identity<void>
 	close: () => Identity<void>
 }
 
 /** Wraps TupleStorageApi with reactivity and MVCC */
 export type TupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Identity<KeyValuePair[]>
-	commit: (writes: Writes, txId?: TxId) => Identity<void>
+	commit: (writes: WriteOps, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	subscribe: (
 		args: ScanStorageArgs,
@@ -37,7 +37,7 @@ export type TupleDatabaseApi = {
 /** Wraps TupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
 export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 	// Types
-	commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
+	commit: (writes: WriteOps<S>, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	scan: <T extends S["key"], P extends TuplePrefix<T>>(
 		args?: ScanArgs<T, P>,
@@ -62,10 +62,12 @@ export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 	) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// Transaction
-	transact: (txId?: TxId) => TupleTransactionApi<S>
+	/** Arguments to transact() are for internal use only. */
+	transact: (txId?: TxId, writes?: WriteOps<S>) => TupleRootTransactionApi<S>
 }
 
-export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+export type TupleRootTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+	// ReadApis
 	// Same as TupleDatabaseClientApi without the txId argument.
 	scan: <T extends S["key"], P extends TuplePrefix<T>>(
 		args?: ScanArgs<T, P>
@@ -75,20 +77,51 @@ export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => Identity<ValueForTuple<S, T> | undefined>
 	exists: <T extends S["key"]>(tuple: T) => Identity<boolean>
 
+	// Subspace
+	// Demotes to a non-root transaction so you cannot commit, cancel, or inspect
+	// the transaction.
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// WriteApis
+	set: <T extends S>(
+		tuple: T["key"],
+		value: T["value"]
+	) => TupleRootTransactionApi<S>
+	remove: (tuple: S["key"]) => TupleRootTransactionApi<S>
+	write: (writes: WriteOps<S>) => TupleRootTransactionApi<S>
+
+	// RootTransactionApis
+	commit: () => Identity<void>
+	cancel: () => Identity<void>
+	id: TxId
+	writes: Required<WriteOps<S>>
+}
+
+export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
+	// ReadApis
+	// Same as TupleDatabaseClientApi without the txId argument.
+	scan: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>
+	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+	get: <T extends S["key"]>(
+		tuple: T
+	) => Identity<ValueForTuple<S, T> | undefined>
+	exists: <T extends S["key"]>(tuple: T) => Identity<boolean>
+
+	// Subspace
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
 	// WriteApis
 	set: <T extends S>(
 		tuple: T["key"],
 		value: T["value"]
 	) => TupleTransactionApi<S>
 	remove: (tuple: S["key"]) => TupleTransactionApi<S>
-	write: (writes: Writes<S>) => TupleTransactionApi<S>
-	commit: () => Identity<void>
-	cancel: () => Identity<void>
-
-	// Subspace
-	subspace: <P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	) => TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+	write: (writes: WriteOps<S>) => TupleTransactionApi<S>
 }
 
 /** Useful for indicating that a function does not commit any writes. */
@@ -112,6 +145,6 @@ export type ReadOnlyTupleDatabaseClientApi<
 }
 
 export type Callback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>,
+	writes: WriteOps<S>,
 	txId: TxId
 ) => void | Identity<void>
