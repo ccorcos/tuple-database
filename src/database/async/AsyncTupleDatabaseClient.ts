@@ -261,6 +261,10 @@ export class AsyncTupleTransactionSubspace<S extends KeyValuePair>
 		public subspacePrefix: Tuple
 	) {}
 
+	get id() {
+		return this.tx.id
+	}
+
 	async scan<T extends S["key"], P extends TuplePrefix<T>>(
 		args: ScanArgs<T, P> = {}
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {

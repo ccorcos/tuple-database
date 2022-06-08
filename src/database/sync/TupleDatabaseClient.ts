@@ -253,6 +253,10 @@ export class TupleTransactionSubspace<S extends KeyValuePair>
 		public subspacePrefix: Tuple
 	) {}
 
+	get id() {
+		return this.tx.id
+	}
+
 	scan<T extends S["key"], P extends TuplePrefix<T>>(
 		args: ScanArgs<T, P> = {}
 	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
