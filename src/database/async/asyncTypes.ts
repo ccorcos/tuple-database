@@ -55,7 +55,11 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 		) => AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 		// Transaction
-		transact: (txId?: TxId) => AsyncTupleRootTransactionApi<S>
+		/** Arguments to transact() are for internal use only. */
+		transact: (
+			txId?: TxId,
+			writes?: WriteOps<S>
+		) => AsyncTupleRootTransactionApi<S>
 	}
 
 export type AsyncTupleRootTransactionApi<
@@ -90,6 +94,7 @@ export type AsyncTupleRootTransactionApi<
 	commit: () => Promise<void>
 	cancel: () => Promise<void>
 	id: TxId
+	writes: Required<WriteOps<S>>
 }
 
 export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {

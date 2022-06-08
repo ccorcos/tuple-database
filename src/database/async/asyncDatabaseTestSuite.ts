@@ -928,6 +928,17 @@ export function asyncDatabaseTestSuite(
 			assertEqual(await store.get([1]), undefined)
 		})
 
+		it("root transaction can be recomposed", async () => {
+			const store = createStorage(randomId())
+			const tx = store.transact()
+			tx.set([1], 2)
+
+			const tx2 = store.transact(tx.id, tx.writes)
+			await tx2.commit()
+
+			assertEqual(await store.scan(), [{ key: [1], value: 2 }])
+		})
+
 		it.skip("cancelled transaction cannot conflict with other transactions")
 
 		describe("application-level indexing", () => {
@@ -1724,7 +1735,7 @@ export function asyncDatabaseTestSuite(
 				])
 			})
 
-			it("Root tuple transaction API conforms to non-root transaction api.", async () => {
+			it("root tuple transaction API conforms to non-root transaction api.", async () => {
 				type Schema = { key: [number]; value: number }
 				const store = createStorage<Schema>(randomId())
 

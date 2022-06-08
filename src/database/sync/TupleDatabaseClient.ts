@@ -105,9 +105,9 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Transaction
-	transact(txId?: TxId): TupleRootTransactionApi<S> {
+	transact(txId?: TxId, writes?: WriteOps<S>): TupleRootTransactionApi<S> {
 		const id = txId || randomId()
-		return new TupleRootTransaction(this.db, this.subspacePrefix, id)
+		return new TupleRootTransaction(this.db, this.subspacePrefix, id, writes)
 	}
 
 	close() {
@@ -121,12 +121,15 @@ export class TupleRootTransaction<S extends KeyValuePair>
 	constructor(
 		private db: TupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple,
-		public id: TxId
-	) {}
+		public id: TxId,
+		writes?: WriteOps<S>
+	) {
+		this.writes = { set: [], remove: [], ...writes }
+	}
 
 	committed = false
 	canceled = false
-	writes: Required<WriteOps<S>> = { set: [], remove: [] }
+	writes: Required<WriteOps<S>>
 
 	private checkActive() {
 		if (this.committed) throw new Error("Transaction already committed")

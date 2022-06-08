@@ -62,7 +62,8 @@ export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 	) => TupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// Transaction
-	transact: (txId?: TxId) => TupleRootTransactionApi<S>
+	/** Arguments to transact() are for internal use only. */
+	transact: (txId?: TxId, writes?: WriteOps<S>) => TupleRootTransactionApi<S>
 }
 
 export type TupleRootTransactionApi<S extends KeyValuePair = KeyValuePair> = {
@@ -95,6 +96,7 @@ export type TupleRootTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	commit: () => Identity<void>
 	cancel: () => Identity<void>
 	id: TxId
+	writes: Required<WriteOps<S>>
 }
 
 export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {

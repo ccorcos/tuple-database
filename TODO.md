@@ -1,16 +1,9 @@
 ## TODO
 
-What features do we need to make replicate easier?
-- tx.writes so you can re-compose transactions.
-```ts
-tx.set([1], 2)
-tx.writes
-tx.subspace([1])
-tx.writes
-
-```
-
 - client.expose(subspace, indexer)
+
+- keep track of transactions and expire them after a timeout
+- keep track of committed transactions too and expire after timeout?
 
 - using ipc-peer over a socket for client across a process / network.
 
