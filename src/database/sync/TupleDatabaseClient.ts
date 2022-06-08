@@ -303,11 +303,11 @@ export class TupleTransactionSubspace<S extends KeyValuePair>
 	}
 
 	commit() {
-		return this.tx.commit()
+		throw new Error("Not allowed to commit from within a transaction subspace.")
 	}
 
 	cancel() {
-		return this.tx.cancel()
+		throw new Error("Not allowed cancel from within a transaction subspace.")
 	}
 
 	subspace<P extends TuplePrefix<S["key"]>>(

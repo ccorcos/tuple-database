@@ -1701,7 +1701,9 @@ export function asyncDatabaseTestSuite(
 
 				const a = store.subspace(["a"])
 				const tx = a.transact()
+
 				tx.set(["a", 3], 3)
+
 				const aa = tx.subspace(["a"])
 				aa.set([4], 4)
 
@@ -1712,7 +1714,7 @@ export function asyncDatabaseTestSuite(
 					{ key: [4], value: 4 },
 				])
 
-				await aa.commit()
+				await tx.commit()
 
 				assertEqual(await a.scan(), [
 					{ key: ["a", 1], value: 1 },
@@ -1720,6 +1722,18 @@ export function asyncDatabaseTestSuite(
 					{ key: ["a", 3], value: 3 },
 					{ key: ["a", 4], value: 4 },
 				])
+			})
+
+			it("not allowed to commit a transaction subspace", async () => {
+				type Schema = { key: ["a", "a", number]; value: number }
+				const store = createStorage<Schema>(randomId())
+
+				const a = store.subspace(["a"])
+				const tx = a.transact()
+				const aa = tx.subspace(["a"])
+				aa.set([4], 4)
+
+				await assert.rejects(() => aa.commit())
 			})
 
 			it("scan args types work", async () => {

@@ -1,7 +1,15 @@
 ## TODO
 
 What features do we need to make replicate easier?
-- tx.id and tx.writes so you can re-compose transactions.
+- tx.writes so you can re-compose transactions.
+```ts
+tx.set([1], 2)
+tx.writes
+tx.subspace([1])
+tx.writes
+
+```
+
 - client.expose(subspace, indexer)
 
 - using ipc-peer over a socket for client across a process / network.
