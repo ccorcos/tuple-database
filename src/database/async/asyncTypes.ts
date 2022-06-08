@@ -82,6 +82,10 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	subspace: <P extends TuplePrefix<S["key"]>>(
 		prefix: P
 	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
+
+	// Transaction
+	// id: TxId
+	// writes: Writes
 }
 
 /** Useful for indicating that a function does not commit any writes. */

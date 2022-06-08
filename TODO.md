@@ -8,6 +8,7 @@
 - queue up commits to wait til after previous emits to prevent infinite loop issues. though also warn about it.
 	Should we? This reduces concurrency performance advantage... Storage needs to handle concurrent writes?
 
+- clean up dangling commits in the commit log after some timeout.
 
 
 - play with more triplestore ergonomics, order value, proxy objects.
