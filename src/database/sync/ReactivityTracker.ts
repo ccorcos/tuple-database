@@ -14,7 +14,7 @@ import {
 	isTupleWithinBounds,
 } from "../../helpers/sortedTupleArray"
 import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
-import { MIN, ScanStorageArgs, Tuple, Writes } from "../../storage/types"
+import { MIN, ScanStorageArgs, Tuple, WriteOps } from "../../storage/types"
 import { TupleStorageApi } from "../sync/types"
 import { TxId } from "../types"
 import { Callback } from "./types"
@@ -26,7 +26,7 @@ export class ReactivityTracker {
 		return subscribe(this.listenersDb, args, callback)
 	}
 
-	computeReactivityEmits(writes: Writes) {
+	computeReactivityEmits(writes: WriteOps) {
 		return getReactivityEmits(this.listenersDb, writes)
 	}
 
@@ -101,9 +101,9 @@ function getListenerCallbacksForTuple(
 	return callbacks
 }
 
-type ReactivityEmits = Map<Callback, Required<Writes>>
+type ReactivityEmits = Map<Callback, Required<WriteOps>>
 
-function getReactivityEmits(listenersDb: TupleStorageApi, writes: Writes) {
+function getReactivityEmits(listenersDb: TupleStorageApi, writes: WriteOps) {
 	const emits: ReactivityEmits = new Map()
 
 	for (const { key, value } of writes.set || []) {

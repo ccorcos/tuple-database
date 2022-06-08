@@ -8,7 +8,7 @@ type Identity<T> = T
 
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
 import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
 import { TxId, Unsubscribe } from "../types"
@@ -31,10 +31,8 @@ export class TupleDatabase implements TupleDatabaseApi {
 		return this.reactivity.subscribe(args, callback)
 	}
 
-	commit(writes: Writes, txId?: string) {
+	commit(writes: WriteOps, txId?: string) {
 		// Note: commit is called for transactional reads as well!
-		// if (this.emitting && !isEmptyWrites(writes))
-
 		const emits = this.reactivity.computeReactivityEmits(writes)
 
 		if (txId) this.log.commit(txId)

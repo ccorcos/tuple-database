@@ -1,4 +1,4 @@
-import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
@@ -10,14 +10,14 @@ import { ScanArgs, TxId, Unsubscribe } from "../types"
 /** The low-level API for implementing new storage layers. */
 export type AsyncTupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Promise<KeyValuePair[]>
-	commit: (writes: Writes) => Promise<void>
+	commit: (writes: WriteOps) => Promise<void>
 	close: () => Promise<void>
 }
 
 /** Wraps AsyncTupleStorageApi with reactivity and MVCC */
 export type AsyncTupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Promise<KeyValuePair[]>
-	commit: (writes: Writes, txId?: TxId) => Promise<void>
+	commit: (writes: WriteOps, txId?: TxId) => Promise<void>
 	cancel: (txId: string) => Promise<void>
 	subscribe: (
 		args: ScanStorageArgs,
@@ -30,7 +30,7 @@ export type AsyncTupleDatabaseApi = {
 export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 	{
 		// Types
-		commit: (writes: Writes<S>, txId?: TxId) => Promise<void>
+		commit: (writes: WriteOps<S>, txId?: TxId) => Promise<void>
 		cancel: (txId: string) => Promise<void>
 		scan: <T extends S["key"], P extends TuplePrefix<T>>(
 			args?: ScanArgs<T, P>,
@@ -74,7 +74,7 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 		value: T["value"]
 	) => AsyncTupleTransactionApi<S>
 	remove: (tuple: S["key"]) => AsyncTupleTransactionApi<S>
-	write: (writes: Writes<S>) => AsyncTupleTransactionApi<S>
+	write: (writes: WriteOps<S>) => AsyncTupleTransactionApi<S>
 	commit: () => Promise<void>
 	cancel: () => Promise<void>
 
@@ -105,6 +105,6 @@ export type ReadOnlyAsyncTupleDatabaseClientApi<
 }
 
 export type AsyncCallback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>,
+	writes: WriteOps<S>,
 	txId: TxId
 ) => void | Promise<void>

@@ -6,7 +6,7 @@ This file is generated from async/asyncTypes.ts
 
 type Identity<T> = T
 
-import { KeyValuePair, ScanStorageArgs, Writes } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
@@ -18,14 +18,14 @@ import { ScanArgs, TxId, Unsubscribe } from "../types"
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Identity<KeyValuePair[]>
-	commit: (writes: Writes) => Identity<void>
+	commit: (writes: WriteOps) => Identity<void>
 	close: () => Identity<void>
 }
 
 /** Wraps TupleStorageApi with reactivity and MVCC */
 export type TupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Identity<KeyValuePair[]>
-	commit: (writes: Writes, txId?: TxId) => Identity<void>
+	commit: (writes: WriteOps, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	subscribe: (
 		args: ScanStorageArgs,
@@ -37,7 +37,7 @@ export type TupleDatabaseApi = {
 /** Wraps TupleDatabaseApi with types, subspaces, transaction objects, and additional read apis.  */
 export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 	// Types
-	commit: (writes: Writes<S>, txId?: TxId) => Identity<void>
+	commit: (writes: WriteOps<S>, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	scan: <T extends S["key"], P extends TuplePrefix<T>>(
 		args?: ScanArgs<T, P>,
@@ -81,7 +81,7 @@ export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 		value: T["value"]
 	) => TupleTransactionApi<S>
 	remove: (tuple: S["key"]) => TupleTransactionApi<S>
-	write: (writes: Writes<S>) => TupleTransactionApi<S>
+	write: (writes: WriteOps<S>) => TupleTransactionApi<S>
 	commit: () => Identity<void>
 	cancel: () => Identity<void>
 
@@ -112,6 +112,6 @@ export type ReadOnlyTupleDatabaseClientApi<
 }
 
 export type Callback<S extends KeyValuePair = KeyValuePair> = (
-	write: Writes<S>,
+	writes: WriteOps<S>,
 	txId: TxId
 ) => void | Identity<void>

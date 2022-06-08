@@ -21,8 +21,7 @@ export type KeyValuePair = { key: Tuple; value: any }
 export const MIN = null
 export const MAX = true
 
-// TODO: call this a "Write" or a "Commit"
-export type Writes<S extends KeyValuePair = KeyValuePair> = {
+export type WriteOps<S extends KeyValuePair = KeyValuePair> = {
 	set?: S[]
 	remove?: S["key"][]
 }

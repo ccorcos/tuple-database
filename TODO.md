@@ -1,5 +1,11 @@
 ## TODO
 
+What features do we need to make replicate easier?
+- Writes -> WriteOps
+- ScanArgs<> vs ScanArgs?
+- tx.id and tx.writes so you can re-compose transactions.
+- client.expose(subspace, indexer)
+
 - using ipc-peer over a socket for client across a process / network.
 
 - rtree for reactivity

@@ -1,7 +1,7 @@
 import { Database, Transaction } from "better-sqlite3"
 import { TupleStorageApi } from "../database/sync/types"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { KeyValuePair, ScanStorageArgs, Tuple, Writes } from "./types"
+import { KeyValuePair, ScanStorageArgs, Tuple, WriteOps } from "./types"
 
 export class SQLiteTupleStorage implements TupleStorageApi {
 	/**
@@ -96,7 +96,7 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 		)
 	}
 
-	commit = (writes: Writes) => {
+	commit = (writes: WriteOps) => {
 		const { set: inserts, remove: deletes } = writes
 		this.writeFactsQuery({ inserts, deletes })
 	}

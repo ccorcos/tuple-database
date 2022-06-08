@@ -1,7 +1,7 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr"
 import { result } from "lodash"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { AsyncTupleStorageApi, ScanStorageArgs, Writes } from "../main"
+import { AsyncTupleStorageApi, ScanStorageArgs, WriteOps } from "../main"
 import { KeyValuePair } from "./types"
 
 const version = 1
@@ -66,7 +66,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		return results
 	}
 
-	async commit(writes: Writes) {
+	async commit(writes: WriteOps) {
 		const db = await this.db
 		const tx = db.transaction(storeName, "readwrite")
 		for (const { key, value } of writes.set || []) {

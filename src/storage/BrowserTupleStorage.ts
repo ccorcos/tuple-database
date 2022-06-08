@@ -1,6 +1,6 @@
 import { TupleStorageApi } from "../database/sync/types"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { Writes } from "./types"
+import { WriteOps } from "./types"
 
 function load(key: string) {
 	const result = localStorage.getItem(key)
@@ -22,7 +22,7 @@ export class BrowserTupleStorage
 		super(load(localStorageKey))
 	}
 
-	commit(writes: Writes): void {
+	commit(writes: WriteOps): void {
 		super.commit(writes)
 		save(this.localStorageKey, this.data)
 	}

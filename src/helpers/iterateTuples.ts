@@ -1,6 +1,6 @@
-import { Writes } from "../storage/types"
+import { WriteOps } from "../storage/types"
 
-export function* iterateWrittenTuples(write: Writes) {
+export function* iterateWrittenTuples(write: WriteOps) {
 	for (const { key } of write.set || []) {
 		yield key
 	}
@@ -9,6 +9,6 @@ export function* iterateWrittenTuples(write: Writes) {
 	}
 }
 
-export function getWrittenTuples(write: Writes) {
+export function getWrittenTuples(write: WriteOps) {
 	return Array.from(iterateWrittenTuples(write))
 }

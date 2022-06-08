@@ -3,7 +3,7 @@ import * as _ from "lodash"
 import { sum } from "lodash"
 import { describe, it } from "mocha"
 import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, MAX, MIN, Writes } from "../../storage/types"
+import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { Assert } from "../typeHelpers"
@@ -1271,7 +1271,7 @@ export function asyncDatabaseTestSuite(
 					set: [{ key: ["a"], value: 1 }],
 				})
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				await store.subscribe({ gte: ["a"], lte: ["a"] }, (writes) => {
 					hoist = writes
 				})
@@ -1281,7 +1281,7 @@ export function asyncDatabaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a"], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("works with set key", async () => {
@@ -1306,7 +1306,7 @@ export function asyncDatabaseTestSuite(
 				const data = await store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				await store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
 					(writes) => {
@@ -1319,7 +1319,7 @@ export function asyncDatabaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a", "b", 1], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("works with remove key", async () => {
@@ -1344,7 +1344,7 @@ export function asyncDatabaseTestSuite(
 				const data = await store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				await store.subscribe({ prefix: ["a", "b"] }, (writes) => {
 					hoist = writes
 				})
@@ -1354,7 +1354,7 @@ export function asyncDatabaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [],
 					remove: [["a", "b", "a"]],
-				} as Writes)
+				})
 			})
 
 			it("works when overwriting a value to an existing key", async () => {
@@ -1379,7 +1379,7 @@ export function asyncDatabaseTestSuite(
 				const data = await store.scan()
 				assertEqual(data, items)
 
-				let hoist: Writes | undefined
+				let hoist: WriteOps | undefined
 				await store.subscribe({ prefix: ["a", "b"] }, (writes) => {
 					hoist = writes
 				})
@@ -1389,7 +1389,7 @@ export function asyncDatabaseTestSuite(
 				assert.deepStrictEqual(hoist, {
 					set: [{ key: ["a", "b", "a"], value: 99 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("should use prefix correctly and filter bounds", async () => {
@@ -1419,7 +1419,7 @@ export function asyncDatabaseTestSuite(
 				// { gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
 				// But the second one has better reactivity performance due to the shared prefix.
 
-				let hoist1: Writes | undefined
+				let hoist1: WriteOps | undefined
 				await store.subscribe(
 					{ gt: ["a", "b", MIN], lt: ["a", "b", MAX] },
 					(writes) => {
@@ -1427,7 +1427,7 @@ export function asyncDatabaseTestSuite(
 					}
 				)
 
-				let hoist2: Writes | undefined
+				let hoist2: WriteOps | undefined
 				await store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MIN] },
 					(writes) => {
@@ -1435,7 +1435,7 @@ export function asyncDatabaseTestSuite(
 					}
 				)
 
-				let hoist3: Writes | undefined
+				let hoist3: WriteOps | undefined
 				await store.subscribe(
 					{ gt: ["a", "a", MAX], lt: ["a", "c", MAX] },
 					(writes) => {
@@ -1453,7 +1453,7 @@ export function asyncDatabaseTestSuite(
 				assert.deepStrictEqual(hoist3, {
 					set: [{ key: ["a", "c", 1], value: 1 }],
 					remove: [],
-				} as Writes)
+				})
 			})
 
 			it("waits for emit callbacks before resolving commit", async () => {

@@ -12,12 +12,12 @@ import * as tv from "../../helpers/sortedTupleValuePairs"
 import {
 	normalizeSubspaceScanArgs,
 	prependPrefixToTuple,
-	prependPrefixToWrites,
+	prependPrefixToWriteOps,
 	removePrefixFromTuple,
 	removePrefixFromTupleValuePairs,
-	removePrefixFromWrites,
+	removePrefixFromWriteOps,
 } from "../../helpers/subspaceHelpers"
-import { KeyValuePair, Tuple, Writes } from "../../storage/types"
+import { KeyValuePair, Tuple, WriteOps } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
 import {
 	FilterTupleValuePairByPrefix,
@@ -53,7 +53,7 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write, txId) => {
 			return callback(
-				removePrefixFromWrites(this.subspacePrefix, write) as Writes<
+				removePrefixFromWriteOps(this.subspacePrefix, write) as WriteOps<
 					FilterTupleValuePairByPrefix<S, P>
 				>,
 				txId
@@ -61,8 +61,8 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		})
 	}
 
-	commit(writes: Writes<S>, txId?: TxId): Identity<void> {
-		const prefixedWrites = prependPrefixToWrites(this.subspacePrefix, writes)
+	commit(writes: WriteOps<S>, txId?: TxId): Identity<void> {
+		const prefixedWrites = prependPrefixToWriteOps(this.subspacePrefix, writes)
 		this.db.commit(prefixedWrites, txId)
 	}
 
@@ -121,7 +121,7 @@ export class TupleTransaction<S extends KeyValuePair>
 
 	committed = false
 	canceled = false
-	writes: Required<Writes<S>> = { set: [], remove: [] }
+	writes: Required<WriteOps<S>> = { set: [], remove: [] }
 
 	private checkActive() {
 		if (this.committed) throw new Error("Transaction already committed")
@@ -209,7 +209,7 @@ export class TupleTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	write(writes: Writes<S>): TupleTransactionApi<S> {
+	write(writes: WriteOps<S>): TupleTransactionApi<S> {
 		this.checkActive()
 
 		// If you're calling this function, then the order of these opertions
@@ -285,7 +285,7 @@ export class TupleTransactionSubspace<S extends KeyValuePair>
 		return this
 	}
 
-	write(writes: Writes<S>): TupleTransactionApi<S> {
+	write(writes: WriteOps<S>): TupleTransactionApi<S> {
 		// If you're calling this function, then the order of these opertions
 		// shouldn't matter.
 		const { set, remove } = writes
