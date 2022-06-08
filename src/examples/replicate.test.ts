@@ -2,8 +2,8 @@ import { strict as assert } from "assert"
 import { after, describe, it } from "mocha"
 import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
 import {
-	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
+	AsyncTupleTransactionApi,
 	ReadOnlyAsyncTupleDatabaseClientApi,
 } from "../database/async/asyncTypes"
 import { transactionalQueryAsync } from "../database/async/transactionalQueryAsync"
@@ -14,10 +14,22 @@ import {
 	ReadOnlyTupleDatabaseClientApi,
 	TupleDatabaseClientApi,
 } from "../database/sync/types"
-import { ScanArgs } from "../database/types"
+import {
+	FilterTupleValuePairByPrefix,
+	RemoveTupleValuePairPrefix,
+	SchemaSubspace,
+	TuplePrefix,
+} from "../database/typeHelpers"
+import { TxId } from "../database/types"
 import { asyncThrottle } from "../helpers/asyncThrottle"
-import { ScanStorageArgs, SchemaSubspace, Tuple, TxId, WriteOps } from "../main"
+import { compareValue } from "../helpers/compareTuple"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import {
+	KeyValuePair,
+	ScanStorageArgs,
+	Tuple,
+	WriteOps,
+} from "../storage/types"
 
 type LogSchema = { key: [number]; value: any }
 
@@ -158,31 +170,64 @@ async function replicateAsync(
 // What features do we need to make this easier?
 // - client.expose(subspace, indexer)
 
-function assertScanArgsPrefix(args: ScanStorageArgs, prefix: Tuple) {}
+function tupleStartsWith(tuple: Tuple, prefix: Tuple) {
+	for (let i = 0; i < prefix.length; i++) {
+		if (compareValue(tuple[i], prefix[i]) !== 0) return false
+	}
+	return true
+}
 
-function exposeReplicateToAsync(
-	db: AsyncTupleDatabaseApi,
-	logPrefix: Tuple,
-	indexer: (tx: any, logItems: LogSchema[]) => void
-): AsyncTupleDatabaseApi {
-	const client = new AsyncTupleDatabaseClient<LogSchema>(db, logPrefix)
+function validateScanPrefix(args: ScanStorageArgs | undefined, prefix: Tuple) {
+	if (args === undefined) {
+		if (prefix.length === 0) return true
+		else return false
+	}
+	if (args.gt && !tupleStartsWith(args.gt, prefix)) return false
+	if (args.gte && !tupleStartsWith(args.gte, prefix)) return false
+	if (args.lt && !tupleStartsWith(args.lt, prefix)) return false
+	if (args.lte && !tupleStartsWith(args.lte, prefix)) return false
+	return true
+}
 
-	return {
+function validateWritePrefix(writes: WriteOps, prefix: Tuple) {
+	for (const { key } of writes.set || []) {
+		if (!tupleStartsWith(key, prefix)) return false
+	}
+	for (const key of writes.remove || []) {
+		if (!tupleStartsWith(key, prefix)) return false
+	}
+	return true
+}
+
+function exposeAsync<S extends KeyValuePair, P extends TuplePrefix<S["key"]>>(
+	db: AsyncTupleDatabaseClientApi<S>,
+	prefix: P,
+	indexer?: (
+		tx: AsyncTupleTransactionApi<S>,
+		writes: WriteOps<FilterTupleValuePairByPrefix<S, P>>
+	) => Error | void | Promise<Error | void>
+): AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>> {
+	const db2 = new AsyncTupleDatabaseClient<S>({
 		scan: (args?: ScanStorageArgs, txId?: TxId) => {
-			return client.scan(args as ScanArgs<[number], []> | undefined, txId)
-		},
-		commit: (writes: WriteOps, txId?: TxId) => {
-			if (writes.remove?.length)
-				throw new Error("No removing from append-only log.")
-
-			if (writes.set) {
-				// TODO: Validate what writes are allowed here.
-				// Add the total indexer to this transaction here
-				const moreTx = client.transact(txId)
-				// indexer(moreTx, writes.set)
-				// moreTx.writes
+			if (!validateScanPrefix(args, prefix)) {
+				throw new Error("Not allowed to scan beyond prefix range.")
 			}
-			return db.commit(writes, txId)
+			return db.scan(args as any, txId)
+		},
+		commit: async (writes: WriteOps, txId?: TxId) => {
+			if (!validateWritePrefix(writes, prefix)) {
+				throw new Error("Not allowed to write beyond prefix range.")
+			}
+
+			const tx = db.transact(txId, writes as WriteOps<S>)
+			if (indexer) {
+				const error = await indexer(tx, writes as any)
+				if (error) {
+					await tx.cancel()
+					throw error
+				}
+			}
+			await tx.commit()
 		},
 		cancel: db.cancel,
 		subscribe: () => {
@@ -191,7 +236,9 @@ function exposeReplicateToAsync(
 		close: () => {
 			throw new Error("Not sure what to do here yet.")
 		},
-	}
+	})
+
+	return db2.subspace(prefix)
 }
 
 describe("replicateAsync", () => {
@@ -258,20 +305,25 @@ describe("replicateAsync", () => {
 		const from = new AsyncTupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
-		const toDb = new TupleDatabase(new InMemoryTupleStorage())
+		const remote = new AsyncTupleDatabaseClient<Schema>(
+			new TupleDatabase(new InMemoryTupleStorage())
+		)
 
-		const to = new AsyncTupleDatabaseClient<Schema>({
-			scan: toDb.scan.bind(toDb),
-			commit: (writes: WriteOps, txId?: string) => {
-				// Validate what writes are allowed here.
-				// Add the total indexer to this transaction here
+		const to = exposeAsync<Schema, ["log"]>(
+			remote,
+			["log"],
+			async (tx, writes) => {
+				if (writes.remove?.length)
+					throw new Error("Not allowed to delete from the append-only log.")
 
-				return toDb.commit(writes, txId)
-			},
-			cancel: toDb.cancel.bind(toDb),
-			subscribe: toDb.subscribe.bind(toDb),
-			close: toDb.close.bind(toDb),
-		})
+				let total: string = (await tx.get(["total"])) || ""
+				for (const { value } of writes.set || []) {
+					total += value
+				}
+
+				tx.set(["total"], total)
+			}
+		)
 
 		const append = transactionalQueryAsync<Schema>()(
 			async (tx, value: string) => {
@@ -295,9 +347,9 @@ describe("replicateAsync", () => {
 		assert.deepEqual(await from.scan(), r3)
 		assert.deepEqual(await to.scan(), [])
 
-		after(await replicateAsync(from.subspace(["log"]), to.subspace(["log"])))
+		after(await replicateAsync(from.subspace(["log"]), to))
 
-		assert.deepEqual(await to.scan(), r3)
+		assert.deepEqual(await remote.scan(), r3)
 
 		await append(from, "d")
 
@@ -309,7 +361,7 @@ describe("replicateAsync", () => {
 			{ key: ["total"], value: "abcd" },
 		]
 		assert.deepEqual(await from.scan(), r4)
-		assert.deepEqual(await to.scan(), r4)
+		assert.deepEqual(await remote.scan(), r4)
 
 		BATCH: {
 			const tx = from.transact()
@@ -329,17 +381,6 @@ describe("replicateAsync", () => {
 		]
 
 		assert.deepEqual(await from.scan(), r6)
-		assert.deepEqual(await to.scan(), r6)
+		assert.deepEqual(await remote.scan(), r6)
 	})
 })
-
-/*
-
-TODO:
-- asyncThrottle tests
-
-- how to run indexing on the other side after syncing?
-	- handles throughput without tx conflict issues.
-
-
-*/

@@ -1,6 +1,13 @@
 ## TODO
 
+
+- how to run indexing on the other side after syncing?
+	- handles throughput without tx conflict issues.
 - client.expose(subspace, indexer)
+
+
+- asyncThrottle tests
+
 
 - keep track of transactions and expire them after a timeout
 - keep track of committed transactions too and expire after timeout?
