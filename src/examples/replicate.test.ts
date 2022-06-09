@@ -7,7 +7,6 @@ import {
 	ReadOnlyAsyncTupleDatabaseClientApi,
 } from "../database/async/asyncTypes"
 import { transactionalQueryAsync } from "../database/async/transactionalQueryAsync"
-import { ReadWriteConflictError } from "../database/ConcurrencyLog"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { SchemaSubspace } from "../database/typeHelpers"
 import { ScanArgs } from "../database/types"
@@ -87,7 +86,7 @@ async function replicateAsync(
 
 function exposeReplicateAsync2(
 	db: AsyncTupleDatabaseClientApi<LogSchema>,
-	append: (item: any[], txId: string) => void | Promise<void>
+	append: (value: any, txId: string) => void | Promise<void>
 ): AsyncTupleDatabaseApi {
 	const api: AsyncTupleDatabaseApi = {
 		scan: async (args = {}, txId) => {
@@ -102,42 +101,30 @@ function exposeReplicateAsync2(
 			if (writes.remove?.length)
 				throw new Error("Not allowed to delete from the append-only log.")
 
-			// Close out the transaction to guarantee that no one else wrote to this
-			// log while we were recieving those writes.
+			// Close out the transaction so that we resolve any concurrency conflicts.
+			// But we're going to append each item one at a time so that we don't
+			// have to retry across the network when there's a conflict on just a
+			// single item when it is getting indexed...
 			await db.commit({}, txId)
 
 			// TODO: validate logs in order, etc.
-			// TODO: this validation is awkward, because its basically checking for
-			// concurrency as well. But this error won't retry...
-
 			const items = (writes.set || []) as LogSchema[]
-			for (const { key, value } of items) {
-				// Transactionally assert that
-				const tx = db.transact()
-				const currentLength = await getLogLengthAsync(tx)
-				const index = key[0]
-				if (index <= currentLength) {
-					await tx.commit()
-					continue
+
+			const appendItem = transactionalQueryAsync<LogSchema>()(
+				async (tx, { key, value }: LogSchema) => {
+					const index = key[0]
+					const currentLength = await getLogLengthAsync(tx)
+					if (index <= currentLength) return
+					if (index !== currentLength + 1)
+						throw new Error("Missing log item: " + currentLength + 1)
+
+					await append(value, tx.id)
 				}
-				if (index !== currentLength + 1) {
-					await tx.cancel()
-					throw new Error("Missing log item: " + currentLength + 1)
-				}
-
-				await append(value, tx.id)
-			}
-
-			let i = currentLength + 1
-			for (const item of items) {
-				if (item.key[0] !== i) throw new ReadWriteConflictError(txId)
-				i += 1
-			}
-
-			return appendItems(
-				items.map(({ value }) => value),
-				txId
 			)
+
+			for (const item of items) {
+				await appendItem(db, item)
+			}
 		},
 		cancel: async (txId) => {
 			return db.cancel(txId)

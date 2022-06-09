@@ -120,6 +120,9 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => AsyncTupleTransactionApi<S>
 	remove: (tuple: S["key"]) => AsyncTupleTransactionApi<S>
 	write: (writes: WriteOps<S>) => AsyncTupleTransactionApi<S>
+
+	// Transaction
+	id: string
 }
 
 /** Useful for indicating that a function does not commit any writes. */
