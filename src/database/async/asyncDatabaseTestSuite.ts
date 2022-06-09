@@ -1183,6 +1183,19 @@ export function asyncDatabaseTestSuite(
 					// Final state.
 					assertEqual(await store.get(["score"]), 9)
 				})
+
+				it("transactionalAsyncQuery will cancel on non-conflict errors", async () => {
+					const id = randomId()
+					const store = createStorage(id)
+
+					const go = transactionalQueryAsync()(async (tx) => {
+						throw new Error("Invalid args")
+					})
+
+					assert.rejects(() => go(store))
+
+					// TODO: this needs a better test.
+				})
 			}
 
 			it("should probably generalize to scans as well", async () => {
