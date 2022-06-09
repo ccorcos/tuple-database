@@ -7,6 +7,7 @@ import {
 	ReadOnlyAsyncTupleDatabaseClientApi,
 } from "../database/async/asyncTypes"
 import { transactionalQueryAsync } from "../database/async/transactionalQueryAsync"
+import { ReadWriteConflictError } from "../database/ConcurrencyLog"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { SchemaSubspace } from "../database/typeHelpers"
 import { ScanArgs } from "../database/types"
@@ -86,7 +87,7 @@ async function replicateAsync(
 
 function exposeReplicateAsync2(
 	db: AsyncTupleDatabaseClientApi<LogSchema>,
-	append: (items: LogSchema[], txId?: string) => void | Promise<void>
+	append: (item: any[], txId: string) => void | Promise<void>
 ): AsyncTupleDatabaseApi {
 	const api: AsyncTupleDatabaseApi = {
 		scan: async (args = {}, txId) => {
@@ -97,12 +98,46 @@ function exposeReplicateAsync2(
 		commit: async (writes, txId) => {
 			// No need to validate prefix because db is already in the log subspace.
 			// TODO: validate that people aren't dumping arbitrary shit in here.
-			// TODO: validate logs in order, etc.
 
 			if (writes.remove?.length)
 				throw new Error("Not allowed to delete from the append-only log.")
 
-			return append((writes.set || []) as LogSchema[], txId)
+			// Close out the transaction to guarantee that no one else wrote to this
+			// log while we were recieving those writes.
+			await db.commit({}, txId)
+
+			// TODO: validate logs in order, etc.
+			// TODO: this validation is awkward, because its basically checking for
+			// concurrency as well. But this error won't retry...
+
+			const items = (writes.set || []) as LogSchema[]
+			for (const { key, value } of items) {
+				// Transactionally assert that
+				const tx = db.transact()
+				const currentLength = await getLogLengthAsync(tx)
+				const index = key[0]
+				if (index <= currentLength) {
+					await tx.commit()
+					continue
+				}
+				if (index !== currentLength + 1) {
+					await tx.cancel()
+					throw new Error("Missing log item: " + currentLength + 1)
+				}
+
+				await append(value, tx.id)
+			}
+
+			let i = currentLength + 1
+			for (const item of items) {
+				if (item.key[0] !== i) throw new ReadWriteConflictError(txId)
+				i += 1
+			}
+
+			return appendItems(
+				items.map(({ value }) => value),
+				txId
+			)
 		},
 		cancel: async (txId) => {
 			return db.cancel(txId)
@@ -191,10 +226,15 @@ describe("replicateAsync", () => {
 		const toApi = exposeReplicateAsync2(
 			remote.subspace(["log"]),
 			async (items, txId) => {
+				// Suppose someone is incrementing their score at the same time
+				// that this log is synced. We'd get a conflict.
+				const tx = remote.transact(txId)
+				// TODO: assert that these items are in order and "next"
+
 				for (const item of items) {
-					await append(remote, item.value)
+					await append(tx, item.value)
 				}
-				if (txId) await remote.cancel(txId)
+				await tx.commit()
 			}
 		)
 
