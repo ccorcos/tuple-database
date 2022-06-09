@@ -933,16 +933,16 @@ export function databaseTestSuite(
 			assertEqual(store.get([1]), undefined)
 		})
 
-		it("root transaction can be recomposed", () => {
-			const store = createStorage(randomId())
-			const tx = store.transact()
-			tx.set([1], 2)
+		// it("root transaction can be recomposed",  () => {
+		// 	const store = createStorage(randomId())
+		// 	const tx = store.transact()
+		// 	tx.set([1], 2)
 
-			const tx2 = store.transact(tx.id, tx.writes)
-			tx2.commit()
+		// 	const tx2 = store.transact(tx.id, tx.writes)
+		// 	 tx2.commit()
 
-			assertEqual(store.scan(), [{ key: [1], value: 2 }])
-		})
+		// 	assertEqual( store.scan(), [{ key: [1], value: 2 }])
+		// })
 
 		it.skip("cancelled transaction cannot conflict with other transactions")
 
@@ -1184,6 +1184,19 @@ export function databaseTestSuite(
 
 					// Final state.
 					assertEqual(store.get(["score"]), 9)
+				})
+
+				it("transactionalQuery will cancel on non-conflict errors", () => {
+					const id = randomId()
+					const store = createStorage(id)
+
+					const go = transactionalQuery()((tx) => {
+						throw new Error("Invalid args")
+					})
+
+					assert.throws(() => go(store))
+
+					// TODO: this needs a better test.
 				})
 			}
 

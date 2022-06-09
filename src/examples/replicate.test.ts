@@ -4,14 +4,16 @@ import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseCl
 import {
 	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
+	AsyncTupleTransactionApi,
 	ReadOnlyAsyncTupleDatabaseClientApi,
 } from "../database/async/asyncTypes"
 import { transactionalQueryAsync } from "../database/async/transactionalQueryAsync"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { SchemaSubspace } from "../database/typeHelpers"
+import { PrefixForSubspace, SchemaSubspace } from "../database/typeHelpers"
 import { ScanArgs } from "../database/types"
 import { asyncThrottle } from "../helpers/asyncThrottle"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { KeyValuePair } from "../storage/types"
 
 type LogSchema = { key: [number]; value: any }
 
@@ -84,50 +86,49 @@ async function replicateAsync(
 // 	return true
 // }
 
-function exposeReplicateAsync2(
-	db: AsyncTupleDatabaseClientApi<LogSchema>,
-	append: (value: any, txId: string) => void | Promise<void>
+function replicateFromAsync<
+	S extends KeyValuePair,
+	P extends PrefixForSubspace<S, LogSchema>
+>(
+	db: AsyncTupleDatabaseClientApi<S>,
+	prefix: P,
+	append: (tx: AsyncTupleTransactionApi<S>, value: any) => Promise<void> | void
 ): AsyncTupleDatabaseApi {
+	// @ts-ignore
+	const logDb = db.subspace(prefix) as AsyncTupleDatabaseClientApi<LogSchema>
+
 	const api: AsyncTupleDatabaseApi = {
-		scan: async (args = {}, txId) => {
-			// TODO: validate that they're only reading the last log item.
-			// TODO: improvement - only need to get the last log item key. maybe just make it "head" key.
-			return db.scan(args as ScanArgs<LogSchema["key"]>, txId)
+		scan: (args = {}, txId) => {
+			// TODO: only allow to read "head".
+			return logDb.scan(args as ScanArgs<LogSchema["key"]>, txId)
 		},
 		commit: async (writes, txId) => {
-			// No need to validate prefix because db is already in the log subspace.
-			// TODO: validate that people aren't dumping arbitrary shit in here.
-
 			if (writes.remove?.length)
 				throw new Error("Not allowed to delete from the append-only log.")
 
-			// Close out the transaction so that we resolve any concurrency conflicts.
-			// But we're going to append each item one at a time so that we don't
-			// have to retry across the network when there's a conflict on just a
-			// single item when it is getting indexed...
-			await db.commit({}, txId)
+			const tx = db.transact(txId)
 
-			// TODO: validate logs in order, etc.
+			// @ts-ignore
+			const logTx = tx.subspace(prefix) as AsyncTupleTransactionApi<LogSchema>
+
 			const items = (writes.set || []) as LogSchema[]
+			let currentLength = await getLogLengthAsync(logTx)
 
-			const appendItem = transactionalQueryAsync<LogSchema>()(
-				async (tx, { key, value }: LogSchema) => {
-					const index = key[0]
-					const currentLength = await getLogLengthAsync(tx)
-					if (index <= currentLength) return
-					if (index !== currentLength + 1)
-						throw new Error("Missing log item: " + currentLength + 1)
+			for (const { key, value } of items) {
+				const index = key[0]
+				if (index <= currentLength) return
+				if (index !== currentLength + 1)
+					throw new Error("Missing log item: " + currentLength + 1)
+				currentLength += 1
 
-					await append(value, tx.id)
-				}
-			)
-
-			for (const item of items) {
-				await appendItem(db, item)
+				// TODO: what is value? validate that people aren't dumping arbitrary shit in here.
+				await append(tx, value)
 			}
+
+			await tx.commit()
 		},
 		cancel: async (txId) => {
-			return db.cancel(txId)
+			return logDb.cancel(txId)
 		},
 		subscribe: async (args, callback) => {
 			throw new Error("Not allowed to subscribe.")
@@ -136,6 +137,7 @@ function exposeReplicateAsync2(
 			throw new Error("Not allowed to close.")
 		},
 	}
+
 	return api
 }
 
@@ -210,20 +212,9 @@ describe("replicateAsync", () => {
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
-		const toApi = exposeReplicateAsync2(
-			remote.subspace(["log"]),
-			async (items, txId) => {
-				// Suppose someone is incrementing their score at the same time
-				// that this log is synced. We'd get a conflict.
-				const tx = remote.transact(txId)
-				// TODO: assert that these items are in order and "next"
-
-				for (const item of items) {
-					await append(tx, item.value)
-				}
-				await tx.commit()
-			}
-		)
+		const toApi = replicateFromAsync(remote, ["log"], async (tx, value) => {
+			await append(tx, value)
+		})
 
 		// On machine A again...
 		const to = new AsyncTupleDatabaseClient<LogSchema>(toApi)

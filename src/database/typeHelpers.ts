@@ -150,3 +150,26 @@ type A15 = Assert<
 	SchemaSubspace<["int"], { key: [1]; value: 1 } | { key: [2]; value: 2 }>,
 	{ key: ["int", 1]; value: 1 } | { key: ["int", 2]; value: 2 }
 >
+
+export type PrefixForSubspace<
+	Schema extends KeyValuePair,
+	Subspace extends KeyValuePair
+> = Schema extends {
+	key: [...infer U, ...Subspace["key"]]
+	value: Subspace["value"]
+}
+	? U
+	: never
+
+type A16 = Assert<
+	PrefixForSubspace<
+		| { key: [number]; value: number }
+		| { key: ["a", number]; value: number }
+		| { key: ["b", number]; value: number }
+		| { key: ["b", "b", number]; value: number }
+		| { key: ["c", string]; value: number }
+		| { key: ["d", number]; value: string },
+		{ key: [number]; value: number }
+	>,
+	["a"] | ["b"] | [] | ["b", "b"]
+>

@@ -928,16 +928,16 @@ export function asyncDatabaseTestSuite(
 			assertEqual(await store.get([1]), undefined)
 		})
 
-		it("root transaction can be recomposed", async () => {
-			const store = createStorage(randomId())
-			const tx = store.transact()
-			tx.set([1], 2)
+		// it("root transaction can be recomposed", async () => {
+		// 	const store = createStorage(randomId())
+		// 	const tx = store.transact()
+		// 	tx.set([1], 2)
 
-			const tx2 = store.transact(tx.id, tx.writes)
-			await tx2.commit()
+		// 	const tx2 = store.transact(tx.id, tx.writes)
+		// 	await tx2.commit()
 
-			assertEqual(await store.scan(), [{ key: [1], value: 2 }])
-		})
+		// 	assertEqual(await store.scan(), [{ key: [1], value: 2 }])
+		// })
 
 		it.skip("cancelled transaction cannot conflict with other transactions")
 
