@@ -3,7 +3,7 @@ import { RemoveTuplePrefix, TuplePrefix } from "./typeHelpers"
 
 export type ScanArgs<
 	T extends Tuple,
-	P extends TuplePrefix<T>
+	P extends TuplePrefix<T> = []
 > = PrefixScanArgs<T, P>
 
 export type PrefixScanArgs<T extends Tuple, P extends TuplePrefix<T>> = {

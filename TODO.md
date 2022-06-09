@@ -1,6 +1,9 @@
 ## TODO
 
 
+- test transactionQuery should cancel a transaction when there's an error.
+
+
 - how to run indexing on the other side after syncing?
 	- handles throughput without tx conflict issues.
 - client.expose(subspace, indexer)

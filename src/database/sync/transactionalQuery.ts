@@ -29,7 +29,13 @@ export function transactionalQuery<S extends KeyValuePair = KeyValuePair>(
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
 			return retry(retries, () => {
 				const tx = dbOrTx.transact()
-				const result = fn(tx, ...args)
+				let result: O
+				try {
+					result = fn(tx, ...args)
+				} catch (error) {
+					tx.cancel()
+					throw error
+				}
 				tx.commit()
 				return result
 			})

@@ -2,126 +2,18 @@ import { strict as assert } from "assert"
 import { after, describe, it } from "mocha"
 import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
 import {
+	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
-	AsyncTupleTransactionApi,
 	ReadOnlyAsyncTupleDatabaseClientApi,
 } from "../database/async/asyncTypes"
 import { transactionalQueryAsync } from "../database/async/transactionalQueryAsync"
-import { transactionalQuery } from "../database/sync/transactionalQuery"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import {
-	ReadOnlyTupleDatabaseClientApi,
-	TupleDatabaseClientApi,
-} from "../database/sync/types"
-import {
-	FilterTupleValuePairByPrefix,
-	RemoveTupleValuePairPrefix,
-	SchemaSubspace,
-	TuplePrefix,
-} from "../database/typeHelpers"
-import { TxId } from "../database/types"
+import { SchemaSubspace } from "../database/typeHelpers"
+import { ScanArgs } from "../database/types"
 import { asyncThrottle } from "../helpers/asyncThrottle"
-import { compareValue } from "../helpers/compareTuple"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import {
-	KeyValuePair,
-	ScanStorageArgs,
-	Tuple,
-	WriteOps,
-} from "../storage/types"
 
 type LogSchema = { key: [number]; value: any }
-
-function getLogLength(db: ReadOnlyTupleDatabaseClientApi<LogSchema>) {
-	const [first] = db.scan({ reverse: true, limit: 1 })
-	return first !== undefined ? first.key[0] : 0
-}
-
-const appendLog = transactionalQuery<LogSchema>()((tx, value) => {
-	const next = getLogLength(tx) + 1
-	tx.set([next], value)
-})
-
-function update(
-	from: TupleDatabaseClientApi<LogSchema>,
-	to: TupleDatabaseClientApi<LogSchema>
-) {
-	const currentLength = getLogLength(to)
-	const desiredLength = getLogLength(from)
-	if (currentLength === desiredLength) return
-	if (currentLength > desiredLength) throw new Error("'to' ahead of 'from'.")
-
-	const missing = desiredLength - currentLength
-	const result = from.scan({ reverse: true, limit: missing })
-	to.commit({ set: result })
-}
-
-function replicate(
-	from: TupleDatabaseClientApi<LogSchema>,
-	to: TupleDatabaseClientApi<LogSchema>
-) {
-	update(from, to)
-	const unsubscribe = from.subscribe({}, () => update(from, to))
-	return unsubscribe
-}
-
-describe("replicate", () => {
-	it("works", () => {
-		const from = new TupleDatabaseClient<LogSchema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
-		const to = new TupleDatabaseClient<LogSchema>(
-			new TupleDatabase(new InMemoryTupleStorage())
-		)
-
-		appendLog(from, "a")
-		appendLog(from, "b")
-		appendLog(from, "c")
-
-		const r3 = [
-			{ key: [1], value: "a" },
-			{ key: [2], value: "b" },
-			{ key: [3], value: "c" },
-		]
-		assert.deepEqual(from.scan(), r3)
-		assert.deepEqual(to.scan(), [])
-
-		after(replicate(from, to))
-
-		assert.deepEqual(to.scan(), r3)
-
-		appendLog(from, "d")
-
-		const r4 = [
-			{ key: [1], value: "a" },
-			{ key: [2], value: "b" },
-			{ key: [3], value: "c" },
-			{ key: [4], value: "d" },
-		]
-		assert.deepEqual(from.scan(), r4)
-		assert.deepEqual(to.scan(), r4)
-
-		BATCH: {
-			const tx = from.transact()
-			appendLog(tx, "e")
-			appendLog(tx, "f")
-			tx.commit()
-		}
-
-		const r6 = [
-			{ key: [1], value: "a" },
-			{ key: [2], value: "b" },
-			{ key: [3], value: "c" },
-			{ key: [4], value: "d" },
-			{ key: [5], value: "e" },
-			{ key: [6], value: "f" },
-		]
-
-		assert.deepEqual(from.scan(), r6)
-		assert.deepEqual(to.scan(), r6)
-	})
-})
 
 async function getLogLengthAsync(
 	db: ReadOnlyAsyncTupleDatabaseClientApi<LogSchema>
@@ -137,108 +29,92 @@ const appendLogAsync = transactionalQueryAsync<LogSchema>()(
 	}
 )
 
-async function updateAsync(
-	from: AsyncTupleDatabaseClientApi<LogSchema>,
-	to: AsyncTupleDatabaseClientApi<LogSchema>
-) {
-	const currentLength = await getLogLengthAsync(to)
-	const desiredLength = await getLogLengthAsync(from)
-	if (currentLength === desiredLength) return
-	if (currentLength > desiredLength) throw new Error("'to' ahead of 'from'.")
+const updateLogAsync = transactionalQueryAsync<LogSchema>()(
+	async (tx, from: AsyncTupleDatabaseClientApi<LogSchema>) => {
+		const currentLength = await getLogLengthAsync(tx)
 
-	const missing = desiredLength - currentLength
-	const result = await from.scan({ reverse: true, limit: missing })
-	result.reverse()
+		const desiredLength = await getLogLengthAsync(from)
+		if (currentLength === desiredLength) return
+		if (currentLength > desiredLength) throw new Error("'to' ahead of 'from'.")
 
-	const tx = to.transact()
-	for (const item of result) {
-		tx.set(item.key, item.value)
+		const missing = desiredLength - currentLength
+		const result = await from.scan({ reverse: true, limit: missing })
+		result.reverse()
+
+		await tx.write({ set: result })
 	}
-	await tx.commit()
-}
+)
 
 async function replicateAsync(
 	from: AsyncTupleDatabaseClientApi<LogSchema>,
 	to: AsyncTupleDatabaseClientApi<LogSchema>
 ) {
-	const update = asyncThrottle(() => updateAsync(from, to))
+	const update = asyncThrottle(() => updateLogAsync(to, from))
 	const unsubscribe = await from.subscribe({}, update)
 	await update()
 	return unsubscribe
 }
 
-// What features do we need to make this easier?
-// - client.expose(subspace, indexer)
+// function tupleStartsWith(tuple: Tuple, prefix: Tuple) {
+// 	for (let i = 0; i < prefix.length; i++) {
+// 		if (compareValue(tuple[i], prefix[i]) !== 0) return false
+// 	}
+// 	return true
+// }
 
-function tupleStartsWith(tuple: Tuple, prefix: Tuple) {
-	for (let i = 0; i < prefix.length; i++) {
-		if (compareValue(tuple[i], prefix[i]) !== 0) return false
-	}
-	return true
-}
+// function validateScanPrefix(args: ScanStorageArgs | undefined, prefix: Tuple) {
+// 	if (args === undefined) {
+// 		if (prefix.length === 0) return true
+// 		else return false
+// 	}
+// 	if (args.gt && !tupleStartsWith(args.gt, prefix)) return false
+// 	if (args.gte && !tupleStartsWith(args.gte, prefix)) return false
+// 	if (args.lt && !tupleStartsWith(args.lt, prefix)) return false
+// 	if (args.lte && !tupleStartsWith(args.lte, prefix)) return false
+// 	return true
+// }
 
-function validateScanPrefix(args: ScanStorageArgs | undefined, prefix: Tuple) {
-	if (args === undefined) {
-		if (prefix.length === 0) return true
-		else return false
-	}
-	if (args.gt && !tupleStartsWith(args.gt, prefix)) return false
-	if (args.gte && !tupleStartsWith(args.gte, prefix)) return false
-	if (args.lt && !tupleStartsWith(args.lt, prefix)) return false
-	if (args.lte && !tupleStartsWith(args.lte, prefix)) return false
-	return true
-}
+// function validateWritePrefix(writes: WriteOps, prefix: Tuple) {
+// 	for (const { key } of writes.set || []) {
+// 		if (!tupleStartsWith(key, prefix)) return false
+// 	}
+// 	for (const key of writes.remove || []) {
+// 		if (!tupleStartsWith(key, prefix)) return false
+// 	}
+// 	return true
+// }
 
-function validateWritePrefix(writes: WriteOps, prefix: Tuple) {
-	for (const { key } of writes.set || []) {
-		if (!tupleStartsWith(key, prefix)) return false
-	}
-	for (const key of writes.remove || []) {
-		if (!tupleStartsWith(key, prefix)) return false
-	}
-	return true
-}
-
-function exposeAsync<S extends KeyValuePair, P extends TuplePrefix<S["key"]>>(
-	db: AsyncTupleDatabaseClientApi<S>,
-	prefix: P,
-	indexer?: (
-		tx: AsyncTupleTransactionApi<S>,
-		writes: WriteOps<FilterTupleValuePairByPrefix<S, P>>
-	) => Error | void | Promise<Error | void>
-): AsyncTupleDatabaseClientApi<RemoveTupleValuePairPrefix<S, P>> {
-	const db2 = new AsyncTupleDatabaseClient<S>({
-		scan: (args?: ScanStorageArgs, txId?: TxId) => {
-			if (!validateScanPrefix(args, prefix)) {
-				throw new Error("Not allowed to scan beyond prefix range.")
-			}
-			return db.scan(args as any, txId)
+function exposeReplicateAsync2(
+	db: AsyncTupleDatabaseClientApi<LogSchema>,
+	append: (items: LogSchema[], txId?: string) => void | Promise<void>
+): AsyncTupleDatabaseApi {
+	const api: AsyncTupleDatabaseApi = {
+		scan: async (args = {}, txId) => {
+			// TODO: validate that they're only reading the last log item.
+			// TODO: improvement - only need to get the last log item key. maybe just make it "head" key.
+			return db.scan(args as ScanArgs<LogSchema["key"]>, txId)
 		},
-		commit: async (writes: WriteOps, txId?: TxId) => {
-			if (!validateWritePrefix(writes, prefix)) {
-				throw new Error("Not allowed to write beyond prefix range.")
-			}
+		commit: async (writes, txId) => {
+			// No need to validate prefix because db is already in the log subspace.
+			// TODO: validate that people aren't dumping arbitrary shit in here.
+			// TODO: validate logs in order, etc.
 
-			const tx = db.transact(txId, writes as WriteOps<S>)
-			if (indexer) {
-				const error = await indexer(tx, writes as any)
-				if (error) {
-					await tx.cancel()
-					throw error
-				}
-			}
-			await tx.commit()
-		},
-		cancel: db.cancel,
-		subscribe: () => {
-			throw new Error("No subscribing, only replicating to.")
-		},
-		close: () => {
-			throw new Error("Not sure what to do here yet.")
-		},
-	})
+			if (writes.remove?.length)
+				throw new Error("Not allowed to delete from the append-only log.")
 
-	return db2.subspace(prefix)
+			return append((writes.set || []) as LogSchema[], txId)
+		},
+		cancel: async (txId) => {
+			return db.cancel(txId)
+		},
+		subscribe: async (args, callback) => {
+			throw new Error("Not allowed to subscribe.")
+		},
+		close: async () => {
+			throw new Error("Not allowed to close.")
+		},
+	}
+	return api
 }
 
 describe("replicateAsync", () => {
@@ -302,28 +178,28 @@ describe("replicateAsync", () => {
 			| SchemaSubspace<["log"], LogSchema>
 			| { key: ["total"]; value: string }
 
+		// On machine A
 		const from = new AsyncTupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
+
+		// On machine B
 		const remote = new AsyncTupleDatabaseClient<Schema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
-		const to = exposeAsync<Schema, ["log"]>(
-			remote,
-			["log"],
-			async (tx, writes) => {
-				if (writes.remove?.length)
-					throw new Error("Not allowed to delete from the append-only log.")
-
-				let total: string = (await tx.get(["total"])) || ""
-				for (const { value } of writes.set || []) {
-					total += value
+		const toApi = exposeReplicateAsync2(
+			remote.subspace(["log"]),
+			async (items, txId) => {
+				for (const item of items) {
+					await append(remote, item.value)
 				}
-
-				tx.set(["total"], total)
+				if (txId) await remote.cancel(txId)
 			}
 		)
+
+		// On machine A again...
+		const to = new AsyncTupleDatabaseClient<LogSchema>(toApi)
 
 		const append = transactionalQueryAsync<Schema>()(
 			async (tx, value: string) => {

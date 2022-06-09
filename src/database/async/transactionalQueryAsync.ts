@@ -24,7 +24,13 @@ export function transactionalQueryAsync<S extends KeyValuePair = KeyValuePair>(
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
 			return await retry(retries, async () => {
 				const tx = dbOrTx.transact()
-				const result = await fn(tx, ...args)
+				let result: O
+				try {
+					result = await fn(tx, ...args)
+				} catch (error) {
+					await tx.cancel()
+					throw error
+				}
 				await tx.commit()
 				return result
 			})
