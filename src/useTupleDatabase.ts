@@ -13,10 +13,12 @@ function shallowEqual(a: any, b: any) {
 	}
 	if (isPlainObject(a)) {
 		if (!isPlainObject(b)) return false
-		const keys = Object.keys(a)
-		const sameKeys = intersection(keys, Object.keys(b))
-		if (keys.length !== sameKeys.length) return false
-		return keys.every((key) => a[key] == b[key])
+		const aKeys = Object.keys(a)
+		const bKeys = Object.keys(b)
+		if (aKeys.length !== bKeys.length) return false
+		const sameKeys = intersection(aKeys, bKeys)
+		if (aKeys.length !== sameKeys.length) return false
+		return aKeys.every((key) => a[key] == b[key])
 	}
 	return false
 }
