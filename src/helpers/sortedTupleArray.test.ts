@@ -5,6 +5,7 @@ import { MAX, MIN, Tuple } from "../storage/types"
 import {
 	getPrefixContainingBounds,
 	isTupleWithinBounds,
+	MaxTuple,
 	normalizeTupleBounds,
 	scan,
 	set,
@@ -321,14 +322,14 @@ describe("sortedTupleArray", () => {
 		it("normalized prefix", () => {
 			assert.deepEqual(normalizeTupleBounds({ prefix: ["a"] }), {
 				gte: ["a"], // NOTE: this is not ["a", MIN]
-				lte: ["a", MAX],
+				lte: ["a", ...MaxTuple],
 			})
 		})
 
 		it("prepends prefix to constraints", () => {
 			assert.deepEqual(normalizeTupleBounds({ prefix: ["a"], gte: ["b"] }), {
 				gte: ["a", "b"],
-				lte: ["a", MAX],
+				lte: ["a", ...MaxTuple],
 			})
 		})
 	})

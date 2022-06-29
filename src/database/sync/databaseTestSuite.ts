@@ -371,6 +371,29 @@ export function databaseTestSuite(
 			])
 		})
 
+		it("scan prefix - issue with MAX being true", () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: [2, true], value: 1 },
+				{ key: [2, true, 1], value: 1 },
+				{ key: [2, true, true], value: 1 },
+				{ key: [2, true, true, 1], value: 1 },
+				{ key: [2, true, true, true], value: 1 },
+				{ key: [2, true, true, true, 1], value: 1 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			transaction.commit()
+			const data = store.scan()
+			assertEqual(data, items)
+
+			const result = store.scan({ prefix: [2] })
+			assertEqual(result, items)
+		})
+
 		it("scan prefix gte/lte", () => {
 			const store = createStorage(randomId())
 

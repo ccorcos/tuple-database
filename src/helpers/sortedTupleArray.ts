@@ -16,6 +16,8 @@ export function remove(data: Array<Tuple>, tuple: Tuple) {
 	return sortedList.remove(data, tuple, compareTuple)
 }
 
+export const MaxTuple = [MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX]
+
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
@@ -54,7 +56,11 @@ export function normalizeTupleBounds(args: ScanArgs<Tuple, any>): Bounds {
 			lt = [...args.lt]
 		}
 	} else if (args.prefix) {
-		lte = [...args.prefix, MAX]
+		// [MAX] is less than [true, "hello"]
+		// So we're counting on there not being a really long, all true tuple.
+		// TODO: ideally, we'd either specify a max tuple length, or we'd go
+		// back to using symbols.
+		lte = [...args.prefix, ...MaxTuple]
 	}
 
 	return omitBy({ gte, gt, lte, lt }, (x) => x === undefined)

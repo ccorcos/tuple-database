@@ -1,6 +1,6 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
-import { MAX } from "../storage/types"
+import { MaxTuple } from "./sortedTupleArray"
 import {
 	normalizeSubspaceScanArgs,
 	prependPrefixToWriteOps,
@@ -65,7 +65,7 @@ describe("subspaceHelpers", () => {
 		it("works", () => {
 			assert.deepEqual(
 				normalizeSubspaceScanArgs([1], { prefix: [2], gt: [3] }),
-				{ gt: [1, 2, 3], lte: [1, 2, MAX] }
+				{ gt: [1, 2, 3], lte: [1, 2, ...MaxTuple] }
 			)
 		})
 	})
