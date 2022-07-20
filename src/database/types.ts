@@ -8,10 +8,10 @@ export type ScanArgs<
 
 export type PrefixScanArgs<T extends Tuple, P extends TuplePrefix<T>> = {
 	prefix?: P
-	gt?: AllowMinMax<RemoveTuplePrefix<T, P>>
-	gte?: AllowMinMax<RemoveTuplePrefix<T, P>>
-	lt?: AllowMinMax<RemoveTuplePrefix<T, P>>
-	lte?: AllowMinMax<RemoveTuplePrefix<T, P>>
+	gt?: AllowMinMax<TuplePrefix<RemoveTuplePrefix<T, P>>>
+	gte?: AllowMinMax<TuplePrefix<RemoveTuplePrefix<T, P>>>
+	lt?: AllowMinMax<TuplePrefix<RemoveTuplePrefix<T, P>>>
+	lte?: AllowMinMax<TuplePrefix<RemoveTuplePrefix<T, P>>>
 	limit?: number
 	reverse?: boolean
 }

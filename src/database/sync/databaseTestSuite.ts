@@ -431,6 +431,15 @@ export function databaseTestSuite(
 			])
 		})
 
+		it("Scan args types work.", () => {
+			type Schema = {
+				key: ["aveo", string, number]
+				value: null
+			}
+			const db = createStorage<Schema>(randomId())
+			db.subspace(["aveo"]).scan({ gte: ["title"] })
+		})
+
 		it("scan prefix gte/lte with schema types", () => {
 			type Schema =
 				| { key: ["a", "a", "a"]; value: 1 }
