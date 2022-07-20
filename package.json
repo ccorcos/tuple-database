@@ -1,6 +1,6 @@
 {
   "name": "tuple-database",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "",
   "repository": "github:ccorcos/tuple-database",
   "main": "./main.js",
