@@ -75,18 +75,22 @@ ${contents}
 	)
 }
 
-fs.removeSync(path.join(rootPath, "src/database/sync"))
-fs.mkdirpSync(path.join(rootPath, "src/database/sync"))
+const asyncDir = path.join(rootPath, "src/database/async")
+const syncDir = path.join(rootPath, "src/database/sync")
 
-const fileNames: string[] = fs.readdirSync(
-	path.join(rootPath, "src/database/async")
-)
+// Remove all non-test files
+for (const fileName of fs.readdirSync(syncDir)) {
+	if (!fileName.endsWith(".test.ts")) {
+		fs.removeSync(path.join(syncDir, fileName))
+	}
+}
 
-for (const fileName of fileNames) {
+for (const fileName of fs.readdirSync(asyncDir)) {
+	if (fileName.endsWith(".test.ts")) continue
 	if (!fileName.endsWith(".ts")) continue
 
 	convertAsyncToSyncFile(
-		path.join(rootPath, `src/database/async/${fileName}`),
-		path.join(rootPath, `src/database/sync/${convertAsyncToSync(fileName)}`)
+		path.join(asyncDir, fileName),
+		path.join(syncDir, convertAsyncToSync(fileName))
 	)
 }
