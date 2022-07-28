@@ -47,6 +47,14 @@ type A3 = Assert<
 	{ key: [1, 2]; value: number } | { key: [1, 3]; value: string }
 >
 
+type A33 = Assert<
+	FilterTupleValuePairByPrefix<
+		{ key: [string, number, boolean]; value: null },
+		[string]
+	>,
+	{ key: [string, number, boolean]; value: null }
+>
+
 export type FilterTupleValuePair<
 	S extends KeyValuePair,
 	P extends Tuple
@@ -96,6 +104,11 @@ type A7 = Assert<TuplePrefix<[1, 2, 3]>, [] | [1] | [1, 2] | [1, 2, 3]>
 type A77 = Assert<TuplePrefix<[1, 2, 3]>, [1] | [1, 2] | [1, 2, 3]>
 type A777 = Assert<TuplePrefix<string[]>, string[]>
 
+type A7775 = Assert<
+	TuplePrefix<[string, boolean, number]>,
+	[] | [string] | [string, boolean] | [string, boolean, number]
+>
+
 export type TupleRest<T extends unknown[]> = T extends [any, ...infer U]
 	? U
 	: never
@@ -111,6 +124,21 @@ export type RemoveTuplePrefix<T, P extends any[]> = T extends IsTuple
 type A9 = Assert<RemoveTuplePrefix<[1, 2, 3], [1, 2]>, [3]>
 type A10 = Assert<RemoveTuplePrefix<[1, 2, 3], [1]>, [2, 3]>
 type A11 = Assert<RemoveTuplePrefix<[1, 2, 3], [2]>, never>
+
+type A111 = Assert<
+	RemoveTuplePrefix<[string, number, boolean], [string]>,
+	[number, boolean]
+>
+
+type A1111 = Assert<
+	RemoveTuplePrefix<[string, number, boolean], []>,
+	[string, number, boolean]
+>
+
+type A11111 = Assert<
+	RemoveTuplePrefix<TuplePrefix<[string, number, boolean]>, []>,
+	TuplePrefix<[string, number, boolean]>
+>
 
 export type RemoveTupleValuePairPrefix<
 	T extends KeyValuePair,
