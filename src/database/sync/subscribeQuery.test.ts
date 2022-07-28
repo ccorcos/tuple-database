@@ -39,7 +39,7 @@ describe("subscribeQuery", () => {
 		destroy()
 	})
 
-	it.only("doesn't run second callback if it is destroyed in first", async () => {
+	it("doesn't run second callback if it is destroyed in first", async () => {
 		type Schema =
 			| {
 					key: ["filesById", number]
