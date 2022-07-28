@@ -59,6 +59,7 @@ describe("subscribeQuery", () => {
 		initTx.set(["focusedFileId"], 1)
 		initTx.commit()
 
+		let focusedFile: number | undefined = undefined
 		let focusedFileValue: string | undefined = undefined
 		let subscription:
 			| { result: string | undefined; destroy: () => void }
@@ -76,24 +77,20 @@ describe("subscribeQuery", () => {
 			focusedFileValue = subscription.result
 		}
 
-		let focusedFile: number | undefined = undefined
-
 		const focusedFileQuery = subscribeQuery(
 			db,
 			(db) => db.get(["focusedFileId"])!,
 			(result) => {
 				focusedFile = result
 				subscription?.destroy()
-				subscribeToFocusedFile(result)
+				subscribeToFocusedFile(focusedFile)
 			}
 		)
 
 		focusedFile = focusedFileQuery.result
-
-		assertEqual(focusedFile, 1)
-
 		subscribeToFocusedFile(focusedFile)
 
+		assertEqual(focusedFile, 1)
 		assertEqual(focusedFileValue, "file 1 value")
 
 		const tx = db.transact()
@@ -103,9 +100,6 @@ describe("subscribeQuery", () => {
 		tx.commit()
 
 		assertEqual(focusedFile, 2)
-
-		subscribeToFocusedFile(focusedFile)
-
 		assertEqual(focusedFileValue, "file 2 value")
 	})
 })
