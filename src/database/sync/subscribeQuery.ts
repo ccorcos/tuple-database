@@ -82,6 +82,5 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 		resetListeners()
 		destroyed = true
 	}
-
 	return { result, destroy }
 }
