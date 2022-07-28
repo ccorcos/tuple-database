@@ -14,6 +14,7 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	fn: (db: AsyncTupleDatabaseClientApi<S>) => Promise<T>,
 	callback: (result: T) => void
 ): Promise<{ result: T; destroy: () => void }> {
+	let destroyed = false
 	const listeners = new Set<any>()
 
 	const compute = () => fn(listenDb)
@@ -26,6 +27,7 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	let lastComputedTxId: string | undefined
 
 	const recompute = async (txId: TxId) => {
+		if (destroyed) return
 		// Skip over duplicate emits.
 		if (txId === lastComputedTxId) return
 
@@ -68,6 +70,9 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	})
 
 	const result = await compute()
-	const destroy = resetListeners
+	const destroy = () => {
+		resetListeners()
+		destroyed = true
+	}
 	return { result, destroy }
 }

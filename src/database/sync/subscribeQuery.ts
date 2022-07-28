@@ -22,6 +22,7 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	fn: (db: TupleDatabaseClientApi<S>) => Identity<T>,
 	callback: (result: T) => void
 ): Identity<{ result: T; destroy: () => void }> {
+	let destroyed = false
 	const listeners = new Set<any>()
 
 	const compute = () => fn(listenDb)
@@ -34,6 +35,7 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	let lastComputedTxId: string | undefined
 
 	const recompute = (txId: TxId) => {
+		if (destroyed) return
 		// Skip over duplicate emits.
 		if (txId === lastComputedTxId) return
 
@@ -76,6 +78,9 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	})
 
 	const result = compute()
-	const destroy = resetListeners
+	const destroy = () => {
+		resetListeners()
+		destroyed = true
+	}
 	return { result, destroy }
 }

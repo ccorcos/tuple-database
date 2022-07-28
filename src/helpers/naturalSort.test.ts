@@ -45,12 +45,10 @@ const scientificNotation: ParseTest[] = [
 	["10.20e2", 1020],
 ]
 
-const negativeScientificNotation: ParseTest[] = scientificNotation.map(
-	toNegative
-)
-const positiveScientificNotation: ParseTest[] = scientificNotation.map(
-	toPositive
-)
+const negativeScientificNotation: ParseTest[] =
+	scientificNotation.map(toNegative)
+const positiveScientificNotation: ParseTest[] =
+	scientificNotation.map(toPositive)
 
 const commaNumbers: ParseTest[] = [
 	["1,000", 1000],
