@@ -16,7 +16,7 @@ type TransactionWriteApi<S extends KeyValuePair> = {
 }
 
 /**
- * Similar to transactionalQuery and transactionalQueryAsync but only allows writes.
+ * Similar to transactionalReadWrite and transactionalReadWriteAsync but only allows writes.
  */
 export function transactionalWrite<S extends KeyValuePair = KeyValuePair>(
 	retries = 5

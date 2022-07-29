@@ -1,6 +1,6 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
-import { transactionalQuery } from "../database/sync/transactionalQuery"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { namedTupleToObject } from "../helpers/namedTupleToObject"
@@ -46,7 +46,7 @@ type Schema =
 			value: null
 	  }
 
-const addFollow = transactionalQuery<Schema>()(
+const addFollow = transactionalReadWrite<Schema>()(
 	(tx, from: string, to: string) => {
 		// Setup the follow relationships.
 		tx.set(["follows", { from }, { to }], null)
@@ -62,7 +62,7 @@ const addFollow = transactionalQuery<Schema>()(
 	}
 )
 
-const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
+const createPost = transactionalReadWrite<Schema>()((tx, post: Post) => {
 	tx.set(["post", { id: post.id }], post)
 
 	// Add to the user's profile
@@ -81,7 +81,7 @@ const createPost = transactionalQuery<Schema>()((tx, post: Post) => {
 	})
 })
 
-const createUser = transactionalQuery<Schema>()((tx, user: User) => {
+const createUser = transactionalReadWrite<Schema>()((tx, user: User) => {
 	tx.set(["user", { username: user.username }], user)
 })
 

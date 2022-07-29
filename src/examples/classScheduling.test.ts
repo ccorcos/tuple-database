@@ -4,7 +4,7 @@
 import { strict as assert } from "assert"
 import { flatten, range } from "lodash"
 import { describe, it } from "mocha"
-import { transactionalQuery } from "../database/sync/transactionalQuery"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
 import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types"
 import { SchemaSubspace } from "../database/typeHelpers"
 import {
@@ -53,14 +53,14 @@ type SchoolSchema =
 	| { key: ["class", string]; value: number }
 	| { key: ["attends", string, string]; value: null }
 
-const addClass = transactionalQuery<SchoolSchema>()(
+const addClass = transactionalReadWrite<SchoolSchema>()(
 	(tr, className: string, remainingSeats: number) => {
 		const course = tr.subspace(["class"])
 		course.set([className], remainingSeats)
 	}
 )
 
-const init = transactionalQuery<SchoolSchema>()((tr) => {
+const init = transactionalReadWrite<SchoolSchema>()((tr) => {
 	// Clear the directory.
 	for (const { key } of tr.scan()) {
 		tr.remove(key)
@@ -82,7 +82,7 @@ function availableClasses(db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>) {
 		})
 }
 
-const signup = transactionalQuery<SchoolSchema>()(
+const signup = transactionalReadWrite<SchoolSchema>()(
 	(tr, student: string, className: string) => {
 		const attends = tr.subspace(["attends"])
 		const course = tr.subspace(["class"])
@@ -100,7 +100,7 @@ const signup = transactionalQuery<SchoolSchema>()(
 	}
 )
 
-const drop = transactionalQuery<SchoolSchema>()(
+const drop = transactionalReadWrite<SchoolSchema>()(
 	(tr, student: string, className: string) => {
 		const attends = tr.subspace(["attends"])
 		const course = tr.subspace(["class"])
@@ -113,7 +113,7 @@ const drop = transactionalQuery<SchoolSchema>()(
 	}
 )
 
-const switchClasses = transactionalQuery<SchoolSchema>()(
+const switchClasses = transactionalReadWrite<SchoolSchema>()(
 	(tr, student: string, classes: { old: string; new: string }) => {
 		drop(tr, student, classes.old)
 		signup(tr, student, classes.new)

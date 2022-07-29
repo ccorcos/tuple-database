@@ -17,7 +17,7 @@ import { sortedValues } from "../../test/fixtures"
 import { transactionalWrite } from "../transactionalWrite"
 import { Assert } from "../typeHelpers"
 import { subscribeQuery } from "./subscribeQuery"
-import { transactionalQuery } from "./transactionalQuery"
+import { transactionalReadWrite } from "./transactionalReadWrite"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 const isSync = true
@@ -1187,7 +1187,7 @@ export function databaseTestSuite(
 					const sleep = (timeMs) =>
 						new Promise((resolve) => setTimeout(resolve, timeMs))
 
-					const incScore = transactionalQuery<Schema>()(
+					const incScore = transactionalReadWrite<Schema>()(
 						(tx, amount: number, sleepMs: number) => {
 							const score = tx.get(["score"])!
 							sleep(sleepMs)
@@ -1236,7 +1236,7 @@ export function databaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalQuery<Schema>()(
+				const addScore = transactionalReadWrite<Schema>()(
 					(tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = (player: string) => {
@@ -1624,7 +1624,7 @@ export function databaseTestSuite(
 					],
 				})
 
-				const getTotal = transactionalQuery<Schema>()((tx) => {
+				const getTotal = transactionalReadWrite<Schema>()((tx) => {
 					const chet = tx.get(["chet"])
 					const meghan = tx.get(["meghan"])
 					return chet! + meghan!
@@ -1664,7 +1664,7 @@ export function databaseTestSuite(
 
 				const store = createStorage<Schema>(randomId())
 
-				const writePerson = transactionalQuery<Schema>()(
+				const writePerson = transactionalReadWrite<Schema>()(
 					(tx, person: Person) => {
 						tx.set(["person", person.id], person)
 						tx.set(["personByName", person.name, person.id], person)

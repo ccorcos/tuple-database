@@ -11,7 +11,7 @@ import { range } from "lodash"
 import * as path from "path"
 import { AsyncTupleDatabase } from "../database/async/AsyncTupleDatabase"
 import { AsyncTupleDatabaseClientApi } from "../database/async/asyncTypes"
-import { transactionalAsyncQuery } from "../database/async/transactionalQueryAsync"
+import { transactionalReadWriteAsync } from "../database/async/transactionalReadWriteAsync"
 import { AsyncTupleDatabaseClient, InMemoryTupleStorage } from "../main"
 import { LevelTupleStorage } from "../storage/LevelTupleStorage"
 import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage"
@@ -28,13 +28,13 @@ function randomTuple() {
 
 const initialDatabaseSize = 10000
 
-const initialize = transactionalAsyncQuery()(async (tx) => {
+const initialize = transactionalReadWriteAsync()(async (tx) => {
 	for (const i of range(initialDatabaseSize)) {
 		tx.set(randomTuple(), null)
 	}
 })
 
-const readRemoveWrite = transactionalAsyncQuery()(async (tx) => {
+const readRemoveWrite = transactionalReadWriteAsync()(async (tx) => {
 	for (const i of range(readIters)) {
 		const results = await tx.scan({ gt: randomTuple(), limit: 10 })
 		for (const { key } of results) {

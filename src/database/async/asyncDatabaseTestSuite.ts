@@ -13,7 +13,7 @@ import {
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
 import { subscribeQueryAsync } from "./subscribeQueryAsync"
-import { transactionalAsyncQuery } from "./transactionalQueryAsync"
+import { transactionalReadWriteAsync } from "./transactionalReadWriteAsync"
 
 const isSync = false
 
@@ -1185,7 +1185,7 @@ export function asyncDatabaseTestSuite(
 					const sleep = (timeMs) =>
 						new Promise((resolve) => setTimeout(resolve, timeMs))
 
-					const incScore = transactionalAsyncQuery<Schema>()(
+					const incScore = transactionalReadWriteAsync<Schema>()(
 						async (tx, amount: number, sleepMs: number) => {
 							const score = (await tx.get(["score"]))!
 							await sleep(sleepMs)
@@ -1234,7 +1234,7 @@ export function asyncDatabaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalAsyncQuery<Schema>()(
+				const addScore = transactionalReadWriteAsync<Schema>()(
 					async (tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = async (player: string) => {
@@ -1622,7 +1622,7 @@ export function asyncDatabaseTestSuite(
 					],
 				})
 
-				const getTotal = transactionalAsyncQuery<Schema>()(async (tx) => {
+				const getTotal = transactionalReadWriteAsync<Schema>()(async (tx) => {
 					const chet = await tx.get(["chet"])
 					const meghan = await tx.get(["meghan"])
 					return chet! + meghan!
@@ -1662,7 +1662,7 @@ export function asyncDatabaseTestSuite(
 
 				const store = createStorage<Schema>(randomId())
 
-				const writePerson = transactionalAsyncQuery<Schema>()(
+				const writePerson = transactionalReadWriteAsync<Schema>()(
 					async (tx, person: Person) => {
 						tx.set(["person", person.id], person)
 						tx.set(["personByName", person.name, person.id], person)

@@ -89,9 +89,9 @@
 4. Define read and write queries:
 
 	```ts
-	import { transactionalQuery } from "tuple-database"
+	import { transactionalReadWrite } from "tuple-database"
 
-	const removeUser = transactionalQuery<Schema>()((tx, id: string) => {
+	const removeUser = transactionalReadWrite<Schema>()((tx, id: string) => {
 		const existing = tx.get(["user", {id}])
 		if (!existing) return
 
@@ -102,14 +102,14 @@
 		return existing
 	})
 
-	const insertUser = transactionalQuery<Schema>()((tx, user: User) => {
+	const insertUser = transactionalReadWrite<Schema>()((tx, user: User) => {
 		const {id, first_name, last_name, age} = user
 		tx.set(["user", {id}], user)
 		tx.set(["userByAge", {age}, {id}], null)
 		tx.set(["userByName", {last_name}, {first_name}, {id}], null)
 	})
 
-	const upsertUser = transactionalQuery<Schema>()((tx, user: User) {
+	const upsertUser = transactionalReadWrite<Schema>()((tx, user: User) {
 		removeUser(tx, user.id)
 		insertUser(tx, user)
 	})
@@ -671,17 +671,17 @@ assert.throws(() => meghan.commit())
 
 To better understand the underlying mechanics of how concurrency control works, please [read the Concurreny Control section](#Concurreny-Control) of this documentation.
 
-### `transactionalQuery`
+### `transactionalReadWrite`
 
 Whenever there is a `ReadWriteConflictError`, all we have to do is keep retrying the transaction until it works without a conflict. Thus is is important that this retry logic is idempotent. We have a convenient helper function for creating these idempotent transactions which will retry when there are conflicts and also has some convenient abstractions for composing transactions.
 
 ```ts
-const setScore = transactionalQuery<GameSchema>()((tx, person: string, score: number) => {
+const setScore = transactionalReadWrite<GameSchema>()((tx, person: string, score: number) => {
 		tx.set(["score", person], score)
 		updateTotal(tx)
 })
 
-const updateTotal = transactionalQuery<GameSchema>()((tx) => {
+const updateTotal = transactionalReadWrite<GameSchema>()((tx) => {
 	const items = tx.scan({ prefix: ["score"] })
 	const total = items.map(({ value }) => value).reduce((a, b) => a + b, 0)
 	tx.set(["total"], total)
@@ -691,13 +691,13 @@ const updateTotal = transactionalQuery<GameSchema>()((tx) => {
 setScore(client, "chet", 12)
 ```
 
-You'll notice there seems to be an extra `()` in there: `transactionalQuery<GameSchema>()((tx, person: string, ...`. That's because we want to tell TypeScript the schema that we're working with, but we want TypeScript also to infer the rest of the arguments as well as the return value. So this is just a TypeScript idiosyncrasy.
+You'll notice there seems to be an extra `()` in there: `transactionalReadWrite<GameSchema>()((tx, person: string, ...`. That's because we want to tell TypeScript the schema that we're working with, but we want TypeScript also to infer the rest of the arguments as well as the return value. So this is just a TypeScript idiosyncrasy.
 
-`transactionalQuery` can accept a client or a transation as its first argument. When the first argument is a client, then it will open and commit a transaction, and retry if there if a conflict. But if the first argument is a transaction, it will simply pass it through without commiting the transaction. This allows these transactional queries to be composed as you can see with `setScore` calling `updateTotal`.
+`transactionalReadWrite` can accept a client or a transation as its first argument. When the first argument is a client, then it will open and commit a transaction, and retry if there if a conflict. But if the first argument is a transaction, it will simply pass it through without commiting the transaction. This allows these transactional queries to be composed as you can see with `setScore` calling `updateTotal`.
 
 You can also see that `updateTotal` reads *through* the transaction. This means that it will see the updated score from `setScore` and compute the correct total.
 
-You can use `transactionalQuery` not just to writes, but also for transactional reads!
+You can use `transactionalReadWrite` not just to writes, but also for transactional reads!
 
 ### `client.subscribe`
 

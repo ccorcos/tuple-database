@@ -1,6 +1,6 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
-import { transactionalQuery } from "../database/sync/transactionalQuery"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { compareTuple } from "../helpers/compareTuple"
@@ -73,7 +73,7 @@ type Schema =
 	// And index for all objects ids that pass the filter.
 	| { key: ["index", string, string]; value: null }
 
-const reindexFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
+const reindexFact = transactionalReadWrite<Schema>()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 
 	// Get all the user-defined filters.
@@ -106,31 +106,33 @@ const reindexFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
 	})
 })
 
-const writeObjectFact = transactionalQuery<Schema>()((tx, fact: Fact) => {
+const writeObjectFact = transactionalReadWrite<Schema>()((tx, fact: Fact) => {
 	writeFact(tx.subspace(["data"]), fact)
 	reindexFact(tx, fact)
 })
 
-const writeObject = transactionalQuery<Schema>()((tx, obj: Obj) => {
+const writeObject = transactionalReadWrite<Schema>()((tx, obj: Obj) => {
 	for (const fact of objectToFacts(obj)) {
 		writeObjectFact(tx, fact)
 	}
 })
 
-const createFilter = transactionalQuery<Schema>()((tx, filter: UserFilter) => {
-	tx.set(["filter", filter.id], filter)
+const createFilter = transactionalReadWrite<Schema>()(
+	(tx, filter: UserFilter) => {
+		tx.set(["filter", filter.id], filter)
 
-	// Evaluate the filter.
-	const query = userFilterToQuery(filter)
-	const ids = evaluateQuery(tx.subspace(["data"]), query).map(
-		({ id }) => id as string
-	)
+		// Evaluate the filter.
+		const query = userFilterToQuery(filter)
+		const ids = evaluateQuery(tx.subspace(["data"]), query).map(
+			({ id }) => id as string
+		)
 
-	// Write those ids to the index.
-	ids.forEach((id) => {
-		tx.set(["index", filter.id, id], null)
-	})
-})
+		// Write those ids to the index.
+		ids.forEach((id) => {
+			tx.set(["index", filter.id, id], null)
+		})
+	}
+)
 
 function readFilterIndex(
 	db: ReadOnlyTupleDatabaseClientApi<Schema>,

@@ -1,4 +1,4 @@
-import { transactionalQuery } from "../database/sync/transactionalQuery"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
 
 export type Value = string | number | boolean
 export type Fact = [string, string, Value]
@@ -8,7 +8,7 @@ export type TriplestoreSchema =
 	| { key: ["ave", string, Value, string]; value: null }
 	| { key: ["vea", Value, string, string]; value: null }
 
-export const writeFact = transactionalQuery<TriplestoreSchema>()(
+export const writeFact = transactionalReadWrite<TriplestoreSchema>()(
 	(tx, fact: Fact) => {
 		const [e, a, v] = fact
 		tx.set(["eav", e, a, v], null)
@@ -17,7 +17,7 @@ export const writeFact = transactionalQuery<TriplestoreSchema>()(
 	}
 )
 
-export const removeFact = transactionalQuery<TriplestoreSchema>()(
+export const removeFact = transactionalReadWrite<TriplestoreSchema>()(
 	(tx, fact: Fact) => {
 		const [e, a, v] = fact
 		tx.remove(["eav", e, a, v])
@@ -44,7 +44,7 @@ export type Expression = [
 export type Binding = { [varName: string]: Value }
 
 // Evaluate an expression by scanning the appropriate index.
-export const queryExpression = transactionalQuery<TriplestoreSchema>()(
+export const queryExpression = transactionalReadWrite<TriplestoreSchema>()(
 	(tx, expr: Expression): Binding[] => {
 		const [$e, $a, $v] = expr
 		if ($e instanceof Variable) {
@@ -135,7 +135,7 @@ export function substituteBinding(query: Query, binding: Binding): Query {
 }
 
 // Recursively evaluate a query.
-export const evaluateQuery = transactionalQuery<TriplestoreSchema>()(
+export const evaluateQuery = transactionalReadWrite<TriplestoreSchema>()(
 	(tx, query: Query): Binding[] => {
 		const [first, ...rest] = query
 
