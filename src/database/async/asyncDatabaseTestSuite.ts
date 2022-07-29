@@ -6,6 +6,7 @@ import { randomId } from "../../helpers/randomId"
 import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
+import { transactionalWrite } from "../transactionalWrite"
 import { Assert } from "../typeHelpers"
 import {
 	AsyncTupleDatabaseClientApi,
@@ -2071,6 +2072,19 @@ export function asyncDatabaseTestSuite(
 					{ key: [3], value: null },
 				])
 			}
+		})
+
+		describe("transactionalWrite", () => {
+			it("Works for both async and sync, but no reads.", () => {
+				const id = randomId()
+				type Schema = { key: ["score"]; value: number }
+				const store = createStorage<Schema>(id)
+
+				const resetScore = transactionalWrite<Schema>()((tx) => {
+					tx.set(["score"], 0)
+				})
+				resetScore(store)
+			})
 		})
 
 		// New tests here...

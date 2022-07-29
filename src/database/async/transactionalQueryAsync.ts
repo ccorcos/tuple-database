@@ -1,9 +1,9 @@
-import { retry } from "../../helpers/retry"
 import { KeyValuePair } from "../../main"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
+import { retryAsync } from "./retryAsync"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
 // Accepts a transaction or a database and allows you to compose transactions together.
@@ -22,7 +22,7 @@ export function transactionalAsyncQuery<S extends KeyValuePair = KeyValuePair>(
 			...args: I
 		): Promise<O> {
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
-			return await retry(retries, async () => {
+			return await retryAsync(retries, async () => {
 				const tx = dbOrTx.transact()
 				const result = await fn(tx, ...args)
 				await tx.commit()

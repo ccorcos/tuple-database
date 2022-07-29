@@ -7,7 +7,7 @@ This file is generated from async/transactionalQueryAsync.ts
 type Identity<T> = T
 
 import { KeyValuePair } from "../../main"
-import { ReadWriteConflictError } from "../ConcurrencyLog"
+import { retry } from "./retry"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
@@ -33,20 +33,6 @@ export function transactionalQuery<S extends KeyValuePair = KeyValuePair>(
 				tx.commit()
 				return result
 			})
-		}
-	}
-}
-
-function retry<O>(retries: number, fn: () => Identity<O>) {
-	while (true) {
-		try {
-			const result = fn()
-			return result
-		} catch (error) {
-			if (retries <= 0) throw error
-			const isConflict = error instanceof ReadWriteConflictError
-			if (!isConflict) throw error
-			retries -= 1
 		}
 	}
 }

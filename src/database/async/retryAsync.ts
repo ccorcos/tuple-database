@@ -1,6 +1,6 @@
-import { ReadWriteConflictError } from "../database/ConcurrencyLog"
+import { ReadWriteConflictError } from "../../database/ConcurrencyLog"
 
-export async function retry<O>(retries: number, fn: () => Promise<O>) {
+export async function retryAsync<O>(retries: number, fn: () => Promise<O>) {
 	while (true) {
 		try {
 			const result = await fn()
