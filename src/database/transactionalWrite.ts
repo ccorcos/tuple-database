@@ -29,7 +29,8 @@ export function transactionalWrite<S extends KeyValuePair = KeyValuePair>(
 				| AsyncTupleDatabaseClientApi<S>
 				| AsyncTupleTransactionApi<S>
 				| TupleDatabaseClientApi<S>
-				| TupleTransactionApi<S>,
+				| TupleTransactionApi<S>
+				| TransactionWriteApi<S>,
 			...args: I
 		): O {
 			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
