@@ -6,7 +6,7 @@ import {
 import { retry } from "./sync/retry"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./sync/types"
 
-type TransactionWriteApi<S extends KeyValuePair> = {
+export type TransactionWriteApi<S extends KeyValuePair> = {
 	set: <T extends S>(
 		tuple: T["key"],
 		value: T["value"]
