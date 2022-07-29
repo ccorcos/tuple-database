@@ -1,5 +1,5 @@
+import { retry } from "../../helpers/retry"
 import { KeyValuePair } from "../../main"
-import { ReadWriteConflictError } from "../ConcurrencyLog"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
@@ -28,20 +28,6 @@ export function transactionalAsyncQuery<S extends KeyValuePair = KeyValuePair>(
 				await tx.commit()
 				return result
 			})
-		}
-	}
-}
-
-async function retry<O>(retries: number, fn: () => Promise<O>) {
-	while (true) {
-		try {
-			const result = await fn()
-			return result
-		} catch (error) {
-			if (retries <= 0) throw error
-			const isConflict = error instanceof ReadWriteConflictError
-			if (!isConflict) throw error
-			retries -= 1
 		}
 	}
 }
