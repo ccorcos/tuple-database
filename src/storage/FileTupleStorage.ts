@@ -1,4 +1,5 @@
 import * as fs from "fs-extra"
+import * as path from "path"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { KeyValuePair, WriteOps } from "./types"
 
@@ -70,7 +71,7 @@ class FileCache {
 	set(data: KeyValuePair[]) {
 		const filePath = this.getFilePath()
 		const fileContents = serializeFile(data)
-		fs.mkdirpSync(this.dbPath)
+		fs.mkdirpSync(path.dirname(this.dbPath))
 		fs.writeFileSync(filePath, fileContents, "utf8")
 	}
 }
