@@ -5,6 +5,8 @@
   "repository": "github:ccorcos/tuple-database",
   "main": "./main.js",
   "scripts": {
+    "build": "run-s build:macros build:tsc",
+    "build:tsc": "tsc",
     "build:macros": "ts-node src/tools/compileMacros.ts",
     "watch": "tsc -w",
     "test": "npm run test:clean && mocha -r ts-node/register './src/**/*.test.ts' --verbose",
