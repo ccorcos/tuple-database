@@ -4,6 +4,7 @@
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
+		"mapRoot": ".",
 		"module": "commonjs",
 		"allowJs": true,
 		"strictNullChecks": true,
