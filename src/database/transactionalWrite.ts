@@ -5,6 +5,7 @@ import {
 } from "./async/asyncTypes"
 import { retry } from "./sync/retry"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./sync/types"
+import { RemoveTupleValuePairPrefix, TuplePrefix } from "./typeHelpers"
 
 export type TransactionWriteApi<S extends KeyValuePair> = {
 	set: <T extends S>(
@@ -13,6 +14,11 @@ export type TransactionWriteApi<S extends KeyValuePair> = {
 	) => TransactionWriteApi<S>
 	remove: (tuple: S["key"]) => TransactionWriteApi<S>
 	write: (writes: WriteOps<S>) => TransactionWriteApi<S>
+
+	// Subspace
+	subspace: <P extends TuplePrefix<S["key"]>>(
+		prefix: P
+	) => TransactionWriteApi<RemoveTupleValuePairPrefix<S, P>>
 }
 
 /**
