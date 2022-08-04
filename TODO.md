@@ -1,5 +1,12 @@
 ## TODO
 
+- listen vs subscribe. transactional. makes things much simpler over here.
+
+
+- types... need to constraint key-value args. value cna be wrong.
+- types... should be able to pass a string literal to a string and it should match for prefix extension stuff.
+
+
 - client.expose(subspace, indexer)
 
 - keep track of transactions and expire them after a timeout

@@ -30,6 +30,34 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		return this.reactivity.subscribe(args, callback)
 	}
 
+	async watch(
+		args: ScanStorageArgs,
+		callback: AsyncCallback
+	): Promise<Unsubscribe> {
+		let ok = true
+		function a() {
+			ok = false
+		}
+		function b() {
+			ok = true
+		}
+		async function subscribeData() {
+			b()
+		}
+		async function writeData() {
+			a()
+		}
+		async function main() {
+			subscribeData().then(() => console.log(ok))
+			writeData()
+		}
+
+		// Is it possible that there's a write immediately before / after the tick?
+		const unsubscribe = this.reactivity.subscribe(args, callback)
+		const results = await this.scan(args)
+		return
+	}
+
 	async commit(writes: WriteOps, txId?: string) {
 		// Note: commit is called for transactional reads as well!
 		const emits = this.reactivity.computeReactivityEmits(writes)
