@@ -1,9 +1,11 @@
 import { strict as assert } from "assert"
 import { describe, it } from "mocha"
+import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import { Value } from "../storage/types"
+import { DelayDb } from "./DelayDb"
 import { execute, QueryBuilder } from "./queryBuilder"
 
 export type Order = number
@@ -45,15 +47,30 @@ const appendTriple = ([e, a, v]: Triple) =>
 
 describe("queryBuilder", () => {
 	it("works", () => {
-		assert.ok(true)
-
 		const db = new TupleDatabaseClient<TriplestoreSchema>(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
+		assert.equal(execute(db, getNextOrder("chet", "color")), 0)
 		execute(db, appendTriple(["chet", "color", "red"]))
+
+		assert.equal(execute(db, getNextOrder("chet", "color")), 1)
 		execute(db, appendTriple(["chet", "color", "blue"]))
 
 		console.log("RESULT", db.scan())
+	})
+
+	it("works async", async () => {
+		const db = new AsyncTupleDatabaseClient<TriplestoreSchema>(
+			DelayDb(new TupleDatabase(new InMemoryTupleStorage()), 10)
+		)
+
+		assert.equal(await execute(db, getNextOrder("chet", "color")), 0)
+		await execute(db, appendTriple(["chet", "color", "red"]))
+
+		assert.equal(await execute(db, getNextOrder("chet", "color")), 1)
+		await execute(db, appendTriple(["chet", "color", "blue"]))
+
+		console.log("RESULT", await db.scan())
 	})
 })

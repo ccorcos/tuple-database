@@ -51,7 +51,13 @@ import {
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
 } from "../database/typeHelpers"
-import { ScanArgs, TupleDatabaseClientApi } from "../main"
+import {
+	AsyncTupleDatabaseClientApi,
+	AsyncTupleTransactionApi,
+	ScanArgs,
+	TupleDatabaseClientApi,
+	TupleTransactionApi,
+} from "../main"
 import { KeyValuePair, WriteOps } from "../storage/types"
 
 /*
@@ -114,13 +120,61 @@ export class QueryBuilder<S extends KeyValuePair = KeyValuePair> {
 	}
 }
 
+// export function execute<O, S extends KeyValuePair = KeyValuePair>(
+// 	db: TupleDatabaseClientApi<S>,
+// 	query: QueryResult<O>
+// ): O {
+// 	let tx: any = db
+// 	if (!("set" in db)) {
+// 		tx = db.transact()
+// 	}
+
+// 	let x: any = tx
+
+// 	for (const op of query.ops) {
+// 		if (op.fn === "subspace") {
+// 			x = x.subspace(...op.args)
+// 		}
+// 		if (op.fn === "scan") {
+// 			x = x.scan(...op.args)
+// 		}
+// 		if (op.fn === "map") {
+// 			x = op.args[0](x)
+// 		}
+// 		if (op.fn === "chain") {
+// 			x = execute(tx, op.args[0](x))
+// 		}
+// 		if (op.fn === "write") {
+// 			x = x.write(...op.args)
+// 		}
+// 	}
+// 	if (!("set" in db)) {
+// 		tx.commit()
+// 	}
+// 	return x
+// }
+
 export function execute<O, S extends KeyValuePair = KeyValuePair>(
-	db: TupleDatabaseClientApi<S>,
+	dbOrTx: TupleDatabaseClientApi<S> | TupleTransactionApi<S>,
 	query: QueryResult<O>
-): O {
-	let tx: any = db
-	if (!("set" in db)) {
-		tx = db.transact()
+): O
+export function execute<O, S extends KeyValuePair = KeyValuePair>(
+	dbOrTx: AsyncTupleDatabaseClientApi<S> | AsyncTupleTransactionApi<S>,
+	query: QueryResult<O>
+): Promise<O>
+export function execute<O, S extends KeyValuePair = KeyValuePair>(
+	dbOrTx:
+		| TupleDatabaseClientApi<S>
+		| TupleTransactionApi<S>
+		| AsyncTupleDatabaseClientApi<S>
+		| AsyncTupleTransactionApi<S>,
+	query: QueryResult<O>
+): O | Promise<O> {
+	let tx: any = dbOrTx
+
+	const isTx = "set" in dbOrTx
+	if (!isTx) {
+		tx = dbOrTx.transact()
 	}
 
 	let x: any = tx
@@ -132,18 +186,36 @@ export function execute<O, S extends KeyValuePair = KeyValuePair>(
 		if (op.fn === "scan") {
 			x = x.scan(...op.args)
 		}
-		if (op.fn === "map") {
-			x = op.args[0](x)
-		}
-		if (op.fn === "chain") {
-			x = execute(tx, op.args[0](x))
-		}
 		if (op.fn === "write") {
 			x = x.write(...op.args)
 		}
+
+		if (op.fn === "map") {
+			if (x instanceof Promise) {
+				x = x.then((x) => op.args[0](x))
+			} else {
+				x = op.args[0](x)
+			}
+		}
+		if (op.fn === "chain") {
+			if (x instanceof Promise) {
+				x = x.then((x) => execute(tx, op.args[0](x)))
+			} else {
+				x = execute(tx, op.args[0](x))
+			}
+		}
 	}
-	if (!("set" in db)) {
-		tx.commit()
+
+	if (!isTx) {
+		if (x instanceof Promise) {
+			x = x.then((x) => {
+				tx.commit()
+				return x
+			})
+		} else {
+			tx.commit()
+		}
 	}
+
 	return x
 }
