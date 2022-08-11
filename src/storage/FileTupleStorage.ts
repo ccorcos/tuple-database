@@ -3,7 +3,7 @@ import * as path from "path"
 import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
 import { KeyValuePair, WriteOps } from "./types"
 
-function parseFile(str: string): KeyValuePair[] {
+export function parseFile(str: string): KeyValuePair[] {
 	if (str === "") {
 		return []
 	}
