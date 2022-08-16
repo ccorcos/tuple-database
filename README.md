@@ -851,4 +851,4 @@ AsyncTupleDatabase(LevelTupleStorage)):readRemoveWrite 2224.8067083358765
 
 - It would be nice if we could replicate / sync this database. Maybe we only want to replicate some subspaces p2p with another client, or maybe we just want to have a backup somewhere.
 
-> 👋 If you're interested in working on this project with me, [send me an email](ccorcos@gmail.com)!
+> 👋 If you're interested in working on this project with me, [send me an email](mailto:ccorcos@gmail.com)!
