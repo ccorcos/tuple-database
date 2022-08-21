@@ -768,7 +768,7 @@ However, there are some crucial differences with FoundationDb.
 
 - [Building a social app with indexes feeds.](./src/examples/socialApp.test.ts) While you probably won't use this database for a social app like Twitter, we can demonstrate the power of this abstraction to index feeds — something you cannot so with SQL. And if you wanted to build a social app, all of these abstractions are transferable to FoundationDb.
 - [Building an end-user database with dynamic properties and indexing.](./src/examples/endUserDatabase.test.ts) If you want to build product like Notion or Airtable with indexes database views, then this is the way to do it. (P.S. I built Notion 😉).
-- [Using a database for frontend state management.](https://github.com/ccorcos/game-counter/blob/master/src/GameState.ts) When you build a sufficiently complex application, state management runs into many of the same problems as databases — normalization, denormalization, indexing, and reactivity. So wouldn't it be great if we could use a proper database for state management?
+- [Using a database for frontend state management.](https://github.com/ccorcos/game-counter/blob/master/src/app/GameDb.ts) When you build a sufficiently complex application, state management runs into many of the same problems as databases — normalization, denormalization, indexing, and reactivity. So wouldn't it be great if we could use a proper database for state management?
 
 # Development
 
