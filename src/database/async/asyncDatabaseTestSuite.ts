@@ -85,6 +85,28 @@ export function asyncDatabaseTestSuite(
 			assertEqual(data3, [{ key: ["a", "a"], value: 1 }])
 		})
 
+		it("tx.scan limit and removes items correctly", async () => {
+			const store = createStorage(randomId())
+
+			await store.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			const transaction = store.transact()
+			transaction.remove([1])
+			transaction.remove([2])
+
+			const dataNoLimit = await transaction.scan()
+			assertEqual(dataNoLimit, [{ key: [3], value: null }])
+
+			const data = await transaction.scan({ limit: 1 })
+			assertEqual(data, [{ key: [3], value: null }])
+		})
+
 		it("inserts the same thing gets deduplicated with ids", async () => {
 			const store = createStorage(randomId())
 			await store
@@ -2070,6 +2092,36 @@ export function asyncDatabaseTestSuite(
 				tx.set([0], null)
 				assertEqual(await tx.scan({ limit: 1, reverse: true }), [
 					{ key: [3], value: null },
+				])
+			}
+		})
+
+		it("tx.scan limit 2", async () => {
+			const db = createStorage(randomId())
+
+			await db.commit({
+				set: [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
+					{ key: [3], value: null },
+				],
+			})
+
+			YesChange: {
+				const tx = db.transact()
+				tx.set([0], null)
+				assertEqual(await tx.scan({ limit: 2 }), [
+					{ key: [0], value: null },
+					{ key: [1], value: null },
+				])
+			}
+
+			NoChange: {
+				const tx = db.transact()
+				tx.set([5], null)
+				assertEqual(await tx.scan({ limit: 2 }), [
+					{ key: [1], value: null },
+					{ key: [2], value: null },
 				])
 			}
 		})

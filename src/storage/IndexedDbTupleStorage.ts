@@ -1,5 +1,4 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr"
-import { result } from "lodash"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 import { AsyncTupleStorageApi, ScanStorageArgs, WriteOps } from "../main"
 import { KeyValuePair } from "./types"
@@ -59,7 +58,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 				key: decodeTuple(cursor.key),
 				value: cursor.value,
 			})
-			if (result.length >= limit) break
+			if (results.length >= limit) break
 		}
 		await tx.done
 

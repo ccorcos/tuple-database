@@ -139,26 +139,36 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
 		this.checkActive()
 
-		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
-		const pairs = await this.db.scan(storageScanArgs, this.id)
+		const { limit: resultLimit, ...scanArgs } = normalizeSubspaceScanArgs(
+			this.subspacePrefix,
+			args
+		)
+
+		// We don't want to include the limit in this scan.
+		const sets = tv.scan(this.writes.set, scanArgs)
+		const removes = t.scan(this.writes.remove, scanArgs)
+
+		// If we've removed items from this range, then lets make sure to fetch enough
+		// from storage for the final result limit.
+		const scanLimit = resultLimit ? resultLimit + removes.length : undefined
+
+		const pairs = await this.db.scan({ ...scanArgs, limit: scanLimit }, this.id)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 
-		const sets = tv.scan(this.writes.set, storageScanArgs)
 		for (const { key: fullTuple, value } of sets) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
 			// Make sure we insert in reverse if the scan is in reverse.
-			tv.set(result, tuple, value, storageScanArgs.reverse)
+			tv.set(result, tuple, value, scanArgs.reverse)
 		}
-		const removes = t.scan(this.writes.remove, storageScanArgs)
 		for (const fullTuple of removes) {
 			const tuple = removePrefixFromTuple(this.subspacePrefix, fullTuple)
-			tv.remove(result, tuple, storageScanArgs.reverse)
+			tv.remove(result, tuple, scanArgs.reverse)
 		}
 
-		// Make sure to trunace the results if we added items to the result set.
-		if (storageScanArgs.limit) {
-			if (result.length > storageScanArgs.limit) {
-				result.splice(storageScanArgs.limit, result.length)
+		// Make sure to truncate the results if we added items to the result set.
+		if (resultLimit) {
+			if (result.length > resultLimit) {
+				result.splice(resultLimit, result.length)
 			}
 		}
 
