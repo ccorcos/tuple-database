@@ -22,9 +22,9 @@ export function useAsyncTupleDatabase<
 		subscribeQueryAsync(
 			db,
 			(db) => fn(db, ...args),
-			(result) => {
+			(newResult) => {
 				if (stopped) return
-				if (!shallowEqual(resultRef.current, result)) {
+				if (!shallowEqual(newResult, result)) {
 			        	setResult(newResult)
 				}
 			}
