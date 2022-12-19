@@ -68,7 +68,7 @@
 	}
 
 	type NameIndex = {
-		key: ["userByName", {last_name: string}, {first_name string}, {id: string}],
+		key: ["userByName", {last_name: string}, {first_name: string}, {id: string}],
 		value: null
 	}
 
@@ -95,7 +95,7 @@
 		const existing = tx.get(["user", {id}])
 		if (!existing) return
 
-		const {id, first_name, last_name, age} = existing
+		const {first_name, last_name, age} = existing
 		tx.remove(["user", {id}])
 		tx.remove(["userByAge", {age}, {id}])
 		tx.remove(["userByName", {last_name}, {first_name}, {id}])
