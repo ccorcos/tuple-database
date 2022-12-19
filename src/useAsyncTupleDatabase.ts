@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useState } from "react"
 import { AsyncTupleDatabaseClientApi } from "./database/async/asyncTypes"
 import { shallowEqual } from "./helpers/shallowEqual"
-import { useRerender } from "./helpers/useRerender"
 import { subscribeQueryAsync } from "./main"
 import { KeyValuePair } from "./storage/types"
 
@@ -15,8 +14,7 @@ export function useAsyncTupleDatabase<
 	fn: (db: AsyncTupleDatabaseClientApi<S>, ...arg: A) => Promise<T>,
 	args: A
 ) {
-	const rerender = useRerender()
-	const resultRef = useRef<T | undefined>(undefined)
+	const [result, setResult] = useState<T | undefined>(undefined)
 
 	useEffect(() => {
 		let stopped = false
@@ -27,12 +25,11 @@ export function useAsyncTupleDatabase<
 			(result) => {
 				if (stopped) return
 				if (!shallowEqual(resultRef.current, result)) {
-					resultRef.current = result
-					rerender()
+			        	setResult(newResult)
 				}
 			}
 		).then(({ result, destroy }) => {
-			resultRef.current = result
+			setResult(result)
 			if (stopped) destroy()
 			else stop = destroy
 		})
@@ -42,5 +39,5 @@ export function useAsyncTupleDatabase<
 		}
 	}, [db, fn, ...args])
 
-	return resultRef.current
+	return result
 }
