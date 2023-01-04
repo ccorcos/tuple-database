@@ -1,5 +1,5 @@
-import { outdent } from "outdent"
 import { mutableFilter } from "../helpers/mutableFilter"
+import { outdent } from "../helpers/outdent"
 import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray"
 import { Tuple } from "../storage/types"
 import { TxId } from "./types"
@@ -11,11 +11,11 @@ type LogItem = ReadItem | WriteItem
 
 export class ReadWriteConflictError extends Error {
 	constructor(txId: string | undefined, writeTuple: Tuple, readBounds: Bounds) {
-		const message = outdent`
+		const message = outdent(`
       ReadWriteConflictError: ${txId}
       Write to tuple ${writeTuple}
       conflicted with a read at the bounds ${readBounds}
-    `
+    `)
 
 		super(message)
 	}
