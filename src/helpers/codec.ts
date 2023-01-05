@@ -23,7 +23,7 @@ export const encodingRank = sortBy(
 	([key, value]) => value
 ).map(([key]) => key as EncodingType)
 
-export function encodeValue(value: Value) {
+export function encodeValue(value: Value): string {
 	if (value === null) {
 		return encodingByte.null
 	}
