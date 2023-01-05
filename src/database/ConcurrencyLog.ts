@@ -1,4 +1,5 @@
 import { mutableFilter } from "../helpers/mutableFilter"
+import { outdent } from "../helpers/outdent"
 import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray"
 import { Tuple } from "../storage/types"
 import { TxId } from "./types"
@@ -9,8 +10,14 @@ type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }
 type LogItem = ReadItem | WriteItem
 
 export class ReadWriteConflictError extends Error {
-	constructor(txId: string | undefined) {
-		super("ReadWriteConflictError: " + txId)
+	constructor(txId: string | undefined, writeTuple: Tuple, readBounds: Bounds) {
+		const message = outdent(`
+      ReadWriteConflictError: ${txId}
+      Write to tuple ${writeTuple}
+      conflicted with a read at the bounds ${readBounds}
+    `)
+
+		super(message)
 	}
 }
 
@@ -48,7 +55,7 @@ export class ConcurrencyLog {
 				} else if (item.type === "write") {
 					for (const read of reads) {
 						if (isTupleWithinBounds(item.tuple, read)) {
-							throw new ReadWriteConflictError(item.txId)
+							throw new ReadWriteConflictError(item.txId, item.tuple, read)
 						}
 					}
 				}
