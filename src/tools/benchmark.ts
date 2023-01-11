@@ -6,7 +6,7 @@
 
 import sqlite from "better-sqlite3"
 import * as fs from "fs-extra"
-import level from "level"
+import { Level } from "level"
 import { range } from "lodash"
 import * as path from "path"
 import { AsyncTupleDatabase } from "../database/async/AsyncTupleDatabase"
@@ -88,7 +88,9 @@ async function main() {
 		"AsyncTupleDatabase(LevelTupleStorage))",
 		new AsyncTupleDatabaseClient(
 			new AsyncTupleDatabase(
-				new LevelTupleStorage(level(path.join(tmpDir, "benchmark-level.db")))
+				new LevelTupleStorage(
+					new Level(path.join(tmpDir, "benchmark-level.db"))
+				)
 			)
 		)
 	)
