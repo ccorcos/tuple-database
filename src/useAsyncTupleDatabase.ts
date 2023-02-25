@@ -25,7 +25,7 @@ export function useAsyncTupleDatabase<
 			(newResult) => {
 				if (stopped) return
 				if (!shallowEqual(newResult, result)) {
-			        	setResult(newResult)
+					setResult(newResult)
 				}
 			}
 		).then(({ result, destroy }) => {
