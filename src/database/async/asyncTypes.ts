@@ -83,9 +83,9 @@ export type AsyncTupleRootTransactionApi<
 	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// WriteApis
-	set: <T extends S>(
-		tuple: T["key"],
-		value: T["value"]
+	set: <Key extends S["key"]>(
+		tuple: Key,
+		value: ValueForTuple<S, Key>
 	) => AsyncTupleRootTransactionApi<S>
 	remove: (tuple: S["key"]) => AsyncTupleRootTransactionApi<S>
 	write: (writes: WriteOps<S>) => AsyncTupleRootTransactionApi<S>
@@ -114,9 +114,9 @@ export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	) => AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>>
 
 	// WriteApis
-	set: <T extends S>(
-		tuple: T["key"],
-		value: T["value"]
+	set: <Key extends S["key"]>(
+		tuple: Key,
+		value: ValueForTuple<S, Key>
 	) => AsyncTupleTransactionApi<S>
 	remove: (tuple: S["key"]) => AsyncTupleTransactionApi<S>
 	write: (writes: WriteOps<S>) => AsyncTupleTransactionApi<S>
