@@ -48,83 +48,43 @@ export function scan<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
 		throw new Error("Invalid bounds.")
 	}
 
-	// Start at lower bound.
-	let i: number
+	let lowerSearchBound: number
+	let upperSearchBound: number
 
-	if (args.reverse) {
-		if (end === undefined) {
-			i = list.length - 1
-		} else {
-			const result = binarySearch(list, end, cmp)
-			if (result.found === undefined) {
-				i = result.closest - 1 // i could be -1!
-			} else {
-				if (args.lt) i = result.found - 1
-				else i = result.found
-			}
-		}
+	if (start === undefined) {
+		lowerSearchBound = 0
 	} else {
-		if (start === undefined) {
-			i = 0
+		const result = binarySearch(list, start, cmp)
+		if (result.found === undefined) {
+			lowerSearchBound = result.closest
 		} else {
-			const result = binarySearch(list, start, cmp)
-			if (result.found === undefined) {
-				i = result.closest
-			} else {
-				if (args.gt) i = result.found + 1
-				else i = result.found
-			}
+			if (args.gt) lowerSearchBound = result.found + 1
+			else lowerSearchBound = result.found
 		}
 	}
 
-	const results: T[] = []
-	while (true) {
-		// End of array.
-		if (i >= list.length || i < 0) {
-			break
-		}
-		if (args.limit && results.length >= args.limit) {
-			// Limit condition.
-			break
-		}
-
-		if (args.reverse) {
-			// Lower bound condition.
-			const item = list[i]
-
-			if (args.gt) {
-				const dir = cmp(args.gt, item)
-				if (dir >= 0) {
-					break
-				}
-			}
-			if (args.gte) {
-				const dir = cmp(args.gte, item)
-				if (dir > 0) {
-					break
-				}
-			}
-			results.push(item)
-			i -= 1
+	if (end === undefined) {
+		upperSearchBound = list.length
+	} else {
+		const result = binarySearch(list, end, cmp)
+		if (result.found === undefined) {
+			upperSearchBound = result.closest
 		} else {
-			// Upper bound condition.
-			const item = list[i]
-
-			if (args.lt) {
-				const dir = cmp(item, args.lt)
-				if (dir >= 0) {
-					break
-				}
-			}
-			if (args.lte) {
-				const dir = cmp(item, args.lte)
-				if (dir > 0) {
-					break
-				}
-			}
-			results.push(item)
-			i += 1
+			if (args.lt) upperSearchBound = result.found
+			else upperSearchBound = result.found + 1
 		}
 	}
-	return results
+
+	const lowerDataBound =
+		args.reverse && args.limit
+			? Math.max(lowerSearchBound, upperSearchBound - args.limit)
+			: lowerSearchBound
+	const upperDataBound =
+		!args.reverse && args.limit
+			? Math.min(lowerSearchBound + args.limit, upperSearchBound)
+			: upperSearchBound
+
+	return args.reverse
+		? list.slice(lowerDataBound, upperDataBound).reverse()
+		: list.slice(lowerDataBound, upperDataBound)
 }
