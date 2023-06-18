@@ -830,7 +830,7 @@ One thing that's been pretty annoying is building async and sync storage abstrac
 
 Ideally we'd use a proper TypeScript parser rather than a home-grown regex.
 
-## Brenchmark
+## Benchmark
 
 We have a simple benchmark that read and writes a bunch. Mostly so we can compare between storage engines. This benchmark currenly does 11000 operations. 10000 reads and 1000 writes. So we're looking at fractions of a millisecond per operation.
 
