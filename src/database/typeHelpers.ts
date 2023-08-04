@@ -3,18 +3,7 @@ import { KeyValuePair, Tuple } from "../storage/types"
 export type Assert<Actual extends Expected, Expected> = Actual
 
 // Can't create recursive string types, otherwise: `${Ints}${Ints}`
-export type Ints =
-	| "0"
-	| "1"
-	| "2"
-	| "3"
-	| "4"
-	| "5"
-	| "6"
-	| "7"
-	| "8"
-	| "9"
-	| "10"
+export type Ints = `${number}`
 
 /** Convert ["a", "b"] in {0: "a", 1: "b"} so that we can use Extract to match tuple prefixes. */
 export type TupleToObject<T extends any[]> = Pick<T, Extract<keyof T, Ints>>
