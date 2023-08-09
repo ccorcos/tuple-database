@@ -7,12 +7,12 @@ This file is generated from async/transactionalReadAsync.ts
 type Identity<T> = T
 
 import { KeyValuePair } from "../../storage/types"
+import { retry } from "../retry"
 import {
 	ReadOnlyTupleDatabaseClientApi,
 	TupleDatabaseClientApi,
 	TupleTransactionApi,
-} from "..//types"
-import { retry } from "../retry"
+} from "./types"
 
 /**
  * Similar to transactionalReadWrite and transactionalWrite but only allows reads.

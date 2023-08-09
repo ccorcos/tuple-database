@@ -1,10 +1,10 @@
 import { KeyValuePair } from "../../storage/types"
+import { retry } from "../retry"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 	ReadOnlyAsyncTupleDatabaseClientApi,
-} from "../async/asyncTypes"
-import { retry } from "../retry"
+} from "./asyncTypes"
 
 /**
  * Similar to transactionalReadWrite and transactionalWrite but only allows reads.
