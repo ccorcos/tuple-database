@@ -7,7 +7,7 @@ This file is generated from async/transactionalReadAsync.ts
 type Identity<T> = T
 
 import { KeyValuePair } from "../../storage/types"
-import { retry } from "../retry"
+import { retry } from "./retry"
 import {
 	ReadOnlyTupleDatabaseClientApi,
 	TupleDatabaseClientApi,
@@ -21,7 +21,7 @@ export function transactionalRead<S extends KeyValuePair = KeyValuePair>(
 	retries = 5
 ) {
 	return function <I extends any[], O>(
-		fn: (tx: ReadOnlyTupleDatabaseClientApi<S>, ...args: I) => O
+		fn: (tx: ReadOnlyTupleDatabaseClientApi<S>, ...args: I) => Identity<O>
 	) {
 		return function (
 			dbOrTx:
@@ -29,7 +29,7 @@ export function transactionalRead<S extends KeyValuePair = KeyValuePair>(
 				| TupleTransactionApi<S>
 				| ReadOnlyTupleDatabaseClientApi<S>,
 			...args: I
-		): O {
+		): Identity<O> {
 			if (!("transact" in dbOrTx)) return fn(dbOrTx, ...args)
 			return retry(retries, () => {
 				const tx = dbOrTx.transact()
