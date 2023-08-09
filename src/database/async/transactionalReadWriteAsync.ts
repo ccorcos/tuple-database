@@ -21,7 +21,7 @@ export function transactionalReadWriteAsync<
 			dbOrTx: AsyncTupleDatabaseClientApi<S> | AsyncTupleTransactionApi<S>,
 			...args: I
 		): Promise<O> {
-			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
+			if (!("transact" in dbOrTx)) return fn(dbOrTx, ...args)
 			return await retryAsync(retries, async () => {
 				const tx = dbOrTx.transact()
 				const result = await fn(tx, ...args)

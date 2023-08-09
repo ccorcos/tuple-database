@@ -26,7 +26,7 @@ export function transactionalReadWrite<S extends KeyValuePair = KeyValuePair>(
 			dbOrTx: TupleDatabaseClientApi<S> | TupleTransactionApi<S>,
 			...args: I
 		): Identity<O> {
-			if ("set" in dbOrTx) return fn(dbOrTx, ...args)
+			if (!("transact" in dbOrTx)) return fn(dbOrTx, ...args)
 			return retry(retries, () => {
 				const tx = dbOrTx.transact()
 				const result = fn(tx, ...args)

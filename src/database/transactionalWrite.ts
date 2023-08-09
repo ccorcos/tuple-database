@@ -3,7 +3,7 @@ import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 } from "./async/asyncTypes"
-import { retry } from "./sync/retry"
+import { retry } from "./retry"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./sync/types"
 import {
 	RemoveTupleValuePairPrefix,
