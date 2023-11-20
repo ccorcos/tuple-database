@@ -3,19 +3,13 @@ import { describe, it } from "mocha"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import {
-	$,
-	evaluateQuery,
-	Fact,
-	TriplestoreSchema,
-	writeFact,
-} from "./triplestore"
+import { $, evaluateQuery, Fact, writeFact } from "./triplestore"
 
 // Read triplestore.ts first to understand this this test.
 
 describe("Triplestore", () => {
 	it("works", () => {
-		const db = new TupleDatabaseClient<TriplestoreSchema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
@@ -45,7 +39,7 @@ describe("Triplestore", () => {
 	})
 
 	it("family example", () => {
-		const db = new TupleDatabaseClient<TriplestoreSchema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 

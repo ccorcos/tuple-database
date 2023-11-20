@@ -21,9 +21,9 @@ export type KeyValuePair = { key: Tuple; value: any }
 export const MIN = null
 export const MAX = true
 
-export type WriteOps<S extends KeyValuePair = KeyValuePair> = {
-	set?: S[]
-	remove?: S["key"][]
+export type WriteOps = {
+	set?: KeyValuePair[]
+	remove?: Tuple[]
 }
 
 export type ScanStorageArgs = {

@@ -21,7 +21,7 @@ export const MaxTuple = [MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX]
 /**
  * Gets the tuple bounds taking into account any prefix specified.
  */
-export function normalizeTupleBounds(args: ScanArgs<Tuple, any>): Bounds {
+export function normalizeTupleBounds(args: ScanArgs): Bounds {
 	let gte: Tuple | undefined
 	let gt: Tuple | undefined
 	let lte: Tuple | undefined
@@ -114,7 +114,7 @@ export type Bounds = {
 	lt?: Tuple
 }
 
-export function scan(data: Array<Tuple>, args: ScanArgs<Tuple, any> = {}) {
+export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
 	const bounds = normalizeTupleBounds(rest)
 	return sortedList.scan(data, { limit, reverse, ...bounds }, compareTuple)

@@ -1,6 +1,5 @@
 import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { Queue } from "../../helpers/Queue"
-import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient"
 import { AsyncTupleDatabaseClientApi } from "./asyncTypes"
@@ -9,9 +8,9 @@ const throwError = () => {
 	throw new Error()
 }
 
-export async function subscribeQueryAsync<S extends KeyValuePair, T>(
-	db: AsyncTupleDatabaseClientApi<S>,
-	fn: (db: AsyncTupleDatabaseClientApi<S>) => Promise<T>,
+export async function subscribeQueryAsync<T>(
+	db: AsyncTupleDatabaseClientApi,
+	fn: (db: AsyncTupleDatabaseClientApi) => Promise<T>,
 	callback: (result: T) => void
 ): Promise<{ result: T; destroy: () => void }> {
 	let destroyed = false
@@ -41,7 +40,7 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 	const recomputeQueue = new Queue()
 
 	// Subscribe for every scan that gets called.
-	const listenDb = new AsyncTupleDatabaseClient<S>({
+	const listenDb = new AsyncTupleDatabaseClient({
 		scan: async (args: any, txId) => {
 			// if (txId)
 			// 	// Maybe one day we can transactionally subscribe to a bunch of things. But

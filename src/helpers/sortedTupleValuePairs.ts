@@ -50,7 +50,7 @@ export function exists(data: KeyValuePair[], key: Tuple, reverse = false) {
 	)
 }
 
-function normalizeTupleValuePairBounds(args: ScanArgs<Tuple, any>) {
+function normalizeTupleValuePairBounds(args: ScanArgs) {
 	const bounds = normalizeTupleBounds(args)
 	const { gt, lt, gte, lte } = bounds
 	return {
@@ -61,7 +61,7 @@ function normalizeTupleValuePairBounds(args: ScanArgs<Tuple, any>) {
 	}
 }
 
-export function scan(data: KeyValuePair[], args: ScanArgs<Tuple, any> = {}) {
+export function scan(data: KeyValuePair[], args: ScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
 	const bounds = normalizeTupleValuePairBounds(rest)
 	return sortedList.scan(

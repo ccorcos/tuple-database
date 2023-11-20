@@ -1,9 +1,82 @@
 ## TODO
 
+- [x] get rid of typed schema.
+- [ ] add a write-op to check a versionstamp.
+- [ ] scan needs to return a versionstamp.
+- [ ] fix the concurrency control.
+- [ ] build a filing cabinet abstraction...
+- [ ] build a whole table + indexing database idea.
+
 - denokv abstraction to explicitly check your reads.
 - maybe all these types are making this library too complicated.
 - can I use foundationdb as a backend?
-- how can I scale up reactivity?
+- how can I scale up reactivity?s
+
+
+https://deno.land/manual/runtime/kv
+```ts
+const kv = await Deno.openKv();
+const result = await kv.set(["preferences", "ada"], prefs);
+
+const kv = await Deno.openKv();
+const result = await kv.getMany([
+  ["preferences", "ada"],
+  ["preferences", "grace"],
+]);
+result[0].key; // ["preferences", "ada"]
+result[0].value; // { ... }
+result[0].versionstamp; // "00000000000000010000"
+result[1].key; // ["preferences", "grace"]
+result[1].value; // null
+result[1].versionstamp; // null
+
+const entries = kv.list({ prefix: ["preferences"] });
+for await (const entry of entries) {
+  console.log(entry.key); // ["preferences", "ada"]
+  console.log(entry.value); // { ... }
+  console.log(entry.versionstamp); // "00000000000000010000"
+}
+
+await kv.delete(["preferences", "alan"]);
+
+const res = await kv.atomic()
+  .check({ key, versionstamp: null }) // `null` versionstamps mean 'no value'
+  .set(key, value)
+  .commit();
+if (res.ok) {
+  console.log("Preferences did not yet exist. Inserted!");
+} else {
+  console.error("Preferences already exist.");
+}
+
+const iter = kv.list<string>({ prefix: ["users"] }, { limit: 2 });
+const iter = kv.list<string>({ prefix: ["users"], start: ["users", "taylor"] });
+const iter = kv.list<string>({ start: ["users", "a"], end: ["users", "n"] });
+;{reverse: true}
+
+
+await kv.atomic()
+  .mutate({
+    type: "sum",
+    key: ["accounts", "alex"],
+    value: new Deno.KvU64(100n),
+  })
+  .commit();
+
+await kv.atomic()
+  .mutate({
+    type: "min",
+    key: ["accounts", "alex"],
+    value: new Deno.KvU64(100n),
+  })
+  .commit();
+
+
+
+```
+
+
+
 
 
 

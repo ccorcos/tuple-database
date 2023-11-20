@@ -6,7 +6,6 @@ This file is generated from async/transactionalReadWriteAsync.ts
 
 type Identity<T> = T
 
-import { KeyValuePair } from "../../main"
 import { retry } from "./retry"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 
@@ -16,14 +15,12 @@ import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
 // This outer function is just used for the schema type because currying is the only way
 // we can partially infer generic type parameters.
 // https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic
-export function transactionalReadWrite<S extends KeyValuePair = KeyValuePair>(
-	retries = 5
-) {
+export function transactionalReadWrite(retries = 5) {
 	return function <I extends any[], O>(
-		fn: (tx: TupleTransactionApi<S>, ...args: I) => Identity<O>
+		fn: (tx: TupleTransactionApi, ...args: I) => Identity<O>
 	) {
 		return function (
-			dbOrTx: TupleDatabaseClientApi<S> | TupleTransactionApi<S>,
+			dbOrTx: TupleDatabaseClientApi | TupleTransactionApi,
 			...args: I
 		): Identity<O> {
 			if (!("transact" in dbOrTx)) return fn(dbOrTx, ...args)

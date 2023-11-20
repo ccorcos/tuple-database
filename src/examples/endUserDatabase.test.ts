@@ -73,7 +73,7 @@ type Schema =
 	// And index for all objects ids that pass the filter.
 	| { key: ["index", string, string]; value: null }
 
-const reindexFact = transactionalReadWrite<Schema>()((tx, fact: Fact) => {
+const reindexFact = transactionalReadWrite()((tx, fact: Fact) => {
 	const [e, a, v] = fact
 
 	// Get all the user-defined filters.
@@ -106,45 +106,40 @@ const reindexFact = transactionalReadWrite<Schema>()((tx, fact: Fact) => {
 	})
 })
 
-const writeObjectFact = transactionalReadWrite<Schema>()((tx, fact: Fact) => {
+const writeObjectFact = transactionalReadWrite()((tx, fact: Fact) => {
 	writeFact(tx.subspace(["data"]), fact)
 	reindexFact(tx, fact)
 })
 
-const writeObject = transactionalReadWrite<Schema>()((tx, obj: Obj) => {
+const writeObject = transactionalReadWrite()((tx, obj: Obj) => {
 	for (const fact of objectToFacts(obj)) {
 		writeObjectFact(tx, fact)
 	}
 })
 
-const createFilter = transactionalReadWrite<Schema>()(
-	(tx, filter: UserFilter) => {
-		tx.set(["filter", filter.id], filter)
+const createFilter = transactionalReadWrite()((tx, filter: UserFilter) => {
+	tx.set(["filter", filter.id], filter)
 
-		// Evaluate the filter.
-		const query = userFilterToQuery(filter)
-		const ids = evaluateQuery(tx.subspace(["data"]), query).map(
-			({ id }) => id as string
-		)
+	// Evaluate the filter.
+	const query = userFilterToQuery(filter)
+	const ids = evaluateQuery(tx.subspace(["data"]), query).map(
+		({ id }) => id as string
+	)
 
-		// Write those ids to the index.
-		ids.forEach((id) => {
-			tx.set(["index", filter.id, id], null)
-		})
-	}
-)
+	// Write those ids to the index.
+	ids.forEach((id) => {
+		tx.set(["index", filter.id, id], null)
+	})
+})
 
-function readFilterIndex(
-	db: ReadOnlyTupleDatabaseClientApi<Schema>,
-	filterId: string
-) {
+function readFilterIndex(db: ReadOnlyTupleDatabaseClientApi, filterId: string) {
 	return db.scan({ prefix: ["index", filterId] }).map(({ key }) => key[2])
 }
 
 describe("End-user Database", () => {
 	it("works", () => {
 		// Lets try it out.
-		const db = new TupleDatabaseClient<Schema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 

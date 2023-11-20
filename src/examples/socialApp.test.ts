@@ -46,23 +46,21 @@ type Schema =
 			value: null
 	  }
 
-const addFollow = transactionalReadWrite<Schema>()(
-	(tx, from: string, to: string) => {
-		// Setup the follow relationships.
-		tx.set(["follows", { from }, { to }], null)
-		tx.set(["following", { to }, { from }], null)
+const addFollow = transactionalReadWrite()((tx, from: string, to: string) => {
+	// Setup the follow relationships.
+	tx.set(["follows", { from }, { to }], null)
+	tx.set(["following", { to }, { from }], null)
 
-		// Get the followed user's posts.
-		tx.scan({ prefix: ["profile", { username: to }] })
-			.map(({ key }) => namedTupleToObject(key))
-			.forEach(({ timestamp, postId }) => {
-				// Write those posts to the user's feed.
-				tx.set(["feed", { username: from }, { timestamp }, { postId }], null)
-			})
-	}
-)
+	// Get the followed user's posts.
+	tx.scan({ prefix: ["profile", { username: to }] })
+		.map(({ key }) => namedTupleToObject(key))
+		.forEach(({ timestamp, postId }) => {
+			// Write those posts to the user's feed.
+			tx.set(["feed", { username: from }, { timestamp }, { postId }], null)
+		})
+})
 
-const createPost = transactionalReadWrite<Schema>()((tx, post: Post) => {
+const createPost = transactionalReadWrite()((tx, post: Post) => {
 	tx.set(["post", { id: post.id }], post)
 
 	// Add to the user's profile
@@ -81,21 +79,18 @@ const createPost = transactionalReadWrite<Schema>()((tx, post: Post) => {
 	})
 })
 
-const createUser = transactionalReadWrite<Schema>()((tx, user: User) => {
+const createUser = transactionalReadWrite()((tx, user: User) => {
 	tx.set(["user", { username: user.username }], user)
 })
 
-function getFeed(db: ReadOnlyTupleDatabaseClientApi<Schema>, username: string) {
+function getFeed(db: ReadOnlyTupleDatabaseClientApi, username: string) {
 	return db
 		.scan({ prefix: ["feed", { username }] })
 		.map(({ key }) => namedTupleToObject(key))
 		.map(({ postId }) => postId)
 }
 
-function getProfile(
-	db: ReadOnlyTupleDatabaseClientApi<Schema>,
-	username: string
-) {
+function getProfile(db: ReadOnlyTupleDatabaseClientApi, username: string) {
 	return db
 		.scan({ prefix: ["profile", { username }] })
 		.map(({ key }) => namedTupleToObject(key))
@@ -105,7 +100,7 @@ function getProfile(
 describe("Social App", () => {
 	it("works", () => {
 		// Lets try it out.
-		const db = new TupleDatabaseClient<Schema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 

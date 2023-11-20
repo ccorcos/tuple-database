@@ -83,7 +83,7 @@
 		TupleDatabase,
 		InMemoryTupleStorage
 	} from "tuple-database"
-	const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+	const db = new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage()))
 	```
 
 4. Define read and write queries:
@@ -91,7 +91,7 @@
 	```ts
 	import { transactionalReadWrite } from "tuple-database"
 
-	const removeUser = transactionalReadWrite<Schema>()((tx, id: string) => {
+	const removeUser = transactionalReadWrite()((tx, id: string) => {
 		const existing = tx.get(["user", {id}])
 		if (!existing) return
 
@@ -102,19 +102,19 @@
 		return existing
 	})
 
-	const insertUser = transactionalReadWrite<Schema>()((tx, user: User) => {
+	const insertUser = transactionalReadWrite()((tx, user: User) => {
 		const {id, first_name, last_name, age} = user
 		tx.set(["user", {id}], user)
 		tx.set(["userByAge", {age}, {id}], null)
 		tx.set(["userByName", {last_name}, {first_name}, {id}], null)
 	})
 
-	const upsertUser = transactionalReadWrite<Schema>()((tx, user: User) {
+	const upsertUser = transactionalReadWrite()((tx, user: User) {
 		removeUser(tx, user.id)
 		insertUser(tx, user)
 	})
 
-	function getOldestUser(db: ReadOnlyTupleDatabaseClientApi<Schema>) {
+	function getOldestUser(db: ReadOnlyTupleDatabaseClientApi) {
 			return db.scan({prefix: ["userByAge"], reverse: true, limit: 1})
 				.map(({key, value}) => key)
 				.map(namedTupleToObject)[0]
@@ -237,9 +237,9 @@ import {
 	InMemoryTupleStorage
 } from "tuple-database"
 
-const db = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+const db = new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage()))
 
-function upsertUser(db: TupleDatabaseClient<Schema>, user: User) {
+function upsertUser(db: TupleDatabaseClient, user: User) {
 	const tx = db.transact()
 
 	const existing = tx.get(["user", {id: user.id}])
@@ -267,7 +267,7 @@ Notice that we're transactionally reading and writing to the the database. And w
 For example, here's a fairly straightforward refactor:
 
 ```ts
-function removeUser(tx: TupleDatabaseTransaction<Schema>, id: string) {
+function removeUser(tx: TupleDatabaseTransaction, id: string) {
 	const existing = tx.get(["user", {id}])
 	if (!existing) return
 
@@ -278,7 +278,7 @@ function removeUser(tx: TupleDatabaseTransaction<Schema>, id: string) {
 	return existing
 }
 
-function insertUser(tx: TupleDatabaseTransaction<Schema>, user: User) {
+function insertUser(tx: TupleDatabaseTransaction, user: User) {
 	const {id, first_name, last_name, age} = user
 	tx.set(["user", {id}], user)
 	tx.set(["userByAge", {age}, {id}], null)
@@ -286,7 +286,7 @@ function insertUser(tx: TupleDatabaseTransaction<Schema>, user: User) {
 }
 
 // Very expressive composition :)
-function upsertUser(tx: TupleDatabaseTransaction<Schema>, user: User) {
+function upsertUser(tx: TupleDatabaseTransaction, user: User) {
 	removeUser(tx, user.id)
 	insertUser(tx, user)
 }
@@ -312,7 +312,7 @@ The query planner under the hood will use the name index and use binary search t
 With `tuple-database` you do something very similar, except by directly reading the index:
 
 ```ts
-function getUsersWithLastName(db: TupleDatabaseClient<Schema>, lastName: string) {
+function getUsersWithLastName(db: TupleDatabaseClient, lastName: string) {
 	return db.scan({prefix: ["userByName", {last_name: lastName}]})
 		// => Array<{key: ["userByName", {last_name: string}, {first_name: string}, {id: string}], value: null}>
 		.map(({key, value}) => key)
@@ -570,7 +570,7 @@ type Schema =
 And using this schema allows TypeScript to typecheck and infer types.
 
 ```ts
-const client = new TupleDatabaseClient<Schema>(
+const client = new TupleDatabaseClient(
 	new TupleDatabase(new InMemoryTupleStorage())
 )
 
@@ -616,7 +616,7 @@ type Schema =
 	| SchemaSubspace<["gameState", string], GameSchema>
 	// SchemaSubspace will prepend the given prefix to every key in the subspace schenma.
 
-const client = new TupleDatabaseClient<Schema>(new TupleDatabase(new InMemoryTupleStorage()))
+const client = new TupleDatabaseClient(new TupleDatabase(new InMemoryTupleStorage()))
 
 // Using a subspace to narrow in on a specific game to re-use the game state logic.
 setScore(client.subspace(["gameState", "game1"]), "chet", 2)

@@ -50,7 +50,7 @@ describe("subscribeQuery", () => {
 					value: number
 			  }
 
-		const db = new TupleDatabaseClient<Schema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 
@@ -83,12 +83,12 @@ describe("subscribeQuery", () => {
 			(result) => {
 				focusedFile = result
 				subscription?.destroy()
-				subscribeToFocusedFile(focusedFile)
+				subscribeToFocusedFile(focusedFile!)
 			}
 		)
 
 		focusedFile = focusedFileQuery.result
-		subscribeToFocusedFile(focusedFile)
+		subscribeToFocusedFile(focusedFile!)
 
 		assertEqual(focusedFile, 1)
 		assertEqual(focusedFileValue, "file 1 value")

@@ -8,7 +8,6 @@ type Identity<T> = T
 
 import { isEmptyWrites } from "../../helpers/isEmptyWrites"
 import { Queue } from "../../helpers/Queue"
-import { KeyValuePair } from "../../storage/types"
 import { TxId } from "../types"
 import { TupleDatabaseClient } from "./TupleDatabaseClient"
 import { TupleDatabaseClientApi } from "./types"
@@ -17,9 +16,9 @@ const throwError = () => {
 	throw new Error()
 }
 
-export function subscribeQuery<S extends KeyValuePair, T>(
-	db: TupleDatabaseClientApi<S>,
-	fn: (db: TupleDatabaseClientApi<S>) => Identity<T>,
+export function subscribeQuery<T>(
+	db: TupleDatabaseClientApi,
+	fn: (db: TupleDatabaseClientApi) => Identity<T>,
 	callback: (result: T) => void
 ): Identity<{ result: T; destroy: () => void }> {
 	let destroyed = false
@@ -49,7 +48,7 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 	const recomputeQueue = new Queue()
 
 	// Subscribe for every scan that gets called.
-	const listenDb = new TupleDatabaseClient<S>({
+	const listenDb = new TupleDatabaseClient({
 		scan: (args: any, txId) => {
 			// if (txId)
 			// 	// Maybe one day we can transactionally subscribe to a bunch of things. But

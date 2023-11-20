@@ -16,11 +16,11 @@ function isNamedTupleItem(value: Value): value is NamedTupleItem {
 	return isPlainObject(value)
 }
 
-export function namedTupleToObject<T extends Tuple>(key: T) {
+export function namedTupleToObject(key: Tuple) {
 	const obj = key
 		.filter(isNamedTupleItem)
 		.reduce((obj, item) => Object.assign(obj, item), {})
-	return obj as NamedTupleToObject<T>
+	return obj as any
 }
 
 // Some type wizardry.

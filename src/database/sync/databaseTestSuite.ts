@@ -15,7 +15,6 @@ import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
 import { assertEqual } from "../../test/assertHelpers"
 import { sortedValues } from "../../test/fixtures"
 import { transactionalWrite } from "../transactionalWrite"
-import { Assert } from "../typeHelpers"
 import { subscribeQuery } from "./subscribeQuery"
 import { transactionalReadWrite } from "./transactionalReadWrite"
 import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
@@ -24,9 +23,7 @@ const isSync = true
 
 export function databaseTestSuite(
 	name: string,
-	createStorage: <S extends KeyValuePair = KeyValuePair>(
-		id: string
-	) => TupleDatabaseClientApi<S>,
+	createStorage: (id: string) => TupleDatabaseClientApi,
 	durable = true
 ) {
 	describe(name, () => {
@@ -459,7 +456,7 @@ export function databaseTestSuite(
 				key: ["aveo", string, number]
 				value: null
 			}
-			const db = createStorage<Schema>(randomId())
+			const db = createStorage(randomId())
 			db.subspace(["aveo"]).scan({ gte: ["title"] })
 		})
 
@@ -476,7 +473,7 @@ export function databaseTestSuite(
 				| { key: ["a", "c", "b"]; value: 8 }
 				| { key: ["a", "c", "c"]; value: 9 }
 
-			const store = createStorage<Schema>(randomId())
+			const store = createStorage(randomId())
 
 			const items: Schema[] = [
 				{ key: ["a", "a", "a"], value: 1 },
@@ -598,7 +595,7 @@ export function databaseTestSuite(
 				| { key: ["a", "c", "b"]; value: 8 }
 				| { key: ["a", "c", "c"]; value: 9 }
 
-			const store = createStorage<Schema>(randomId())
+			const store = createStorage(randomId())
 
 			const items: Schema[] = [
 				{ key: ["a", "a", "a"], value: 1 },
@@ -1202,14 +1199,14 @@ export function databaseTestSuite(
 				it("transactionalQuery will retry on those errors", () => {
 					const id = randomId()
 					type Schema = { key: ["score"]; value: number }
-					const store = createStorage<Schema>(id)
+					const store = createStorage(id)
 
 					store.commit({ set: [{ key: ["score"], value: 0 }] })
 
 					const sleep = (timeMs) =>
 						new Promise((resolve) => setTimeout(resolve, timeMs))
 
-					const incScore = transactionalReadWrite<Schema>()(
+					const incScore = transactionalReadWrite()(
 						(tx, amount: number, sleepMs: number) => {
 							const score = tx.get(["score"])!
 							sleep(sleepMs)
@@ -1247,7 +1244,7 @@ export function databaseTestSuite(
 				type Schema =
 					| { key: ["player", string, number]; value: null }
 					| { key: ["total", number]; value: null }
-				const store = createStorage<Schema>(id)
+				const store = createStorage(id)
 				store.commit({
 					set: [
 						// TODO: add test using value as well.
@@ -1258,14 +1255,14 @@ export function databaseTestSuite(
 				})
 
 				// We have a score keeping game.
-				const addScore = transactionalReadWrite<Schema>()(
+				const addScore = transactionalReadWrite()(
 					(tx, player: string, inc: number) => {
 						// It has this miserable api, lol.
 						const getPlayerScore = (player: string) => {
 							const pairs = tx.scan({ prefix: ["player", player] })
 							if (pairs.length !== 1) throw new Error("Missing player.")
 							const [{ key }] = pairs
-							return key[2]
+							return key[2] as number
 						}
 
 						const getCurrentTotal = () => {
@@ -1576,7 +1573,7 @@ export function databaseTestSuite(
 					| { key: ["person", number]; value: string }
 					| { key: ["list", number, number]; value: null }
 
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 				store.commit({
 					set: [
 						{ key: ["person", 1], value: "chet" },
@@ -1637,7 +1634,7 @@ export function databaseTestSuite(
 			it("can transactionally read", () => {
 				const id = randomId()
 				type Schema = { key: [string]; value: number }
-				const store = createStorage<Schema>(id)
+				const store = createStorage(id)
 
 				store.commit({
 					set: [
@@ -1646,7 +1643,7 @@ export function databaseTestSuite(
 					],
 				})
 
-				const getTotal = transactionalReadWrite<Schema>()((tx) => {
+				const getTotal = transactionalReadWrite()((tx) => {
 					const chet = tx.get(["chet"])
 					const meghan = tx.get(["meghan"])
 					return chet! + meghan!
@@ -1684,15 +1681,13 @@ export function databaseTestSuite(
 					| { key: ["personByName", string, string]; value: Person }
 					| { key: ["personByAge", number, string]; value: Person }
 
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
-				const writePerson = transactionalReadWrite<Schema>()(
-					(tx, person: Person) => {
-						tx.set(["person", person.id], person)
-						tx.set(["personByName", person.name, person.id], person)
-						tx.set(["personByAge", person.age, person.id], person)
-					}
-				)
+				const writePerson = transactionalReadWrite()((tx, person: Person) => {
+					tx.set(["person", person.id], person)
+					tx.set(["personByName", person.name, person.id], person)
+					tx.set(["personByAge", person.age, person.id], person)
+				})
 
 				writePerson(store, { id: "1", name: "Chet", age: 31 })
 				writePerson(store, { id: "2", name: "Meghan", age: 30 })
@@ -1710,7 +1705,7 @@ export function databaseTestSuite(
 
 			it("writes work", () => {
 				type Schema = { key: ["a", number]; value: number }
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
 				store.commit({
 					set: [
@@ -1734,7 +1729,7 @@ export function databaseTestSuite(
 
 			it("writes work in a nested subspace", () => {
 				type Schema = { key: ["a", "a", number]; value: number }
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
 				store.commit({
 					set: [
@@ -1758,7 +1753,7 @@ export function databaseTestSuite(
 
 			it("can create nested subspace inside a transaction", () => {
 				type Schema = { key: ["a", "a", number]; value: number }
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
 				store.commit({
 					set: [
@@ -1794,9 +1789,9 @@ export function databaseTestSuite(
 
 			it("root tuple transaction API conforms to non-root transaction api.", () => {
 				type Schema = { key: [number]; value: number }
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
-				function f(tx: TupleTransactionApi<{ key: [number]; value: number }>) {}
+				function f(tx: TupleTransactionApi) {}
 
 				const tx = store.transact()
 				f(tx)
@@ -1805,7 +1800,7 @@ export function databaseTestSuite(
 
 			it("scan args types work", () => {
 				type Schema = { key: ["a", number]; value: number }
-				const store = createStorage<Schema>(randomId())
+				const store = createStorage(randomId())
 
 				store.commit({
 					set: [
@@ -1817,121 +1812,6 @@ export function databaseTestSuite(
 				const a = store.subspace(["a"])
 
 				assertEqual(a.scan({ gt: [1] }), [{ key: [2], value: 2 }])
-			})
-		})
-
-		describe("subschema", () => {
-			it("types work", () => {
-				type SubSchema1 = { key: ["a", number]; value: number }
-				type SubSchema2 = { key: ["b", string]; value: string }
-				type Schema = SubSchema1 | SubSchema2
-				const store = createStorage<Schema>(randomId())
-
-				function module0(db: TupleDatabaseClientApi<Schema>) {
-					const a1 = () => db.get(["a", 1])
-					type A1 = Assert<ReturnType<typeof a1>, Identity<number | undefined>>
-
-					const a2 = () => db.get(["b", ""])
-					type A2 = Assert<ReturnType<typeof a2>, Identity<string | undefined>>
-
-					const a3 = () => db.scan({ prefix: ["a"] })
-					type A3 = Assert<ReturnType<typeof a3>, Identity<SubSchema1[]>>
-
-					const a4 = () => db.scan({ prefix: ["b"] })
-					type A4 = Assert<ReturnType<typeof a4>, Identity<SubSchema2[]>>
-
-					const a5 = () => db.scan({ prefix: [] })
-					type A5 = Assert<ReturnType<typeof a5>, Identity<Schema[]>>
-
-					const a6 = () => db.subspace(["a"])
-					type A6 = Assert<
-						ReturnType<typeof a6>,
-						TupleDatabaseClientApi<{
-							key: [number]
-							value: number
-						}>
-					>
-
-					const a7 = () => db.subspace(["b"])
-					type A7 = Assert<
-						ReturnType<typeof a7>,
-						TupleDatabaseClientApi<{
-							key: [string]
-							value: string
-						}>
-					>
-
-					const a8 = () => db.transact()
-					type A8 = Assert<ReturnType<typeof a8>, TupleTransactionApi<Schema>>
-				}
-				function module1(db: TupleDatabaseClientApi<SubSchema1>) {
-					const a1 = () => db.get(["a", 1])
-					type A1 = Assert<ReturnType<typeof a1>, Identity<number | undefined>>
-
-					const a3 = () => db.scan({ prefix: ["a"] })
-					type A3 = Assert<ReturnType<typeof a3>, Identity<SubSchema1[]>>
-
-					// TODO: this is leaky! Maybe its best to use subspaces!
-					const a5 = () => db.scan({ prefix: [] })
-					type A5 = Assert<ReturnType<typeof a5>, Identity<SubSchema1[]>>
-
-					const a6 = () => db.subspace(["a"])
-					type A6 = Assert<
-						ReturnType<typeof a6>,
-						TupleDatabaseClientApi<{
-							key: [number]
-							value: number
-						}>
-					>
-
-					const a8 = () => db.transact()
-					type A8 = Assert<
-						ReturnType<typeof a8>,
-						TupleTransactionApi<SubSchema1>
-					>
-				}
-				function module2(db: TupleDatabaseClientApi<SubSchema2>) {
-					const a2 = () => db.get(["b", ""])
-					type A2 = Assert<ReturnType<typeof a2>, Identity<string | undefined>>
-
-					const a4 = () => db.scan({ prefix: ["b"] })
-					type A4 = Assert<ReturnType<typeof a4>, Identity<SubSchema2[]>>
-
-					const a5 = () => db.scan({ prefix: [] })
-					type A5 = Assert<ReturnType<typeof a5>, Identity<SubSchema2[]>>
-
-					const a7 = () => db.subspace(["b"])
-					type A7 = Assert<
-						ReturnType<typeof a7>,
-						TupleDatabaseClientApi<{
-							key: [string]
-							value: string
-						}>
-					>
-				}
-
-				module0(store)
-				// @ts-expect-error
-				module1(store)
-				// @ts-expect-error
-				module2(store)
-			})
-
-			it("types work", () => {
-				type SubSchema1 = { key: ["a", number]; value: number }
-				type SubSchema2 = { key: ["b", string]; value: string }
-				type SubSchema3 = { key: ["c", boolean]; value: boolean }
-
-				type Schema = SubSchema1 | SubSchema2
-				const store = createStorage<Schema>(randomId())
-
-				function module1(db: TupleDatabaseClientApi<SubSchema3>) {}
-				function module2(db: TupleDatabaseClientApi<SubSchema3>) {}
-
-				// @ts-expect-error
-				module1(store)
-				// @ts-expect-error
-				module2(store)
 			})
 		})
 
@@ -2127,9 +2007,9 @@ export function databaseTestSuite(
 			it("Works for both  and sync, but no reads.", () => {
 				const id = randomId()
 				type Schema = { key: ["score"]; value: number }
-				const store = createStorage<Schema>(id)
+				const store = createStorage(id)
 
-				const resetScore = transactionalWrite<Schema>()((tx) => {
+				const resetScore = transactionalWrite()((tx) => {
 					tx.set(["score"], 0)
 				})
 				resetScore(store)

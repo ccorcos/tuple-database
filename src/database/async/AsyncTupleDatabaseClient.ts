@@ -9,14 +9,8 @@ import {
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWriteOps,
 } from "../../helpers/subspaceHelpers"
-import { KeyValuePair, Tuple, WriteOps } from "../../storage/types"
+import { KeyValuePair, Tuple, Value, WriteOps } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
-import {
-	FilterTupleValuePairByPrefix,
-	RemoveTupleValuePairPrefix,
-	TuplePrefix,
-	ValueForTuple,
-} from "../typeHelpers"
 import { ScanArgs, TxId, Unsubscribe } from "../types"
 import {
 	AsyncCallback,
@@ -26,40 +20,33 @@ import {
 	AsyncTupleTransactionApi,
 } from "./asyncTypes"
 
-export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
-	implements AsyncTupleDatabaseClientApi<S>
-{
+export class AsyncTupleDatabaseClient implements AsyncTupleDatabaseClientApi {
 	constructor(
 		private db: AsyncTupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple = []
 	) {}
 
-	async scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {},
-		txId?: TxId
-	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
+	async scan(args: ScanArgs = {}, txId?: TxId): Promise<KeyValuePair[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = await this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	async subscribe<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P>,
-		callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
+	async subscribe(
+		args: ScanArgs,
+		callback: AsyncCallback
 	): Promise<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write, txId) => {
 			return callback(
-				removePrefixFromWriteOps(this.subspacePrefix, write) as WriteOps<
-					FilterTupleValuePairByPrefix<S, P>
-				>,
+				removePrefixFromWriteOps(this.subspacePrefix, write) as WriteOps,
 				txId
 			)
 		})
 	}
 
-	async commit(writes: WriteOps<S>, txId?: TxId): Promise<void> {
+	async commit(writes: WriteOps, txId?: TxId): Promise<void> {
 		const prefixedWrites = prependPrefixToWriteOps(this.subspacePrefix, writes)
 		await this.db.commit(prefixedWrites, txId)
 	}
@@ -68,10 +55,7 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return this.db.cancel(txId)
 	}
 
-	async get<T extends S["key"]>(
-		tuple: T,
-		txId?: TxId
-	): Promise<ValueForTuple<S, T> | undefined> {
+	async get(tuple: Tuple, txId?: TxId): Promise<Value | undefined> {
 		// Not sure why these types aren't happy
 		// @ts-ignore
 		const items = await this.scan<T, []>({ gte: tuple, lte: tuple }, txId)
@@ -81,7 +65,7 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return pair.value
 	}
 
-	async exists<T extends S["key"]>(tuple: T, txId?: TxId): Promise<boolean> {
+	async exists(tuple: Tuple, txId?: TxId): Promise<boolean> {
 		// Not sure why these types aren't happy
 		// @ts-ignore
 		const items = await this.scan({ gte: tuple, lte: tuple }, txId)
@@ -90,15 +74,13 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Subspace
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): AsyncTupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): AsyncTupleDatabaseClient {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
 		return new AsyncTupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction
-	transact(txId?: TxId, writes?: WriteOps<S>): AsyncTupleRootTransactionApi<S> {
+	transact(txId?: TxId, writes?: WriteOps): AsyncTupleRootTransactionApi {
 		const id = txId || randomId()
 		return new AsyncTupleRootTransaction(
 			this.db,
@@ -113,30 +95,26 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 }
 
-export class AsyncTupleRootTransaction<S extends KeyValuePair>
-	implements AsyncTupleRootTransactionApi<S>
-{
+export class AsyncTupleRootTransaction implements AsyncTupleRootTransactionApi {
 	constructor(
 		private db: AsyncTupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple,
 		public id: TxId,
-		writes?: WriteOps<S>
+		writes?: WriteOps
 	) {
 		this.writes = { set: [], remove: [], ...writes }
 	}
 
 	committed = false
 	canceled = false
-	writes: Required<WriteOps<S>>
+	writes: Required<WriteOps>
 
 	private checkActive() {
 		if (this.committed) throw new Error("Transaction already committed")
 		if (this.canceled) throw new Error("Transaction already canceled")
 	}
 
-	async scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {}
-	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
+	async scan(args: ScanArgs = {}): Promise<KeyValuePair[]> {
 		this.checkActive()
 
 		const { limit: resultLimit, ...scanArgs } = normalizeSubspaceScanArgs(
@@ -172,12 +150,10 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 			}
 		}
 
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	async get<T extends S["key"]>(
-		tuple: T
-	): Promise<ValueForTuple<S, T> | undefined> {
+	async get(tuple: Tuple): Promise<Value | undefined> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -198,7 +174,7 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 		return pair.value
 	}
 
-	async exists<T extends S["key"]>(tuple: T): Promise<boolean> {
+	async exists(tuple: Tuple): Promise<boolean> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -217,10 +193,7 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 	}
 
 	// ReadApis
-	set<T extends S>(
-		tuple: T["key"],
-		value: T["value"]
-	): AsyncTupleRootTransactionApi<S> {
+	set(tuple: Tuple, value: Value): AsyncTupleRootTransactionApi {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		t.remove(this.writes.remove, fullTuple)
@@ -228,7 +201,7 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	remove(tuple: S["key"]): AsyncTupleRootTransactionApi<S> {
+	remove(tuple: Tuple): AsyncTupleRootTransactionApi {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		tv.remove(this.writes.set, fullTuple)
@@ -236,7 +209,7 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	write(writes: WriteOps<S>): AsyncTupleRootTransactionApi<S> {
+	write(writes: WriteOps): AsyncTupleRootTransactionApi {
 		this.checkActive()
 
 		// If you're calling this function, then the order of these opertions
@@ -263,61 +236,50 @@ export class AsyncTupleRootTransaction<S extends KeyValuePair>
 		return this.db.cancel(this.id)
 	}
 
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): AsyncTupleTransactionApi {
 		this.checkActive()
 		// TODO: types.
 		return new AsyncTupleSubspaceTransaction(this as any, prefix)
 	}
 }
 
-export class AsyncTupleSubspaceTransaction<S extends KeyValuePair>
-	implements AsyncTupleTransactionApi<S>
-{
+export class AsyncTupleSubspaceTransaction implements AsyncTupleTransactionApi {
 	constructor(
-		private tx: AsyncTupleTransactionApi<any>,
+		private tx: AsyncTupleTransactionApi,
 		public subspacePrefix: Tuple
 	) {}
 
-	async scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {}
-	): Promise<FilterTupleValuePairByPrefix<S, P>[]> {
+	async scan(args: ScanArgs = {}): Promise<KeyValuePair[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = await this.tx.scan(storageScanArgs)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	async get<T extends S["key"]>(
-		tuple: T
-	): Promise<ValueForTuple<S, T> | undefined> {
+	async get(tuple: Tuple): Promise<Value | undefined> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.get(fullTuple)
 	}
 
-	async exists<T extends S["key"]>(tuple: T): Promise<boolean> {
+	async exists(tuple: Tuple): Promise<boolean> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.exists(fullTuple)
 	}
 
 	// ReadApis
-	set<T extends S>(
-		tuple: T["key"],
-		value: T["value"]
-	): AsyncTupleTransactionApi<S> {
+	set(tuple: Tuple, value: Value): AsyncTupleTransactionApi {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.set(fullTuple, value)
 		return this
 	}
 
-	remove(tuple: S["key"]): AsyncTupleTransactionApi<S> {
+	remove(tuple: Tuple): AsyncTupleTransactionApi {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.remove(fullTuple)
 		return this
 	}
 
-	write(writes: WriteOps<S>): AsyncTupleTransactionApi<S> {
+	write(writes: WriteOps): AsyncTupleTransactionApi {
 		// If you're calling this function, then the order of these opertions
 		// shouldn't matter.
 		const { set, remove } = writes
@@ -330,9 +292,7 @@ export class AsyncTupleSubspaceTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): AsyncTupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): AsyncTupleTransactionApi {
 		return new AsyncTupleSubspaceTransaction(this.tx, [
 			...this.subspacePrefix,
 			...prefix,

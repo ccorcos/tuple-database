@@ -10,8 +10,8 @@ export function useAsyncTupleDatabase<
 	T,
 	A extends any[]
 >(
-	db: AsyncTupleDatabaseClientApi<S>,
-	fn: (db: AsyncTupleDatabaseClientApi<S>, ...arg: A) => Promise<T>,
+	db: AsyncTupleDatabaseClientApi,
+	fn: (db: AsyncTupleDatabaseClientApi, ...arg: A) => Promise<T>,
 	args: A
 ) {
 	const [result, setResult] = useState<T | undefined>(undefined)

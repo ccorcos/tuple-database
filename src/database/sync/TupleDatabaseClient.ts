@@ -17,14 +17,8 @@ import {
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWriteOps,
 } from "../../helpers/subspaceHelpers"
-import { KeyValuePair, Tuple, WriteOps } from "../../storage/types"
+import { KeyValuePair, Tuple, Value, WriteOps } from "../../storage/types"
 import { TupleDatabaseApi } from "../sync/types"
-import {
-	FilterTupleValuePairByPrefix,
-	RemoveTupleValuePairPrefix,
-	TuplePrefix,
-	ValueForTuple,
-} from "../typeHelpers"
 import { ScanArgs, TxId, Unsubscribe } from "../types"
 import {
 	Callback,
@@ -33,40 +27,30 @@ import {
 	TupleTransactionApi,
 } from "./types"
 
-export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
-	implements TupleDatabaseClientApi<S>
-{
+export class TupleDatabaseClient implements TupleDatabaseClientApi {
 	constructor(
 		private db: TupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple = []
 	) {}
 
-	scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {},
-		txId?: TxId
-	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
+	scan(args: ScanArgs = {}, txId?: TxId): Identity<KeyValuePair[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	subscribe<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P>,
-		callback: Callback<FilterTupleValuePairByPrefix<S, P>>
-	): Identity<Unsubscribe> {
+	subscribe(args: ScanArgs, callback: Callback): Identity<Unsubscribe> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		return this.db.subscribe(storageScanArgs, (write, txId) => {
 			return callback(
-				removePrefixFromWriteOps(this.subspacePrefix, write) as WriteOps<
-					FilterTupleValuePairByPrefix<S, P>
-				>,
+				removePrefixFromWriteOps(this.subspacePrefix, write) as WriteOps,
 				txId
 			)
 		})
 	}
 
-	commit(writes: WriteOps<S>, txId?: TxId): Identity<void> {
+	commit(writes: WriteOps, txId?: TxId): Identity<void> {
 		const prefixedWrites = prependPrefixToWriteOps(this.subspacePrefix, writes)
 		this.db.commit(prefixedWrites, txId)
 	}
@@ -75,10 +59,7 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return this.db.cancel(txId)
 	}
 
-	get<T extends S["key"]>(
-		tuple: T,
-		txId?: TxId
-	): Identity<ValueForTuple<S, T> | undefined> {
+	get(tuple: Tuple, txId?: TxId): Identity<Value | undefined> {
 		// Not sure why these types aren't happy
 		// @ts-ignore
 		const items = this.scan<T, []>({ gte: tuple, lte: tuple }, txId)
@@ -88,7 +69,7 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		return pair.value
 	}
 
-	exists<T extends S["key"]>(tuple: T, txId?: TxId): Identity<boolean> {
+	exists(tuple: Tuple, txId?: TxId): Identity<boolean> {
 		// Not sure why these types aren't happy
 		// @ts-ignore
 		const items = this.scan({ gte: tuple, lte: tuple }, txId)
@@ -97,15 +78,13 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 
 	// Subspace
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): TupleDatabaseClient<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): TupleDatabaseClient {
 		const subspacePrefix = [...this.subspacePrefix, ...prefix]
 		return new TupleDatabaseClient(this.db, subspacePrefix)
 	}
 
 	// Transaction
-	transact(txId?: TxId, writes?: WriteOps<S>): TupleRootTransactionApi<S> {
+	transact(txId?: TxId, writes?: WriteOps): TupleRootTransactionApi {
 		const id = txId || randomId()
 		return new TupleRootTransaction(this.db, this.subspacePrefix, id, writes)
 	}
@@ -115,30 +94,26 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	}
 }
 
-export class TupleRootTransaction<S extends KeyValuePair>
-	implements TupleRootTransactionApi<S>
-{
+export class TupleRootTransaction implements TupleRootTransactionApi {
 	constructor(
 		private db: TupleDatabaseApi | TupleDatabaseApi,
 		public subspacePrefix: Tuple,
 		public id: TxId,
-		writes?: WriteOps<S>
+		writes?: WriteOps
 	) {
 		this.writes = { set: [], remove: [], ...writes }
 	}
 
 	committed = false
 	canceled = false
-	writes: Required<WriteOps<S>>
+	writes: Required<WriteOps>
 
 	private checkActive() {
 		if (this.committed) throw new Error("Transaction already committed")
 		if (this.canceled) throw new Error("Transaction already canceled")
 	}
 
-	scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {}
-	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
+	scan(args: ScanArgs = {}): Identity<KeyValuePair[]> {
 		this.checkActive()
 
 		const { limit: resultLimit, ...scanArgs } = normalizeSubspaceScanArgs(
@@ -174,10 +149,10 @@ export class TupleRootTransaction<S extends KeyValuePair>
 			}
 		}
 
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	get<T extends S["key"]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
+	get(tuple: Tuple): Identity<Value | undefined> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -195,7 +170,7 @@ export class TupleRootTransaction<S extends KeyValuePair>
 		return pair.value
 	}
 
-	exists<T extends S["key"]>(tuple: T): Identity<boolean> {
+	exists(tuple: Tuple): Identity<boolean> {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 
@@ -211,10 +186,7 @@ export class TupleRootTransaction<S extends KeyValuePair>
 	}
 
 	// ReadApis
-	set<T extends S>(
-		tuple: T["key"],
-		value: T["value"]
-	): TupleRootTransactionApi<S> {
+	set(tuple: Tuple, value: Value): TupleRootTransactionApi {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		t.remove(this.writes.remove, fullTuple)
@@ -222,7 +194,7 @@ export class TupleRootTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	remove(tuple: S["key"]): TupleRootTransactionApi<S> {
+	remove(tuple: Tuple): TupleRootTransactionApi {
 		this.checkActive()
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		tv.remove(this.writes.set, fullTuple)
@@ -230,7 +202,7 @@ export class TupleRootTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	write(writes: WriteOps<S>): TupleRootTransactionApi<S> {
+	write(writes: WriteOps): TupleRootTransactionApi {
 		this.checkActive()
 
 		// If you're calling this function, then the order of these opertions
@@ -257,56 +229,47 @@ export class TupleRootTransaction<S extends KeyValuePair>
 		return this.db.cancel(this.id)
 	}
 
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): TupleTransactionApi {
 		this.checkActive()
 		// TODO: types.
 		return new TupleSubspaceTransaction(this as any, prefix)
 	}
 }
 
-export class TupleSubspaceTransaction<S extends KeyValuePair>
-	implements TupleTransactionApi<S>
-{
-	constructor(
-		private tx: TupleTransactionApi<any>,
-		public subspacePrefix: Tuple
-	) {}
+export class TupleSubspaceTransaction implements TupleTransactionApi {
+	constructor(private tx: TupleTransactionApi, public subspacePrefix: Tuple) {}
 
-	scan<T extends S["key"], P extends TuplePrefix<T>>(
-		args: ScanArgs<T, P> = {}
-	): Identity<FilterTupleValuePairByPrefix<S, P>[]> {
+	scan(args: ScanArgs = {}): Identity<KeyValuePair[]> {
 		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
 		const pairs = this.tx.scan(storageScanArgs)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
-		return result as FilterTupleValuePairByPrefix<S, P>[]
+		return result as KeyValuePair[]
 	}
 
-	get<T extends S["key"]>(tuple: T): Identity<ValueForTuple<S, T> | undefined> {
+	get(tuple: Tuple): Identity<Value | undefined> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.get(fullTuple)
 	}
 
-	exists<T extends S["key"]>(tuple: T): Identity<boolean> {
+	exists(tuple: Tuple): Identity<boolean> {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		return this.tx.exists(fullTuple)
 	}
 
 	// ReadApis
-	set<T extends S>(tuple: T["key"], value: T["value"]): TupleTransactionApi<S> {
+	set(tuple: Tuple, value: Value): TupleTransactionApi {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.set(fullTuple, value)
 		return this
 	}
 
-	remove(tuple: S["key"]): TupleTransactionApi<S> {
+	remove(tuple: Tuple): TupleTransactionApi {
 		const fullTuple = prependPrefixToTuple(this.subspacePrefix, tuple)
 		this.tx.remove(fullTuple)
 		return this
 	}
 
-	write(writes: WriteOps<S>): TupleTransactionApi<S> {
+	write(writes: WriteOps): TupleTransactionApi {
 		// If you're calling this function, then the order of these opertions
 		// shouldn't matter.
 		const { set, remove } = writes
@@ -319,9 +282,7 @@ export class TupleSubspaceTransaction<S extends KeyValuePair>
 		return this
 	}
 
-	subspace<P extends TuplePrefix<S["key"]>>(
-		prefix: P
-	): TupleTransactionApi<RemoveTupleValuePairPrefix<S, P>> {
+	subspace(prefix: Tuple): TupleTransactionApi {
 		return new TupleSubspaceTransaction(this.tx, [
 			...this.subspacePrefix,
 			...prefix,

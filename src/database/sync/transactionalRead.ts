@@ -6,7 +6,6 @@ This file is generated from async/transactionalReadAsync.ts
 
 type Identity<T> = T
 
-import { KeyValuePair } from "../../storage/types"
 import { retry } from "./retry"
 import {
 	ReadOnlyTupleDatabaseClientApi,
@@ -17,17 +16,15 @@ import {
 /**
  * Similar to transactionalReadWrite and transactionalWrite but only allows reads.
  */
-export function transactionalRead<S extends KeyValuePair = KeyValuePair>(
-	retries = 5
-) {
+export function transactionalRead(retries = 5) {
 	return function <I extends any[], O>(
-		fn: (tx: ReadOnlyTupleDatabaseClientApi<S>, ...args: I) => Identity<O>
+		fn: (tx: ReadOnlyTupleDatabaseClientApi, ...args: I) => Identity<O>
 	) {
 		return function (
 			dbOrTx:
-				| TupleDatabaseClientApi<S>
-				| TupleTransactionApi<S>
-				| ReadOnlyTupleDatabaseClientApi<S>,
+				| TupleDatabaseClientApi
+				| TupleTransactionApi
+				| ReadOnlyTupleDatabaseClientApi,
 			...args: I
 		): Identity<O> {
 			if (!("transact" in dbOrTx)) return fn(dbOrTx, ...args)

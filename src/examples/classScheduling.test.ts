@@ -53,14 +53,14 @@ type SchoolSchema =
 	| { key: ["class", string]; value: number }
 	| { key: ["attends", string, string]; value: null }
 
-const addClass = transactionalReadWrite<SchoolSchema>()(
+const addClass = transactionalReadWrite()(
 	(tr, className: string, remainingSeats: number) => {
 		const course = tr.subspace(["class"])
 		course.set([className], remainingSeats)
 	}
 )
 
-const init = transactionalReadWrite<SchoolSchema>()((tr) => {
+const init = transactionalReadWrite()((tr) => {
 	// Clear the directory.
 	for (const { key } of tr.scan()) {
 		tr.remove(key)
@@ -71,7 +71,7 @@ const init = transactionalReadWrite<SchoolSchema>()((tr) => {
 	}
 })
 
-function availableClasses(db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>) {
+function availableClasses(db: ReadOnlyTupleDatabaseClientApi) {
 	return db
 		.subspace(["class"])
 		.scan()
@@ -82,7 +82,7 @@ function availableClasses(db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>) {
 		})
 }
 
-const signup = transactionalReadWrite<SchoolSchema>()(
+const signup = transactionalReadWrite()(
 	(tr, student: string, className: string) => {
 		const attends = tr.subspace(["attends"])
 		const course = tr.subspace(["class"])
@@ -100,7 +100,7 @@ const signup = transactionalReadWrite<SchoolSchema>()(
 	}
 )
 
-const drop = transactionalReadWrite<SchoolSchema>()(
+const drop = transactionalReadWrite()(
 	(tr, student: string, className: string) => {
 		const attends = tr.subspace(["attends"])
 		const course = tr.subspace(["class"])
@@ -113,17 +113,14 @@ const drop = transactionalReadWrite<SchoolSchema>()(
 	}
 )
 
-const switchClasses = transactionalReadWrite<SchoolSchema>()(
+const switchClasses = transactionalReadWrite()(
 	(tr, student: string, classes: { old: string; new: string }) => {
 		drop(tr, student, classes.old)
 		signup(tr, student, classes.new)
 	}
 )
 
-function getClasses(
-	db: ReadOnlyTupleDatabaseClientApi<SchoolSchema>,
-	student: string
-) {
+function getClasses(db: ReadOnlyTupleDatabaseClientApi, student: string) {
 	const attends = db.subspace(["attends"])
 	const classes = attends.scan({ prefix: [student] }).map(({ key }) => key[1])
 	return classes
@@ -138,7 +135,7 @@ describe("Class Scheduling Example", () => {
 	function createStorage() {
 		// The class scheduling application is just a subspace!
 		type Schema = SchemaSubspace<["scheduling"], SchoolSchema>
-		const db = new TupleDatabaseClient<Schema>(
+		const db = new TupleDatabaseClient(
 			new TupleDatabase(new InMemoryTupleStorage())
 		)
 		const scheduling = db.subspace(["scheduling"])
