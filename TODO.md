@@ -1,5 +1,12 @@
 ## TODO
 
+- denokv abstraction to explicitly check your reads.
+- maybe all these types are making this library too complicated.
+- can I use foundationdb as a backend?
+- how can I scale up reactivity?
+
+
+
 - listen vs subscribe. transactional. makes things much simpler over here.
 
 
