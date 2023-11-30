@@ -1,14 +1,3 @@
-// encoding
-
-// kv = {
-//   get(key): {value, version},
-//   write(tx: {
-//     check: {key, version}[]
-//     set: {key, value}[]
-//     delete: key[]
-//   }): void
-// }
-
 // export class InMemoryTupleStorage implements TupleStorageApi {
 // 	data: KeyValuePair[]
 

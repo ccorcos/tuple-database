@@ -12,7 +12,7 @@ kv = {
 }
 
 
-btree = {
+okvBtree = {
   scan(start, end): {list: {key, value, version}[], version},
   write(tx: {
     check: {start, end, version}[]
