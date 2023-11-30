@@ -1,15 +1,15 @@
 import { ScanArgs } from "../database/types"
 import { KeyValuePair, Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
+import { codec } from "./codec"
 import * as sortedList from "./sortedList"
 import { normalizeTupleBounds } from "./sortedTupleArray"
 
 function compareTupleValuePair(a: KeyValuePair, b: KeyValuePair) {
-	return compareTuple(a.key, b.key)
+	return codec.compare(a.key, b.key)
 }
 
 function compareTupleValuePairReverse(a: KeyValuePair, b: KeyValuePair) {
-	return compareTuple(a.key, b.key) * -1
+	return codec.compare(a.key, b.key) * -1
 }
 
 export function set(

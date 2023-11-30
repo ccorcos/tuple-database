@@ -1,5 +1,5 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr"
-import { decodeTuple, encodeTuple } from "../helpers/codec"
+import { codec } from "../helpers/codec"
 import { AsyncTupleStorageApi, ScanStorageArgs, WriteOps } from "../main"
 import { KeyValuePair } from "./types"
 
@@ -33,17 +33,17 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		if (upper) {
 			if (lower) {
 				range = IDBKeyRange.bound(
-					encodeTuple(lower),
-					encodeTuple(upper),
+					codec.encode(lower),
+					codec.encode(upper),
 					!lowerEq,
 					!upperEq
 				)
 			} else {
-				range = IDBKeyRange.upperBound(encodeTuple(upper), !upperEq)
+				range = IDBKeyRange.upperBound(codec.encode(upper), !upperEq)
 			}
 		} else {
 			if (lower) {
-				range = IDBKeyRange.lowerBound(encodeTuple(lower), !lowerEq)
+				range = IDBKeyRange.lowerBound(codec.encode(lower), !lowerEq)
 			} else {
 				range = null
 			}
@@ -55,7 +55,7 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		let results: KeyValuePair[] = []
 		for await (const cursor of index.iterate(range, direction)) {
 			results.push({
-				key: decodeTuple(cursor.key),
+				key: codec.decode(cursor.key),
 				value: cursor.value,
 			})
 			if (results.length >= limit) break
@@ -69,10 +69,10 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		const db = await this.db
 		const tx = db.transaction(storeName, "readwrite")
 		for (const { key, value } of writes.set || []) {
-			tx.store.put(value, encodeTuple(key))
+			tx.store.put(value, codec.encode(key))
 		}
 		for (const key of writes.remove || []) {
-			tx.store.delete(encodeTuple(key))
+			tx.store.delete(codec.encode(key))
 		}
 		await tx.done
 	}

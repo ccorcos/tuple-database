@@ -3,7 +3,7 @@ import { describe, it } from "mocha"
 import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
 import { TupleDatabase } from "../database/sync/TupleDatabase"
 import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { compareTuple } from "../helpers/compareTuple"
+import { codec } from "../helpers/codec"
 import { ReadOnlyTupleDatabaseClientApi, SchemaSubspace } from "../main"
 import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
 import {
@@ -35,7 +35,7 @@ function objectToFacts(obj: Obj) {
 			facts.push([id, key, value])
 		}
 	}
-	facts.sort(compareTuple)
+	facts.sort(codec.compare)
 	return facts
 }
 

@@ -1,19 +1,19 @@
 import { omitBy } from "lodash"
 import { ScanArgs } from "../database/types"
 import { MAX, Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
+import { codec } from "./codec"
 import * as sortedList from "./sortedList"
 
 export function set(data: Array<Tuple>, tuple: Tuple) {
-	return sortedList.set(data, tuple, compareTuple)
+	return sortedList.set(data, tuple, codec.compare)
 }
 
 export function exists(data: Array<Tuple>, tuple: Tuple) {
-	return sortedList.exists(data, tuple, compareTuple)
+	return sortedList.exists(data, tuple, codec.compare)
 }
 
 export function remove(data: Array<Tuple>, tuple: Tuple) {
-	return sortedList.remove(data, tuple, compareTuple)
+	return sortedList.remove(data, tuple, codec.compare)
 }
 
 export const MaxTuple = [MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX]
@@ -83,22 +83,22 @@ export function getPrefixContainingBounds(bounds: Bounds) {
 
 export function isTupleWithinBounds(tuple: Tuple, bounds: Bounds) {
 	if (bounds.gt) {
-		if (compareTuple(tuple, bounds.gt) !== 1) {
+		if (codec.compare(tuple, bounds.gt) !== 1) {
 			return false
 		}
 	}
 	if (bounds.gte) {
-		if (compareTuple(tuple, bounds.gte) === -1) {
+		if (codec.compare(tuple, bounds.gte) === -1) {
 			return false
 		}
 	}
 	if (bounds.lt) {
-		if (compareTuple(tuple, bounds.lt) !== -1) {
+		if (codec.compare(tuple, bounds.lt) !== -1) {
 			return false
 		}
 	}
 	if (bounds.lte) {
-		if (compareTuple(tuple, bounds.lte) === 1) {
+		if (codec.compare(tuple, bounds.lte) === 1) {
 			return false
 		}
 	}
@@ -117,5 +117,5 @@ export type Bounds = {
 export function scan(data: Array<Tuple>, args: ScanArgs = {}) {
 	const { limit, reverse, ...rest } = args
 	const bounds = normalizeTupleBounds(rest)
-	return sortedList.scan(data, { limit, reverse, ...bounds }, compareTuple)
+	return sortedList.scan(data, { limit, reverse, ...bounds }, codec.compare)
 }

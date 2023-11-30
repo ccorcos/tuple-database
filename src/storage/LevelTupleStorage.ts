@@ -1,12 +1,8 @@
 import { AbstractBatch } from "abstract-leveldown"
 import { Level } from "level"
 import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
-import {
-	decodeTuple,
-	decodeValue,
-	encodeTuple,
-	encodeValue,
-} from "../helpers/codec"
+import { codec } from "../helpers/codec"
+
 import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
 
 export class LevelTupleStorage implements AsyncTupleStorageApi {
@@ -18,18 +14,18 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 
 	async scan(args: ScanStorageArgs = {}): Promise<KeyValuePair[]> {
 		const dbArgs: any = {}
-		if (args.gt !== undefined) dbArgs.gt = encodeTuple(args.gt)
-		if (args.gte !== undefined) dbArgs.gte = encodeTuple(args.gte)
-		if (args.lt !== undefined) dbArgs.lt = encodeTuple(args.lt)
-		if (args.lte !== undefined) dbArgs.lte = encodeTuple(args.lte)
+		if (args.gt !== undefined) dbArgs.gt = codec.encode(args.gt)
+		if (args.gte !== undefined) dbArgs.gte = codec.encode(args.gte)
+		if (args.lt !== undefined) dbArgs.lt = codec.encode(args.lt)
+		if (args.lte !== undefined) dbArgs.lte = codec.encode(args.lte)
 		if (args.limit !== undefined) dbArgs.limit = args.limit
 		if (args.reverse !== undefined) dbArgs.reverse = args.reverse
 
 		const results: KeyValuePair[] = []
 		for await (const [key, value] of this.db.iterator(dbArgs)) {
 			results.push({
-				key: decodeTuple(key),
-				value: decodeValue(value),
+				key: codec.decode(key),
+				value: codec.decode(value),
 			})
 		}
 		return results
@@ -41,15 +37,15 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 				(tuple) =>
 					({
 						type: "del",
-						key: encodeTuple(tuple),
+						key: codec.encode(tuple),
 					} as AbstractBatch)
 			),
 			...(writes.set || []).map(
 				({ key, value }) =>
 					({
 						type: "put",
-						key: encodeTuple(key),
-						value: encodeValue(value),
+						key: codec.encode(key),
+						value: codec.encode(value),
 					} as AbstractBatch)
 			),
 		]

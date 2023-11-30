@@ -1,5 +1,53 @@
 ## TODO
 
+```ts
+
+kv = {
+  get(key): {value, version},
+  write(tx: {
+    check: {key, version}[]
+    set: {key, value}[]
+    delete: key[]
+  }): void
+}
+
+
+btree = {
+  scan(start, end): {list: {key, value, version}[], version},
+  write(tx: {
+    check: {start, end, version}[]
+    set: {key, value}[]
+    delete: key[] | {start, end}[]
+  }): void
+}
+
+itree = {
+  overlaps(start, end): {list: {start, end, key, value, version}[], version},
+  write(tx: {
+    check: {start, end, version}[]
+    set: {key, value}[]
+    delete: key[] | {start, end}[]
+  }): void
+}
+
+rtree = {...}
+
+
+```
+
+
+
+- [ ]  Just the encoding composable  like data type
+- [ ]  Less type inference  totally dynamic
+- [ ]  Use with any database
+- [ ]  Custom query logic thing
+- [ ]  Copy Deno api
+- [ ]  Interval tree and reactivity
+- [ ]  Meet deno folks
+- [ ]  Redis?
+
+---
+
 - [x] get rid of typed schema.
 - [ ] add a write-op to check a versionstamp.
 - [ ] scan needs to return a versionstamp.
@@ -10,7 +58,41 @@
 - denokv abstraction to explicitly check your reads.
 - maybe all these types are making this library too complicated.
 - can I use foundationdb as a backend?
-- how can I scale up reactivity?s
+- how can I scale up reactivity?
+
+
+- Deno conversation...
+  - [] looks like kv.list doesn't return some kind of max versionstamp for transactionality.
+  - []
+
+
+
+```ts
+const CollectionSchema = t.object({
+  id: t.uuid,
+  name: t.string,
+  properties: t.list(t.uuid),
+})
+
+const PropertySchema = t.object({
+  id: t.uuid,
+  name: t.string,
+  type: t.union(
+    t.literal("string"),
+    t.literal("number"),
+    t.literal("boolean"),
+    t.literal("relation"),
+  ),
+  number_unit: t.string,
+  related_to: t.uuid,
+})
+
+const CellSchema = t.object({
+  id: t.uuid,
+  property_id: uuid,
+  value: t.string
+})
+```
 
 
 https://deno.land/manual/runtime/kv

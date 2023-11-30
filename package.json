@@ -48,6 +48,7 @@
     "elen": "^1.0.10",
     "fractional-indexing": "^3.1.0",
     "fs-extra": "^11.1.0",
+    "lexicodec": "^0.0.3",
     "lodash": "^4.17.21",
     "md5": "^2.3.0",
     "uuid": "^9.0.0"

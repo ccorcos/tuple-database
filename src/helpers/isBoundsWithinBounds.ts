@@ -1,21 +1,21 @@
 import { Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
+import { codec } from "./codec"
 import { Bounds } from "./sortedTupleArray"
 
 function isLessThanOrEqualTo(a: Tuple, b: Tuple) {
-	return compareTuple(a, b) !== 1
+	return codec.compare(a, b) !== 1
 }
 
 function isLessThan(a: Tuple, b: Tuple) {
-	return compareTuple(a, b) === -1
+	return codec.compare(a, b) === -1
 }
 
 function isGreaterThanOrEqualTo(a: Tuple, b: Tuple) {
-	return compareTuple(a, b) !== -1
+	return codec.compare(a, b) !== -1
 }
 
 function isGreaterThan(a: Tuple, b: Tuple) {
-	return compareTuple(a, b) === 1
+	return codec.compare(a, b) === 1
 }
 
 export function isBoundsWithinBounds(args: {

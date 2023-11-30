@@ -1,6 +1,6 @@
 import { Database, Transaction } from "better-sqlite3"
 import { TupleStorageApi } from "../database/sync/types"
-import { decodeTuple, encodeTuple } from "../helpers/codec"
+import { codec } from "../helpers/codec"
 import { KeyValuePair, ScanStorageArgs, Tuple, WriteOps } from "./types"
 
 export class SQLiteTupleStorage implements TupleStorageApi {
@@ -31,12 +31,12 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 			}) => {
 				for (const { key, value } of inserts || []) {
 					insertQuery.run({
-						key: encodeTuple(key),
+						key: codec.encode(key),
 						value: JSON.stringify(value),
 					})
 				}
 				for (const tuple of deletes || []) {
-					deleteQuery.run({ key: encodeTuple(tuple) })
+					deleteQuery.run({ key: codec.encode(tuple) })
 				}
 			}
 		)
@@ -46,13 +46,13 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 
 	scan = (args: ScanStorageArgs = {}) => {
 		// Bounds.
-		let start = args.gte ? encodeTuple(args.gte) : undefined
+		let start = args.gte ? codec.encode(args.gte) : undefined
 		let startAfter: string | undefined = args.gt
-			? encodeTuple(args.gt)
+			? codec.encode(args.gt)
 			: undefined
-		let end: string | undefined = args.lte ? encodeTuple(args.lte) : undefined
+		let end: string | undefined = args.lte ? codec.encode(args.lte) : undefined
 		let endBefore: string | undefined = args.lt
-			? encodeTuple(args.lt)
+			? codec.encode(args.lt)
 			: undefined
 
 		const sqlArgs = {
@@ -90,7 +90,7 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 		return results.map(
 			({ key, value }) =>
 				({
-					key: decodeTuple(key) as Tuple,
+					key: codec.decode(key) as Tuple,
 					value: JSON.parse(value),
 				} as KeyValuePair)
 		)
