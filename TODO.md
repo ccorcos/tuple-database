@@ -2,16 +2,6 @@
 
 ```ts
 
-kv = {
-  get(key): {value, version},
-  write(tx: {
-    check: {key, version}[]
-    set: {key, value}[]
-    delete: key[]
-  }): void
-}
-
-
 okvBtree = {
   scan(start, end): {list: {key, value, version}[], version},
   write(tx: {

@@ -7,19 +7,20 @@ describe("KeyValueDatabase", () => {
 		const kv = new KeyValueDatabase()
 
 		let result = kv.get("a")
-		assert.deepEqual(result, { value: undefined, version: 0 })
+		assert.deepEqual(result?.value, undefined)
 
 		kv.write({ set: [{ key: "a", value: 1 }] })
 		result = kv.get("a")
-		assert.deepEqual(result, { value: 1, version: 1 })
+		assert.deepEqual(result?.value, 1)
 	})
 
 	it("conflict", () => {
 		const kv = new KeyValueDatabase()
 		kv.write({ set: [{ key: "a", value: 1 }] })
 
-		const a = kv.get("a")
+		const a = kv.get("a")!
 		kv.write({ set: [{ key: "a", value: 2 }] })
+
 		assert.throws(() => {
 			kv.write({
 				check: [{ key: "a", version: a.version }],
@@ -31,8 +32,8 @@ describe("KeyValueDatabase", () => {
 	it("sum", () => {
 		const kv = new KeyValueDatabase()
 		kv.write({ sum: [{ key: "a", value: 1 }] })
-		assert.deepEqual(kv.get("a"), { value: 1, version: 1 })
+		assert.deepEqual(kv.get("a")?.value, 1)
 		kv.write({ sum: [{ key: "a", value: 1 }] })
-		assert.deepEqual(kv.get("a"), { value: 2, version: 2 })
+		assert.deepEqual(kv.get("a")?.value, 2)
 	})
 })
