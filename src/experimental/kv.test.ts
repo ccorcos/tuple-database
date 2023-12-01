@@ -3,7 +3,7 @@ import { describe, it } from "mocha"
 import { KeyValueDatabase } from "./kv"
 
 describe("KeyValueDatabase", () => {
-	it("read/write", () => {
+	it("get", () => {
 		const kv = new KeyValueDatabase()
 
 		let result = kv.get("a")

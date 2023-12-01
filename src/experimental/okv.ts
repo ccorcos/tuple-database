@@ -1,12 +1,5 @@
-// TODO: list query versioning...
-// TODO: kv cleanup for deletes...
-// - centralized sequencer but then not as good for offline...
+import { ulid } from "ulid"
 
-/*
-
-
-
-*/
 type BinarySearchResult =
 	| { found: number; closest?: undefined }
 	| { found?: undefined; closest: number }
@@ -19,7 +12,7 @@ function binarySearch<T>(
 	var max = list.length - 1
 	while (min <= max) {
 		var k = (max + min) >> 1
-		var dir = compare(list[k])
+		var dir = compare(list[k]) * -1
 		if (dir > 0) {
 			min = k + 1
 		} else if (dir < 0) {
@@ -44,14 +37,52 @@ function compare<K extends string | number | boolean | Date>(
 	return 0
 }
 
+function insert<T>(
+	value: T,
+	list: Array<T>,
+	compare: (a: T, b: T) => -1 | 0 | 1
+) {
+	const result = binarySearch(list, (item) => compare(item, value))
+	if (result.found !== undefined) {
+		// Replace the whole item.
+		list.splice(result.found, 1, value)
+	} else {
+		// Insert at missing index.
+		list.splice(result.closest, 0, value)
+	}
+}
+
+function replace<T>(
+	list: Array<T>,
+	compare: (a: T) => -1 | 0 | 1,
+	update: (existing?: T) => T
+) {
+	const result = binarySearch(list, compare)
+	if (result.found !== undefined) {
+		// Replace the whole item.
+		list.splice(result.found, 1, update(list[result.found]))
+	} else {
+		// Insert at missing index.
+		list.splice(result.closest, 0, update())
+	}
+}
+
+function remove<T>(list: T[], compare: (a: T) => -1 | 0 | 1) {
+	let { found } = binarySearch(list, compare)
+	if (found !== undefined) {
+		// Remove from index.
+		return list.splice(found, 1)[0]
+	}
+}
+
 export class ConflictError extends Error {}
 
 export class OrderedKeyValueDatabase {
-	private data: { key: string; value: any; version: number }[] = []
+	private data: { key: string; value: any; version: string }[] = []
 
-	get = (key: string): { value: any; version: number } => {
+	get = (key: string): { value: any; version: string } | undefined => {
 		const result = binarySearch(this.data, (a) => compare(a.key, key))
-		if (!result.found) return { value: undefined, version: 0 }
+		if (result.found === undefined) return
 		const { value, version } = this.data[result.found]
 		return { value, version }
 	}
@@ -76,10 +107,7 @@ export class OrderedKeyValueDatabase {
 			startKey = args.start
 		}
 		if (args.end) {
-			const lastChar = String.fromCharCode(
-				args.end.charCodeAt(args.end.length - 1) + 1
-			)
-			endKey = args.end.substring(0, args.end.length - 1) + lastChar
+			endKey = args.end
 		}
 
 		if (startKey && endKey && compare(startKey, endKey) > 0) {
@@ -101,125 +129,71 @@ export class OrderedKeyValueDatabase {
 			endIndex = result.found !== undefined ? result.found : result.closest
 		}
 
-		let list: { key: string; value: any; version: number }[] = []
-
 		if (args.reverse) {
-			if (args.limit) {
-				list = this.data
-					.slice(Math.max(startIndex, endIndex - args.limit), endIndex)
-					.reverse()
-			} else {
-				list = this.data.slice(startIndex, endIndex).reverse()
-			}
-		} else {
-			if (args.limit) {
-				list = this.data.slice(
-					startIndex,
-					Math.min(startIndex + args.limit, endIndex)
-				)
-			} else {
-				list = this.data.slice(startIndex, endIndex)
-			}
+			if (!args.limit) return this.data.slice(startIndex, endIndex).reverse()
+			return this.data
+				.slice(Math.max(startIndex, endIndex - args.limit), endIndex)
+				.reverse()
 		}
 
-		return list
+		if (!args.limit) return this.data.slice(startIndex, endIndex)
+		return this.data.slice(
+			startIndex,
+			Math.min(startIndex + args.limit, endIndex)
+		)
 	}
 
 	write(tx: {
-		check?: { key: string; version: number }[]
-		// | { start: string; end: string; version: number }
+		check?: { key: string; version: string }[]
+		// TODO: check range
 		set?: { key: string; value: any }[]
 		sum?: { key: string; value: number }[]
 		min?: { key: string; value: number }[]
 		max?: { key: string; value: number }[]
-		delete?: (string | { start: string; end: string })[]
+		delete?: string[]
+		// TODO: delete range
 	}) {
 		for (const { key, version } of tx.check || [])
-			if (this.get(key).version !== version)
+			if (this.get(key)?.version !== version)
 				throw new ConflictError(`Version check failed. ${key} ${version}`)
 
-		for (const { key, value } of tx.set || []) {
-			const result = binarySearch(this.data, (item) => compare(item.key, key))
-			if (result.found !== undefined) {
-				// Replace the whole item.
-				const existing = this.data[result.found]
-				this.data.splice(result.found, 1, {
-					key,
-					value,
-					version: existing.version + 1,
-				})
-			} else {
-				// Insert at missing index.
-				this.data.splice(result.closest, 0, {
-					key,
-					value,
-					version: 1,
-				})
-			}
-		}
+		const version = ulid()
 
-		const numberOperation = (
-			key: string,
-			value: number,
-			op: (a: number, b: number) => number
-		) => {
-			const result = binarySearch(this.data, (item) => compare(item.key, key))
-			if (result.found !== undefined) {
-				// Replace the whole item.
-				const existing = this.data[result.found]
+		for (const { key, value } of tx.set || [])
+			insert({ key, value, version }, this.data, (a, b) =>
+				compare(a.key, b.key)
+			)
 
-				let newValue = value
-				if (typeof existing.value === "number") {
-					newValue = op(value, existing.value)
-				} else if (existing.value !== undefined) {
-					console.warn(
-						"Calling sum on a non-number value:",
-						key,
-						existing.value
-					)
-				}
-				this.data.splice(result.found, 1, {
-					key,
-					value: newValue,
-					version: existing.version + 1,
-				})
-			} else {
-				// Insert at missing index.
-				this.data.splice(result.closest, 0, {
-					key,
-					value,
-					version: 1,
-				})
-			}
-		}
+		const replaceValue = (key: string, update: (existing?: any) => any) =>
+			replace(
+				this.data,
+				(a) => compare(a.key, key),
+				(result) => ({ key, version, value: update(result?.value) })
+			)
 
 		for (const { key, value } of tx.sum || [])
-			numberOperation(key, value, (a, b) => a + b)
+			replaceValue(key, (existing) => {
+				if (typeof existing === "number") return existing + value
+				if (existing === undefined) return value
+				console.warn("Calling sum on a non-number value:", key, existing)
+				return value
+			})
 		for (const { key, value } of tx.min || [])
-			numberOperation(key, value, (a, b) => Math.min(a, b))
+			replaceValue(key, (existing) => {
+				if (typeof existing === "number") return Math.min(existing, value)
+				if (existing === undefined) return value
+				console.warn("Calling min on a non-number value:", key, existing)
+				return value
+			})
 		for (const { key, value } of tx.max || [])
-			numberOperation(key, value, (a, b) => Math.max(a, b))
+			replaceValue(key, (existing) => {
+				if (typeof existing === "number") return Math.max(existing, value)
+				if (existing === undefined) return value
+				console.warn("Calling max on a non-number value:", key, existing)
+				return value
+			})
 
-		for (const key of tx.delete || []) {
-			if (typeof key === "string") {
-				const existing = this.map[key]
-				if (!existing) continue
-				this.map[key] = {
-					value: undefined,
-					version: existing.version + 1,
-				}
-			}
-		}
+		for (const key of tx.delete || [])
+			remove(this.data, (a) => compare(a.key, key))
 	}
 }
-
-// itree = {
-//   overlaps(start, end): {list: {start, end, key, value, version}[], version},
-//   write(tx: {
-//     check: {start, end, version}[]
-//     set: {key, value}[]
-//     delete: key[] | {start, end}[]
-//   }): void
-// }
-
-// rtree = {...}

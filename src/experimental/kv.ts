@@ -18,11 +18,11 @@ export class KeyValueDatabase {
 		min?: { key: string; value: number }[]
 		max?: { key: string; value: number }[]
 	}) {
-		const version = ulid()
-
 		for (const { key, version } of tx.check || [])
 			if (this.map[key]?.version !== version)
 				throw new ConflictError(`Version check failed. ${key} ${version}`)
+
+		const version = ulid()
 
 		for (const { key, value } of tx.set || [])
 			this.map[key] = { value, version }
