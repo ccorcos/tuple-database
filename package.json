@@ -46,9 +46,9 @@
   },
   "dependencies": {
     "elen": "^1.0.10",
-    "fractional-indexing": "^3.1.0",
+    "fractional-indexing": "^3.2.0",
     "fs-extra": "^11.1.0",
-    "lexicodec": "^0.0.3",
+    "lexicodec": "^0.0.4",
     "lodash": "^4.17.21",
     "md5": "^2.3.0",
     "ulid": "^2.3.0",

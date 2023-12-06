@@ -1,5 +1,14 @@
 ## TODO
 
+
+OK & OKV...
+- tuple + codec
+- interval tree based on kv.
+- separate storage abstraction
+- reactivity
+
+
+
 ```ts
 
 okvBtree = {
