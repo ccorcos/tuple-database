@@ -1,24 +1,19 @@
 ## TODO
 
-
 OK & OKV...
-- tuple + codec
 - interval tree based on kv.
 - separate storage abstraction
 - reactivity
+- write about it
+  start with kv, add version checks
+
+
+order intervals in terms of containment.
+
 
 
 
 ```ts
-
-okvBtree = {
-  scan(start, end): {list: {key, value, version}[], version},
-  write(tx: {
-    check: {start, end, version}[]
-    set: {key, value}[]
-    delete: key[] | {start, end}[]
-  }): void
-}
 
 itree = {
   overlaps(start, end): {list: {start, end, key, value, version}[], version},
