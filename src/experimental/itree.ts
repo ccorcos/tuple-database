@@ -1,191 +1,297 @@
 /*
-THIS IS A SEGMENT TREE: https://www.dgp.toronto.edu/public_user/JamesStewart/378notes/22intervals/
 Try this: https://www.youtube.com/watch?v=q0QOYtSsTg4
-
 
 - [ ] diff between avl and red-black tree.
 - [ ] generalized search tree. start with a btree for practice?
 
 
 GiST Required Methods:  insert, delete, search, chooseSubtree, split, and consolidate.
-
-
-
-
-
-In some sense, intervals are just ordered by containment.
-
-Is it possible to do this with binary search in an ordered list?
-x = [10,20]
-y = [15,25]
-z = [18,22]
-
-[10,15,x]
-[15,20,xy]
-[18,20,z]
-[20,22,z]
-[20,25,y]
-
-
-how does split work?
-[10,20,x]
-insert [15,25,y]
-[10,15,x]
-[15,20,xy]
-[20,25,y]
-insert [18,22,z]
-
-
-
-
-ex2 = [
-	[1, 5]
-	[1, 6]
-	[2, 4]
-	[2, 5]
-	[3, 8]
-	[9, 11]
-]
-
-
- * listIntervals( k, x )
- *
- * List all the intervals that contain 	 in the subtree rooted at x.
- *
- * This is intitially called as listIntervals( k, root ).
-
-
-listIntervals( k, x )
-
-  while x != NULL
-    output intervals(x)
-    if k < separator(x)
-      x = left(x)
-    else
-      x = right(x)
-    endif
-  endwhile
-
- * addInterval( I, a, b, min, max, x )
- *
- * The interval to insert is [a,b] and is named I.  We assume that the
- * values a and b separate elementary intervals somewhere in the tree.
- * [min,max] is the span of the current subtree rooted at node x.
- *
- * This is initially called as addInterval( I, a, b, -infinity, +infinity, root ).
-
-addInterval( I, a, b, min, max, x )
-
-  if a <= min and max <= b
-
-    // span(x) is completely within [a,b], so store the interval and stop
-
-    store I in intervals(x)
-
-  else
-
-    // span(x) contains some elementary intervals that aren't in [a,b].
-     * We must recurse until we find a subtree that is completely contained
-     * in [a,b].  Note that we might recurse into both subtrees.
-
-    if (a < separator(x))
-      addInterval( I, a, b, min, separator(x), left(x) );
-    endif
-
-    if (separator(x) < b)
-      addInterval( I, a, b, separator(x), max, left(x) );
-    endif
-
-  endif
+https://speakerdeck.com/jhellerstein/gist-a-generalized-search-tree-for-database-systems?slide=10
 
 */
 
-export class ConflictError extends Error {}
+import { KeyValueDatabase } from "./kv"
 
-type IntervalNode = {
+// TODO:
+// - start with a basic b-tree
+// - save it with kv and consistency checks
+// - add balancing
+// - making it b+
+// - implement as GiST.
+// - extend to interval / range.
+
+// export class KeyValueDatabase {
+// 	private map: { [key: string]: { value: any; version: string } } = {}
+
+// 	get = (key: string): { value: any; version: string } | undefined => {
+// 		const existing = this.map[key]
+// 		if (existing) return existing
+// 	}
+
+// 	write(tx: {
+// 		check?: { key: string; version: string }[]
+// 		set?: { key: string; value: any }[]
+// 		delete?: string[]
+// 		sum?: { key: string; value: number }[]
+// 		min?: { key: string; value: number }[]
+// 		max?: { key: string; value: number }[]
+// 	}) {
+
+class KeyValueTransaction {
+	constructor(private kv: KeyValueDatabase) {}
+	private checks: { key: string; version: string | undefined }[] = []
+	private sets: { [key: string]: any } = {}
+	private deletes = new Set<string>()
+	private cache: { [kesy: string]: any } = {}
+
+	get(key: string): RedBlackNode | undefined {
+		if (this.deletes.has(key)) return
+		if (key in this.sets) return this.sets[key]
+		if (key in this.cache) return this.cache[key]
+		const result = this.kv.get(key)
+		this.checks.push({ key, version: result?.version })
+		this.cache[key] = result?.value
+		return result?.value
+	}
+
+	set(key: string, value: RedBlackNode) {
+		this.deletes.delete(key)
+		this.sets[key] = value
+	}
+
+	update(key: string, props: Partial<RedBlackNode>) {
+		this.deletes.delete(key)
+		const existing = this.get(key)
+		if (!existing) throw new Error("Does not exist.")
+		this.sets[key] = { ...existing, ...props }
+	}
+}
+
+const RED = 0 as const
+const BLACK = 1 as const
+
+type RedBlackNode = {
 	id: string
-	intervalIds: string[]
-
-	separator?: number
+	color: 1 | 0
+	key: string
+	value: any
 	leftId?: string
 	rightId?: string
 }
 
-type IntervalCursor = {
-	id: string
-	min: number
-	max: number
-}
+class RedBlackTree {
+	constructor(private kv: KeyValueDatabase, private name: string) {}
 
-type IntervalValue = { id: string; min: number; max: number }
+	insert = (key: string, value: any) => {
+		const tx = new KeyValueTransaction(this.kv)
 
-export class IntervalTree {
-	private data: { [id: string]: IntervalNode } = {}
-
-	get = (n: number) => {
-		const intervalIds: string[] = []
-
-		let node: IntervalNode | undefined = this.data["root"]
-		while (node) {
-			if (!node) break
-			if (node.intervalIds) intervalIds.push(...node.intervalIds)
-
-			if (n < node.separator) {
-				node = node.leftId ? this.data[node.leftId] : undefined
+		// Find path to insert new node.
+		let n = tx.get(this.name)
+		const n_stack: string[] = []
+		const d_stack: (-1 | 0 | 1)[] = []
+		while (n) {
+			const d = compare(key, n.key)
+			n_stack.push(n.id)
+			d_stack.push(d)
+			if (d === 0) break
+			else if (d < 0) {
+				if (!n.leftId) break
+				n = tx.get(n.leftId)
 			} else {
-				node = node.rightId ? this.data[node.rightId] : undefined
+				if (!n.rightId) break
+				n = tx.get(n.rightId)
 			}
 		}
 
-		return intervalIds
-	}
-
-	overlaps() {}
-
-	write(tx: { set?: IntervalValue[]; delete?: string[] }) {
-		for (const interval of tx.set || []) {
-			const root = this.data["root"]
-			if (!root) {
-				this.data["root"] = { id: "root", intervalIds: [interval] }
-			}
-
-			if (!root) {
-				this.data["root"] = { id: "root", intervalIds: [interval] }
+		// Rebuild path to leaf node.
+		const newNode: RedBlackNode = {
+			id: randomId(),
+			color: RED,
+			key,
+			value,
+			// count: 1,
+		}
+		tx.set(key, newNode)
+		n_stack.push(newNode.id)
+		for (let s = n_stack.length - 2; s >= 0; --s) {
+			let n = n_stack[s]
+			const nn = tx.get(n)!
+			if (d_stack[s] <= 0) {
+				if (nn.leftId !== n_stack[s + 1]) {
+					tx.update(nn.id, { leftId: n_stack[s + 1] })
+				}
+				// n.setCount(n.count + 1)
+			} else {
+				if (nn.rightId !== n_stack[s + 1]) {
+					tx.update(nn.id, { rightId: n_stack[s + 1] })
+				}
+				// n.setCount(n.count + 1)
 			}
 		}
 
-		// const addInterval = (interval: IntervalValue, cursor: IntervalCursor) => {
-		// 	if (interval.min <= cursor.min && interval.max >= cursor.max) {
-		// 		// interval contains the cursor.
-		// 		const node = this.data[cursor.id]
-		// 		if (node) node.intervalIds.push(interval.id)
-		// 		else
-		// 			this.data[cursor.id] = { id: cursor.id, intervalIds: [interval.id] }
-		// 		return
-		// 	}
-		// 	// Overlaps to the left.
-		// 	if (interval.min < cursor.node.separator) {
-		// 		addInterval(interval, { min: cursor.min, max: cursor.node.separator })
-		// 	}
-		// }
-		// * addInterval( I, a, b, min, max, x )
-		//  *
-		//  * The interval to insert is [a,b] and is named I.  We assume that the
-		//  * values a and b separate elementary intervals somewhere in the tree.
-		//  * [min,max] is the span of the current subtree rooted at node x.
-		//  *
-		//  * This is initially called as addInterval( I, a, b, -infinity, +infinity, root ).
-		// addInterval( I, a, b, min, max, x )
-		//     // span(x) contains some elementary intervals that aren't in [a,b].
-		//      * We must recurse until we find a subtree that is completely contained
-		//      * in [a,b].  Note that we might recurse into both subtrees.
-		//     if (a < separator(x))
-		//       addInterval( I, a, b, min, separator(x), left(x) );
-		//     endif
-		//     if (separator(x) < b)
-		//       addInterval( I, a, b, separator(x), max, left(x) );
-		//     endif
+		// 8 types of rotations.
+		// Rebalance tree using rotations
+		// console.log("start insert", key, d_stack)
+		for (let s = n_stack.length - 1; s > 1; --s) {
+			let p = n_stack[s - 1]
+			const pn = tx.get(p)!
+			let n = n_stack[s]
+			const nn = tx.get(n)!
+			if (pn.color === BLACK || nn.color === BLACK) break
+
+			let pp = n_stack[s - 2]
+			const ppn = tx.get(pp)!
+			if (ppn.leftId === pn.id) {
+				if (pn.leftId === nn.id) {
+					let y = ppn.rightId ? tx.get(ppn.rightId) : undefined
+					if (y && y.color === RED) {
+						//
+						//      (pp)
+						//      /  \
+						//    (p)  (y)
+						//    /
+						//  (n)
+						//
+						// console.log("LLr")
+						tx.set(pn.id, { ...pn, color: BLACK })
+						tx.update(y.id, { color: BLACK })
+						tx.update(ppn.id, { rightId: y.id, color: RED })
+						s -= 1
+					} else {
+						// console.log("LLb")
+						tx.update(ppn.id, { color: RED, leftId: pn.rightId })
+						tx.update(pn.id, { color: BLACK, rightId: ppn.id })
+						n_stack[s - 2] = p
+						n_stack[s - 1] = n
+						// await recount(pp)
+						// await recount(p)
+						if (s >= 3) {
+							let ppp = n_stack[s - 3]
+							const pppn = tx.get(ppp)!
+							if (pppn.leftId === ppn.id) {
+								tx.update(pppn.id, { leftId: pn.id })
+							} else {
+								tx.update(pppn.id, { rightId: pn.id })
+							}
+						}
+						break
+					}
+				} else {
+					let y = ppn.rightId ? tx.get(ppn.rightId) : undefined
+					if (y && y.color === RED) {
+						// console.log("LRr")
+						tx.update(pn.id, { color: BLACK })
+						tx.update(y.id, { color: BLACK })
+						tx.update(ppn.id, { rightId: y.id, color: RED })
+						s -= 1
+					} else {
+						// console.log("LRb")
+						tx.update(pn.id, { rightId: nn.leftId })
+						tx.update(ppn.id, { color: RED, leftId: nn.rightId })
+						tx.update(nn.id, { color: BLACK, leftId: pn.id, rightId: ppn.id })
+						n_stack[s - 2] = n
+						n_stack[s - 1] = p
+						// await recount(pp)
+						// await recount(p)
+						// await recount(n)
+						if (s >= 3) {
+							let ppp = n_stack[s - 3]
+							const pppn = tx.get(ppp)!
+							if (pppn.leftId === ppn.id) {
+								tx.update(pppn.id, { leftId: nn.id })
+							} else {
+								tx.update(pppn.id, { rightId: nn.id })
+							}
+						}
+						break
+					}
+				}
+			} else {
+				if (pn.rightId === nn.id) {
+					let y = ppn.leftId ? tx.get(ppn.leftId) : undefined
+					if (y && y.color === RED) {
+						// console.log("RRr", y.key)
+						tx.update(pn.id, { color: BLACK })
+						tx.update(y.id, { color: BLACK })
+						tx.update(ppn.id, { leftId: y.id, color: RED })
+						s -= 1
+					} else {
+						// console.log("RRb")
+						tx.update(ppn.id, { color: RED, rightId: pn.leftId })
+						tx.update(pn.id, { color: BLACK, leftId: ppn.id })
+						n_stack[s - 2] = p
+						n_stack[s - 1] = n
+						// await recount(pp)
+						// await recount(p)
+						if (s >= 3) {
+							let ppp = n_stack[s - 3]
+							const pppn = tx.get(ppp)!
+							if (pppn.rightId === ppn.id) {
+								tx.update(pppn.id, { rightId: pn.id })
+							} else {
+								tx.update(pppn.id, { leftId: pn.id })
+							}
+						}
+						break
+					}
+				} else {
+					let y = ppn.leftId ? tx.get(ppn.leftId) : undefined
+					if (y && y.color === RED) {
+						// console.log("RLr")
+						tx.update(pn.id, { color: BLACK })
+						tx.update(y.id, { color: BLACK })
+						tx.update(ppn.id, { leftId: y.id, color: RED })
+						s -= 1
+					} else {
+						// console.log("RLb")
+
+						tx.update(pn.id, { leftId: nn.rightId })
+						tx.update(ppn.id, { color: RED, rightId: nn.leftId })
+						tx.update(nn.id, { color: BLACK, rightId: pn.id, leftId: ppn.id })
+						n_stack[s - 2] = n
+						n_stack[s - 1] = p
+						// await recount(pp)
+						// await recount(p)
+						// await recount(n)
+						if (s >= 3) {
+							let ppp = n_stack[s - 3]
+							const pppn = tx.get(ppp)!
+							if (pppn.rightId === ppn.id) {
+								tx.update(pppn.id, { rightId: nn.id })
+							} else {
+								tx.update(pppn.id, { leftId: nn.id })
+							}
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// Return new tree
+		n_stack[0].setColor(BLACK)
+		const newRootId = n_stack[0].id
+		await transaction.commit()
+		return new RedBlackTree(
+			{ compare: this.compare, rootId: newRootId },
+			this.store
+		)
 	}
 }
 
-Math.random().toString(36).slice(2, 10)
+function compare<K extends string | number | boolean | Date>(
+	a: K,
+	b: K
+): -1 | 0 | 1 {
+	if (a > b) {
+		return 1
+	}
+	if (a < b) {
+		return -1
+	}
+	return 0
+}
+
+function randomId() {
+	return Math.random().toString(36).slice(2, 10)
+}
