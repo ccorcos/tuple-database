@@ -1,12 +1,12 @@
 /*
 Try this: https://www.youtube.com/watch?v=q0QOYtSsTg4
 
-- [ ] diff between avl and red-black tree.
-- [ ] generalized search tree. start with a btree for practice?
-
-
-GiST Required Methods:  insert, delete, search, chooseSubtree, split, and consolidate.
-https://speakerdeck.com/jhellerstein/gist-a-generalized-search-tree-for-database-systems?slide=10
+- [x] diff between avl and red-black tree.
+	- red black is less balanced and requires less rebalancing.
+- [x] generalized search tree. start with a btree for practice?
+	- just a set of functions.
+		GiST Required Methods:  insert, delete, search, chooseSubtree, split, and consolidate.
+		https://speakerdeck.com/jhellerstein/gist-a-generalized-search-tree-for-database-systems?slide=10
 
 */
 
@@ -269,13 +269,13 @@ class RedBlackTree {
 		}
 
 		// Return new tree
-		n_stack[0].setColor(BLACK)
-		const newRootId = n_stack[0].id
-		await transaction.commit()
-		return new RedBlackTree(
-			{ compare: this.compare, rootId: newRootId },
-			this.store
-		)
+		// n_stack[0].setColor(BLACK)
+		// const newRootId = n_stack[0].id
+		// await transaction.commit()
+		// return new RedBlackTree(
+		// 	{ compare: this.compare, rootId: newRootId },
+		// 	this.store
+		// )
 	}
 }
 
