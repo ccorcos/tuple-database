@@ -136,37 +136,12 @@ export class BinaryPlusTree {
 					value: rightNode.id,
 				})
 
-				// Update parent key for the left node.
-				// If parentIndex is 0, then the key should remain null.
-				if (parentIndex !== 0) {
-					const minKey = node.values[0].key
-					if (parent.values[parentIndex].key !== minKey) {
-						parent.values[parentIndex] = { key: minKey, value: node.id }
-					}
-				}
-
 				// Recur
 				node = parent
 				continue
 			}
 
-			// No splitting going on, just need to update the minKey in the parent.
-			const parent = nodePath.shift()
-			const parentIndex = indexPath.shift()
-			if (node.id !== "root") {
-				if (!parent) throw new Error("Broken.")
-				if (parentIndex === undefined) throw new Error("Broken.")
-				if (parentIndex !== 0) {
-					const minKey = node.values[0].key
-					if (parent.values[parentIndex].key !== minKey) {
-						throw new Error("I don't think this should happen.")
-						// parent.values[parentIndex] = { key: minKey, value: node.id }
-					}
-				}
-			}
-
-			// Recur
-			node = parent
+			break
 		}
 	}
 
