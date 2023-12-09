@@ -5,6 +5,12 @@ Both Postgres and SQLite use B+ trees as the foundation of their indexes.
 Even though we have an OrderedKeyValueDatabase, let's build a B+ tree on top of a KeyValueDatabase
 so that we can later extend it to an interval tree and a range tree.
 
+TODO:
+- delete keys and compact.
+- what to do about duplicate keys.
+- some basic performance analysis and comparison.
+-> interval tree!
+
 */
 
 type Key = string | number
