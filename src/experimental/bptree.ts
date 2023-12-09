@@ -7,68 +7,19 @@ so that we can later extend it to an interval tree and a range tree.
 
 */
 
-/*
-
-Demonstration
-
-Order: 3
-minSize: 2
-
-Inserts -> [5, 10, 3, 6, 14, 24, 20, 22, 12, 11, 2, 13]
-
-5 -> [5]
-10 -> [5,10]
-3 -> [3,5,10]
-6 -> [3,5,6,10]
-	-> First split
-	-> [6]
-	[3,5] [6,10]
-14 -> [6]
-	[3,5] [6,10,14]
-24 -> [6]
-	[3,5] [6,10,14,24]
-	-> Second split
-	-> [6,14]
-	[3,5] [6,10] [14,24]
-20 -> [6,14]
-	[3,5] [6,10] [14,20,24]
-22 -> [6,14]
-	[3,5] [6,10] [14,20,22,24]
-	-> Third split
-	-> [6,14,22]
-	[3,5] [6,10] [14,20] [22,24]
-12 -> [6,14,22]
-	[3,5] [6,10,12] [14,20] [22,24]
-11 -> [6,14,22]
-	[3,5] [6,10,11,12] [14,20] [22,24]
-	-> Double split
-	-> [6,11,14,22]
-	[3,5] [6,10] [11,12] [14,20] [22,24]
-	-> [14]
-	  [6,11] [14,22]
-	[3,5] [6,10] [11,12] [14,20] [22,24]
-2 -> [14]
-	  [6,11] [14,22]
-	[2,3,5] [6,10] [11,12] [14,20] [22,24]
-13 -> Update parent minKey
-   -> [14]
-	[6,11] [13,22]
-[2,3,5] [6,10] [11,12] [13,14,20] [22,24]
-*/
-
 type Key = string | number
 
 export type BranchNode = {
 	leaf?: false
 	id: string
 	// nodes: { minKey: Key; id: string }[]
-	values: { key: Key; value: string }[]
+	values: { key: Key | null; value: string }[]
 }
 
 export type LeafNode = {
 	leaf: true
 	id: string
-	values: { key: Key; value: any }[]
+	values: { key: Key | null; value: any }[]
 }
 
 export class BinaryPlusTree {
@@ -98,7 +49,7 @@ export class BinaryPlusTree {
 			}
 
 			// Closest node that is greater than the key.
-			// Left-most node key is always "" so closest should never be 0.
+			// Left-most node key is always null so closest should never be 0.
 			if (result.closest === 0) throw new Error("Broken.")
 			const childId = node.values[result.closest - 1].value
 			const child = this.nodes[childId]
@@ -132,14 +83,13 @@ export class BinaryPlusTree {
 			}
 
 			const result = binarySearch(node.values, (x) => compare(x.key, key))
-			if (result.found !== undefined) {
-				const childId = node.values[result.found].value
-				const child = this.nodes[childId]
-				if (!child) throw Error("Missing child node.")
-				nodePath.push(child)
-				indexPath.push(result.found)
-				continue
-			}
+			const index =
+				result.found !== undefined ? result.found : result.closest - 1
+			const childId = node.values[index].value
+			const child = this.nodes[childId]
+			if (!child) throw Error("Missing child node.")
+			nodePath.unshift(child)
+			indexPath.unshift(index)
 		}
 
 		// Balance the tree, starting from the leaf.
@@ -160,15 +110,16 @@ export class BinaryPlusTree {
 				// If we're splitting the root node.
 				if (node.id === "root") {
 					const leftNode: LeafNode | BranchNode = {
-						...node,
 						id: randomId(),
+						leaf: node.leaf,
+						values: node.values,
 					}
 					this.nodes[leftNode.id] = leftNode
 
 					this.nodes["root"] = {
 						id: "root",
 						values: [
-							{ key: "", value: leftNode.id },
+							{ key: null, value: leftNode.id },
 							{ key: rightMinKey, value: rightNode.id },
 						],
 					}
@@ -186,7 +137,7 @@ export class BinaryPlusTree {
 				})
 
 				// Update parent key for the left node.
-				// If parentIndex is 0, then the key should remain "".
+				// If parentIndex is 0, then the key should remain null.
 				if (parentIndex !== 0) {
 					const minKey = node.values[0].key
 					if (parent.values[parentIndex].key !== minKey) {
@@ -208,7 +159,8 @@ export class BinaryPlusTree {
 				if (parentIndex !== 0) {
 					const minKey = node.values[0].key
 					if (parent.values[parentIndex].key !== minKey) {
-						parent.values[parentIndex] = { key: minKey, value: node.id }
+						throw new Error("I don't think this should happen.")
+						// parent.values[parentIndex] = { key: minKey, value: node.id }
 					}
 				}
 			}
@@ -216,6 +168,20 @@ export class BinaryPlusTree {
 			// Recur
 			node = parent
 		}
+	}
+
+	depth() {
+		const root = this.nodes["root"]
+		if (!root) return 0
+		let depth = 1
+		let node = root
+		while (!node.leaf) {
+			depth += 1
+			const nextNode = this.nodes[node.values[0].value]
+			if (!nextNode) throw new Error("Broken.")
+			node = nextNode
+		}
+		return depth
 	}
 }
 
@@ -243,10 +209,13 @@ function binarySearch<T>(
 	return { closest: min }
 }
 
-function compare<K extends string | number | boolean | Date>(
-	a: K,
-	b: K
+function compare(
+	a: string | number | null,
+	b: string | number | null
 ): -1 | 0 | 1 {
+	if (a === b) return 0
+	if (a === null) return -1
+	if (b === null) return 1
 	if (a > b) {
 		return 1
 	}
