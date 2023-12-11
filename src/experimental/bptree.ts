@@ -6,15 +6,13 @@ Even though we have an OrderedKeyValueDatabase, let's build a B+ tree on top of 
 so that we can later extend it to an interval tree and a range tree.
 
 TODO:
-- add plenty more comments.
-- assert.
-- what to do about duplicate keys.
+- assert for more efficient runtime checks.
+	write a typescript function called assert(x) that throws an error if x is nullable with a type assertion as well that narrows the type
 - some basic performance analysis and comparison.
 -> interval tree!
 
 LATER:
 - batch insert.
--
 
 */
 
@@ -44,8 +42,8 @@ export class BinaryPlusTree {
 	/**
 	 * minSize must be less than maxSize / 2.
 	 */
-	constructor(private minSize: number, private maxSize: number) {
-		// if (minSize > maxSize / 2) throw new Error("Invalid tree size.")
+	constructor(public minSize: number, public maxSize: number) {
+		if (minSize > maxSize / 2) throw new Error("Invalid tree size.")
 	}
 
 	get = (key: Key): any | undefined => {

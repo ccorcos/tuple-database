@@ -1,144 +1,10 @@
 import { strict as assert } from "assert"
+import { cloneDeep } from "lodash"
 import { describe, it } from "mocha"
 import { BinaryPlusTree } from "./bptree"
 
-type Key = string | number
-type KeyTree =
-	| { keys: Key[]; children?: undefined }
-	| { keys: Key[]; children: KeyTree[] }
-
-function toKeyTree(tree: BinaryPlusTree, id = "root"): KeyTree {
-	const node = tree.nodes[id]
-	if (!node) throw new Error("Missing node!")
-
-	const keys = node.values.map((v) => v.key)
-	if (node.leaf) return { keys: keys }
-
-	const subtrees = node.values.map((v) => toKeyTree(tree, v.value))
-	return { keys: keys, children: subtrees }
-}
-
-type TreeLayer = Key[][]
-
-function toTreeLayers(tree: KeyTree): TreeLayer[] {
-	const layers: TreeLayer[] = []
-
-	let cursor = [tree]
-	while (cursor.length > 0) {
-		const layer: TreeLayer = []
-		const nextCursor: KeyTree[] = []
-		for (const tree of cursor) {
-			layer.push(tree.keys)
-			if (tree.children) nextCursor.push(...tree.children)
-		}
-		layers.push(layer)
-		cursor = nextCursor
-	}
-	return layers
-}
-
-function print(x: any) {
-	if (x === null) return "null"
-	if (typeof x === "number") return x.toString()
-	if (typeof x === "string") return JSON.stringify(x)
-	if (Array.isArray(x)) return "[" + x.map(print).join(",") + "]"
-	return ""
-}
-
-function inspect(tree: BinaryPlusTree) {
-	const keyTree = toKeyTree(tree)
-	const layers = toTreeLayers(keyTree)
-	const str = layers
-		.map((layer) =>
-			layer.length === 1 ? print(layer[0]) : layer.map(print).join(" ")
-		)
-		.join("\n")
-	return str
-}
-
-function parseTests(str: string) {
-	// Cleanup extra whitespace
-	str = str
-		.split("\n")
-		.map((line) => line.trim())
-		.join("\n")
-		.trim()
-
-	return str.split("\n\n").map((block) => {
-		const lines = block.split("\n")
-		let comment = ""
-		if (lines[0].startsWith("//")) {
-			comment = lines[0].slice(3)
-			lines.splice(0, 1)
-		}
-		const [op, nStr] = lines[0].split(" ")
-		const n = parseInt(nStr)
-		const tree = lines.slice(1).join("\n")
-		return { comment, n, tree, op: op as "+" | "-" }
-	})
-}
-
-const originalTests = `
-+ 5
-[5]
-
-+ 10
-[5,10]
-
-+ 3
-[3,5,10]
-
-// First split
-+ 6
-[null,6]
-[3,5] [6,10]
-
-+ 14
-[null,6]
-[3,5] [6,10,14]
-
-// Second split
-+ 24
-[null,6,14]
-[3,5] [6,10] [14,24]
-
-+ 20
-[null,6,14]
-[3,5] [6,10] [14,20,24]
-
-// Double split
-+ 22
-[null,14]
-[null,6] [14,22]
-[3,5] [6,10] [14,20] [22,24]
-
-+ 12
-[null,14]
-[null,6] [14,22]
-[3,5] [6,10,12] [14,20] [22,24]
-
-// Split
-+ 11
-[null,14]
-[null,6,11] [14,22]
-[3,5] [6,10] [11,12] [14,20] [22,24]
-
-+ 2
-[null,14]
-[null,6,11] [14,22]
-[2,3,5] [6,10] [11,12] [14,20] [22,24]
-
-+ 13
-[null,14]
-[null,6,11] [14,22]
-[2,3,5] [6,10] [11,12,13] [14,20] [22,24]
-`
-
-// Advisable that min <= max.
-// Then we never have to "resplit".
-// min = 2 // min >=2
-// max = 4 // max >= min*2
-const testsWithDelete = `
+// min = 2, max = 4
+const structuralTests = `
 + 5
 [5]
 
@@ -302,46 +168,183 @@ const testsWithDelete = `
 `
 
 describe("BinaryPlusTree", () => {
-	it("inserts", () => {
-		const tree = new BinaryPlusTree(2, 3)
-		for (const test of parseTests(originalTests)) {
-			if (test.op === "+") tree.set(test.n, test.n)
-			if (test.op === "-") tree.delete(test.n)
-			assert.equal(inspect(tree), test.tree, test.comment)
-		}
-
-		assert.equal(tree.depth(), 3)
-	})
-
-	// TODO: duplicate keys
-	it("set and get", () => {
-		const tree = new BinaryPlusTree(2, 3)
-		const numbers: number[] = []
-		for (let i = 0; i < 100; i++) numbers.push(Math.round(Math.random() * 1000))
-		for (const n of numbers) tree.set(n, n)
-		for (const n of numbers) assert.equal(tree.get(n), n)
-		// console.log(inspect(tree))
-	})
-
-	it("big tree", function () {
-		this.timeout(10_000)
-		const tree = new BinaryPlusTree(2, 10)
-		const numbers: number[] = []
-		const size = 10_000
-		for (let i = 0; i < size; i++)
-			numbers.push(Math.round(Math.random() * size * 10))
-		for (const n of numbers) tree.set(n, n)
-		for (const n of numbers) assert.equal(tree.get(n), n)
-		const expectedSize = Math.round(Math.log(size) / Math.log(10))
-		assert.ok(tree.depth() - expectedSize <= 1)
-	})
-
-	it("tests with delete", () => {
+	it("structural tests", () => {
 		const tree = new BinaryPlusTree(2, 4)
-		for (const test of parseTests(testsWithDelete)) {
-			if (test.op === "+") tree.set(test.n, null)
-			if (test.op === "-") tree.delete(test.n)
-			assert.equal(inspect(tree), test.tree, test.comment)
+		test(tree, structuralTests)
+	})
+
+	it("property testing", () => {
+		const size = 1000
+		const numbers = randomNumbers(size)
+
+		const tree = new BinaryPlusTree(3, 6)
+		for (let i = 0; i < size; i++) {
+			const n = numbers[i]
+			tree.set(n, n.toString())
+			verify(tree)
+
+			// Get works on every key so far.
+			for (let j = 0; j <= i; j++) {
+				const x = numbers[j]
+				assert.equal(tree.get(x), x.toString())
+			}
+
+			// Overwrite the jth key.
+			for (let j = 0; j <= i; j++) {
+				const t = clone(tree)
+				const x = numbers[j]
+				t.set(x, x * 2)
+				verify(t)
+
+				// Check get on all keys.
+				for (let k = 0; k <= i; k++) {
+					const y = numbers[k]
+					if (x === y) assert.equal(t.get(y), y * 2)
+					else assert.equal(t.get(y), y.toString())
+				}
+			}
+
+			// Delete the jth key.
+			for (let j = 0; j <= i; j++) {
+				const t = clone(tree)
+				const x = numbers[j]
+				t.delete(x)
+				try {
+					verify(t)
+				} catch (error) {
+					console.log("BEFORE", inspect(tree))
+					console.log("DELETE", x)
+					console.log("AFTER", inspect(t))
+					throw error
+				}
+
+				// Check get on all keys.
+				for (let k = 0; k <= i; k++) {
+					const y = numbers[k]
+					if (x === y) assert.equal(t.get(y), undefined)
+					else assert.equal(t.get(y), y.toString())
+				}
+			}
 		}
 	})
 })
+
+function randomNumbers(size: number) {
+	const numbers: number[] = []
+	for (let i = 0; i < size; i++)
+		numbers.push(Math.round(Math.random() * size * 10))
+	return numbers
+}
+
+function parseTests(str: string) {
+	// Cleanup extra whitespace
+	str = str
+		.split("\n")
+		.map((line) => line.trim())
+		.join("\n")
+		.trim()
+
+	return str.split("\n\n").map((block) => {
+		const lines = block.split("\n")
+		let comment = ""
+		if (lines[0].startsWith("//")) {
+			comment = lines[0].slice(3)
+			lines.splice(0, 1)
+		}
+		const [op, nStr] = lines[0].split(" ")
+		const n = parseInt(nStr)
+		const tree = lines.slice(1).join("\n")
+		return { comment, n, tree, op: op as "+" | "-" }
+	})
+}
+
+function test(tree: BinaryPlusTree, str: string) {
+	for (const test of parseTests(structuralTests)) {
+		if (test.op === "+") tree.set(test.n, test.n.toString())
+		if (test.op === "-") tree.delete(test.n)
+		assert.equal(inspect(tree), test.tree, test.comment)
+
+		const value = test.op === "+" ? test.n.toString() : undefined
+		assert.equal(tree.get(test.n), value, test.comment)
+
+		assert.equal(tree.depth(), test.tree.split("\n").length, test.comment)
+	}
+}
+
+type Key = string | number
+type KeyTree =
+	| { keys: Key[]; children?: undefined }
+	| { keys: Key[]; children: KeyTree[] }
+
+function toKeyTree(tree: BinaryPlusTree, id = "root"): KeyTree {
+	const node = tree.nodes[id]
+	if (!node) throw new Error("Missing node!")
+
+	const keys = node.values.map((v) => v.key)
+	if (node.leaf) return { keys: keys }
+
+	const subtrees = node.values.map((v) => toKeyTree(tree, v.value))
+	return { keys: keys, children: subtrees }
+}
+
+type TreeLayer = Key[][]
+
+function toTreeLayers(tree: KeyTree): TreeLayer[] {
+	const layers: TreeLayer[] = []
+
+	let cursor = [tree]
+	while (cursor.length > 0) {
+		const layer: TreeLayer = []
+		const nextCursor: KeyTree[] = []
+		for (const tree of cursor) {
+			layer.push(tree.keys)
+			if (tree.children) nextCursor.push(...tree.children)
+		}
+		layers.push(layer)
+		cursor = nextCursor
+	}
+	return layers
+}
+
+function print(x: any) {
+	if (x === null) return "null"
+	if (typeof x === "number") return x.toString()
+	if (typeof x === "string") return JSON.stringify(x)
+	if (Array.isArray(x)) return "[" + x.map(print).join(",") + "]"
+	return ""
+}
+
+function inspect(tree: BinaryPlusTree) {
+	const keyTree = toKeyTree(tree)
+	const layers = toTreeLayers(keyTree)
+	const str = layers
+		.map((layer) =>
+			layer.length === 1 ? print(layer[0]) : layer.map(print).join(" ")
+		)
+		.join("\n")
+	return str
+}
+
+function clone(tree: BinaryPlusTree) {
+	const cloned = new BinaryPlusTree(tree.minSize, tree.maxSize)
+	cloned.nodes = cloneDeep(tree.nodes)
+	return cloned
+}
+
+/** Check for node sizes. */
+function verify(tree: BinaryPlusTree, id = "root") {
+	const node = tree.nodes[id]
+	if (id === "root") {
+		if (!node) return
+		if (node.leaf) return
+		for (const { value } of node.values) verify(tree, value)
+		return
+	}
+
+	assert.ok(node)
+	assert.ok(node.values.length >= tree.minSize)
+	assert.ok(node.values.length <= tree.maxSize, inspect(tree))
+
+	if (node.leaf) return
+	for (const { value } of node.values) verify(tree, value)
+}
