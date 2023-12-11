@@ -6,8 +6,8 @@ Even though we have an OrderedKeyValueDatabase, let's build a B+ tree on top of 
 so that we can later extend it to an interval tree and a range tree.
 
 TODO:
-- delete keys and compact.
 - add plenty more comments.
+- assert.
 - what to do about duplicate keys.
 - some basic performance analysis and comparison.
 -> interval tree!
@@ -20,10 +20,14 @@ LATER:
 
 type Key = string | number
 
+/**
+ * id references the node in a key-value database.
+ * Each item in values has a `key` that is the minKey of the child node with id `value`.
+ * The key will be null for the left-most branch nodes.
+ */
 export type BranchNode = {
 	leaf?: false
 	id: string
-	// nodes: { minKey: Key; id: string }[]
 	values: { key: Key | null; value: string }[]
 }
 
@@ -34,13 +38,19 @@ export type LeafNode = {
 }
 
 export class BinaryPlusTree {
+	// In preparation for storing nodes in a key-value database.
 	nodes: { [key: Key]: BranchNode | LeafNode | undefined } = {}
 
-	constructor(private minSize: number, private maxSize: number) {}
+	/**
+	 * minSize must be less than maxSize / 2.
+	 */
+	constructor(private minSize: number, private maxSize: number) {
+		// if (minSize > maxSize / 2) throw new Error("Invalid tree size.")
+	}
 
 	get = (key: Key): any | undefined => {
 		const root = this.nodes["root"]
-		if (!root) return
+		if (!root) return // Empty tree
 
 		let node = root
 		while (true) {
@@ -51,6 +61,8 @@ export class BinaryPlusTree {
 			}
 
 			const result = binarySearch(node.values, (x) => compare(x.key, key))
+
+			// If we find the key in a branch node, recur into that child.
 			if (result.found !== undefined) {
 				const childId = node.values[result.found].value
 				const child = this.nodes[childId]
@@ -59,9 +71,10 @@ export class BinaryPlusTree {
 				continue
 			}
 
-			// Closest node that is greater than the key.
-			// Left-most node key is always null so closest should never be 0.
+			// Closest key that is at least as big as the key...
+			// So the closest should never be less than the minKey.
 			if (result.closest === 0) throw new Error("Broken.")
+			// And we should recurd into the `closest-1` child
 			const childId = node.values[result.closest - 1].value
 			const child = this.nodes[childId]
 			if (!child) throw Error("Missing child node.")
@@ -89,7 +102,11 @@ export class BinaryPlusTree {
 			const node = nodePath[0]
 
 			if (node.leaf) {
-				insert({ key, value }, node.values, (x) => compare(x.key, key))
+				const existing = insert({ key, value }, node.values, (x) =>
+					compare(x.key, key)
+				)
+				// No need to rebalance if we're replacing
+				if (existing) return
 				break
 			}
 
@@ -99,11 +116,12 @@ export class BinaryPlusTree {
 			const childId = node.values[index].value
 			const child = this.nodes[childId]
 			if (!child) throw Error("Missing child node.")
+			// Recur into child.
 			nodePath.unshift(child)
 			indexPath.unshift(index)
 		}
 
-		// Balance the tree, starting from the leaf.
+		// Balance the tree by splitting nodes, starting from the leaf.
 		let node = nodePath.shift()
 		while (node) {
 			const size = node.values.length
@@ -152,58 +170,6 @@ export class BinaryPlusTree {
 		}
 	}
 
-	// If its too small, then merge with left or right.
-	// NOPE: If its too big, then re-split.
-	// Remove from parent values
-	// If the parent only has one item, then delete the parent
-
-	private merge(nodePath: (BranchNode | LeafNode)[], indexPath: number[]) {
-		// [null,6]
-		// [3,5] [6,10]
-		// 6 -
-		// [3,5,10]
-
-		// [null,14]
-		// [null,6] [14,22]
-		// [3,5] [6,10] [14,20] [22,24]
-		// 6 -
-		// [null,14,22]
-		// [3,5,10] [14,20] [22,24]
-
-		let child = nodePath.shift()!
-
-		while (child.values.length < this.minSize) {
-			if (child.id === "root") {
-				if (child.leaf) return
-			}
-
-			const parentIndex = indexPath.shift()
-			const parent = nodePath.shift()
-			if (!parent) throw new Error("Broken.")
-			if (parentIndex === undefined) throw new Error("Broken.")
-
-			if (parentIndex === 0) {
-				const rightSibling = this.nodes[parent.values[parentIndex + 1].value]
-				if (!rightSibling) throw new Error("Broken.")
-				rightSibling.values.unshift(...child.values)
-				// No need to update minKey because it should be null.
-				// Update parent pointers.
-				parent.values[0].value = rightSibling.id
-				parent.values.splice(1, 1)
-			} else {
-				const leftSibling = this.nodes[parent.values[parentIndex - 1].value]
-				if (!leftSibling) throw new Error("Broken.")
-				leftSibling.values.push(...child.values)
-				// No need to update minKey because we added to the right.
-				// Update parent pointers.
-				parent.values.splice(parentIndex, 1)
-			}
-
-			if (parent.values.length < this.minSize) {
-			}
-		}
-	}
-
 	delete = (key: Key) => {
 		const root = this.nodes["root"]
 		if (!root) return
@@ -226,14 +192,16 @@ export class BinaryPlusTree {
 			const childId = node.values[index].value
 			const child = this.nodes[childId]
 			if (!child) throw Error("Missing child node.")
+			// Recur into the child.
 			nodePath.unshift(child)
 			indexPath.unshift(index)
 		}
 
-		// Balance the tree, starting from the leaf.
 		/*
 
-		Example:
+		Step-by-step explanation of the more complicated case.
+
+		Imagine a tree with minSize = 2, maxSize = 4.
 
 		[null,10]
 		[null,5] [10,15]
@@ -245,25 +213,13 @@ export class BinaryPlusTree {
 		[null,5] [10,15]
 		[2,4] [5,7] [11] [15,24]
 
-		Update the parent minKey
-
-		[null,10]
-		[null,5] [11,15]
-		[2,4] [5,7] [11] [15,24]
-
-		Loop: Merge
-
-		[null,10]
-		[null,5] [11,15]
-		[2,4] [5,7] [11,15,24]
-
-		Remove parent key
+		Loop: Merge and update parent pointers.
 
 		[null,10]
 		[null,5] [11]
 		[2,4] [5,7] [11,15,24]
 
-		Recurse into parent -> Merge,etc.
+		Recurse into parent.
 
 		[null]
 		[null,5,11]
@@ -271,12 +227,18 @@ export class BinaryPlusTree {
 
 		Replace the root with child if there is only one key
 
+		[null,5,11]
+		[2,4] [5,7] [11,15,24]
+
 		*/
 
 		let node = nodePath.shift()
 		while (node) {
 			if (node.id === "root") {
+				// A root leaf node has no minSize constaint.
 				if (node.leaf) return
+
+				// If node with only one child becomes its child.
 				if (node.values.length === 1) {
 					const newRoot = this.nodes[node.values[0].value]
 					if (!newRoot) throw new Error("Broken.")
@@ -290,15 +252,13 @@ export class BinaryPlusTree {
 			if (!parent) throw new Error("Broken.")
 			if (parentIndex === undefined) throw new Error("Broken.")
 
-			// Update the minKey in the parent.
 			if (node.values.length >= this.minSize) {
+				// No need to merge but we might need to update the minKey in the parent
 				const parentItem = parent.values[parentIndex]
 				// No need to recusively update the left-most branch.
 				if (parentItem.key === null) return
-
 				// No need to recursively update if the minKey didn't change.
 				if (parentItem.key === node.values[0].key) return
-
 				// Set the minKey and recur
 				parentItem.key = node.values[0].key
 				node = parent
@@ -398,25 +358,10 @@ function insert<T>(
 	const result = binarySearch(list, (item) => compare(item, value))
 	if (result.found !== undefined) {
 		// Replace the whole item.
-		list.splice(result.found, 1, value)
+		return list.splice(result.found, 1, value)
 	} else {
 		// Insert at missing index.
 		list.splice(result.closest, 0, value)
-	}
-}
-
-function replace<T>(
-	list: Array<T>,
-	compare: (a: T) => -1 | 0 | 1,
-	update: (existing?: T) => T
-) {
-	const result = binarySearch(list, compare)
-	if (result.found !== undefined) {
-		// Replace the whole item.
-		list.splice(result.found, 1, update(list[result.found]))
-	} else {
-		// Insert at missing index.
-		list.splice(result.closest, 0, update())
 	}
 }
 

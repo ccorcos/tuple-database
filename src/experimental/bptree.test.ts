@@ -305,10 +305,11 @@ describe("BinaryPlusTree", () => {
 	it("inserts", () => {
 		const tree = new BinaryPlusTree(2, 3)
 		for (const test of parseTests(originalTests)) {
-			if (test.op === "+") tree.set(test.n, null)
+			if (test.op === "+") tree.set(test.n, test.n)
 			if (test.op === "-") tree.delete(test.n)
 			assert.equal(inspect(tree), test.tree, test.comment)
 		}
+
 		assert.equal(tree.depth(), 3)
 	})
 
