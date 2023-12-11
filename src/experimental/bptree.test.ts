@@ -4,7 +4,7 @@ import { describe, it } from "mocha"
 import { BinaryPlusTree } from "./bptree"
 
 // min = 2, max = 4
-const structuralTests = `
+const structuralTests24 = `
 + 5
 [5]
 
@@ -165,68 +165,135 @@ const structuralTests = `
 - 2
 [null,10,15]
 [4,5,6,7] [10,11,12] [15,23,24]
+
+- 15
+[null,10,23]
+[4,5,6,7] [10,11,12] [23,24]
+
++ 20
+[null,10,23]
+[4,5,6,7] [10,11,12,20] [23,24]
+
+// Redistribute right
+- 24
+[null,10,20]
+[4,5,6,7] [10,11,12] [20,23]
+
++ 13
+[null,10,20]
+[4,5,6,7] [10,11,12,13] [20,23]
+
+- 4
+[null,10,20]
+[5,6,7] [10,11,12,13] [20,23]
+
+- 5
+[null,10,20]
+[6,7] [10,11,12,13] [20,23]
+
+// Redistribute left
+- 6
+[null,12,20]
+[7,10,11] [12,13] [20,23]
+
 `
 
 describe("BinaryPlusTree", () => {
-	it("structural tests", () => {
+	describe("structural tests 2-4", () => {
 		const tree = new BinaryPlusTree(2, 4)
-		test(tree, structuralTests)
+		test(tree, structuralTests24)
 	})
 
-	it("property testing", () => {
-		const size = 1000
+	describe("property test 2-4 * 100", () => {
+		propertyTest({ minSize: 2, maxSize: 4, testSize: 100 })
+	})
+
+	describe("property test 3-6 * 100", () => {
+		propertyTest({ minSize: 3, maxSize: 6, testSize: 100 })
+	})
+
+	it("big tree", () => {
+		const numbers = randomNumbers(20_000)
+		const tree = new BinaryPlusTree(3, 9)
+		for (const number of numbers) {
+			tree.set(number, number * 2)
+			assert.equal(tree.get(number), number * 2)
+		}
+		for (const number of numbers) {
+			tree.delete(number)
+			assert.equal(tree.get(number), undefined)
+		}
+		assert.equal(tree.depth(), 1)
+	})
+
+	function propertyTest(args: {
+		minSize: number
+		maxSize: number
+		testSize: number
+	}) {
+		const size = args.testSize
 		const numbers = randomNumbers(size)
 
-		const tree = new BinaryPlusTree(3, 6)
+		const tree = new BinaryPlusTree(args.minSize, args.maxSize)
 		for (let i = 0; i < size; i++) {
 			const n = numbers[i]
-			tree.set(n, n.toString())
-			verify(tree)
+			it(`Set ${i} : ${n}`, () => {
+				// it(`+ ${n}`, () => {
+				tree.set(n, n.toString())
+				verify(tree)
 
-			// Get works on every key so far.
-			for (let j = 0; j <= i; j++) {
-				const x = numbers[j]
-				assert.equal(tree.get(x), x.toString())
-			}
-
-			// Overwrite the jth key.
-			for (let j = 0; j <= i; j++) {
-				const t = clone(tree)
-				const x = numbers[j]
-				t.set(x, x * 2)
-				verify(t)
-
-				// Check get on all keys.
-				for (let k = 0; k <= i; k++) {
-					const y = numbers[k]
-					if (x === y) assert.equal(t.get(y), y * 2)
-					else assert.equal(t.get(y), y.toString())
+				// Get works on every key so far.
+				for (let j = 0; j <= i; j++) {
+					const x = numbers[j]
+					assert.equal(tree.get(x), x.toString())
 				}
-			}
+				// })
 
-			// Delete the jth key.
-			for (let j = 0; j <= i; j++) {
-				const t = clone(tree)
-				const x = numbers[j]
-				t.delete(x)
-				try {
+				// Overwrite the jth key.
+				for (let j = 0; j <= i; j++) {
+					const x = numbers[j]
+
+					// it(`Overwrite ${j}: ${x}`, () => {
+					const t = clone(tree)
+					t.set(x, x * 2)
 					verify(t)
-				} catch (error) {
-					console.log("BEFORE", inspect(tree))
-					console.log("DELETE", x)
-					console.log("AFTER", inspect(t))
-					throw error
+
+					// Check get on all keys.
+					for (let k = 0; k <= i; k++) {
+						const y = numbers[k]
+						if (x === y) assert.equal(t.get(y), y * 2)
+						else assert.equal(t.get(y), y.toString())
+					}
+					// })
 				}
 
-				// Check get on all keys.
-				for (let k = 0; k <= i; k++) {
-					const y = numbers[k]
-					if (x === y) assert.equal(t.get(y), undefined)
-					else assert.equal(t.get(y), y.toString())
+				// Delete the jth key.
+				for (let j = 0; j <= i; j++) {
+					const x = numbers[j]
+
+					// it(`Delete ${j} : ${x}`, () => {
+					const t = clone(tree)
+					t.delete(x)
+					try {
+						verify(t)
+					} catch (error) {
+						console.log("BEFORE", inspect(tree))
+						console.log("DELETE", x)
+						console.log("AFTER", inspect(t))
+						throw error
+					}
+
+					// Check get on all keys.
+					for (let k = 0; k <= i; k++) {
+						const y = numbers[k]
+						if (x === y) assert.equal(t.get(y), undefined)
+						else assert.equal(t.get(y), y.toString())
+					}
+					// })
 				}
-			}
+			})
 		}
-	})
+	}
 })
 
 function randomNumbers(size: number) {
@@ -259,15 +326,19 @@ function parseTests(str: string) {
 }
 
 function test(tree: BinaryPlusTree, str: string) {
-	for (const test of parseTests(structuralTests)) {
-		if (test.op === "+") tree.set(test.n, test.n.toString())
-		if (test.op === "-") tree.delete(test.n)
-		assert.equal(inspect(tree), test.tree, test.comment)
+	for (const test of parseTests(structuralTests24)) {
+		let label = `${test.op} ${test.n}`
+		if (test.comment) label += " // " + test.comment
+		it(label, () => {
+			if (test.op === "+") tree.set(test.n, test.n.toString())
+			if (test.op === "-") tree.delete(test.n)
+			assert.equal(inspect(tree), test.tree, test.comment)
 
-		const value = test.op === "+" ? test.n.toString() : undefined
-		assert.equal(tree.get(test.n), value, test.comment)
+			const value = test.op === "+" ? test.n.toString() : undefined
+			assert.equal(tree.get(test.n), value, test.comment)
 
-		assert.equal(tree.depth(), test.tree.split("\n").length, test.comment)
+			assert.equal(tree.depth(), test.tree.split("\n").length, test.comment)
+		})
 	}
 }
 

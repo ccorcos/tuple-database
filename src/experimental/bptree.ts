@@ -263,28 +263,59 @@ export class BinaryPlusTree {
 				continue
 			}
 
-			// Merge
+			// Merge or redistribute
 			if (parentIndex === 0) {
 				const rightSibling = this.nodes[parent.values[parentIndex + 1].value]
 				if (!rightSibling) throw new Error("Broken.")
-				rightSibling.values.unshift(...node.values)
 
-				// Remove the old pointer to rightSibling
-				parent.values.splice(1, 1)
+				const combinedSize = node.values.length + rightSibling.values.length
+				if (combinedSize > this.maxSize) {
+					// Redistribute
+					const splitIndex = Math.round(combinedSize / 2) - node.values.length
+					const moveLeft = rightSibling.values.splice(0, splitIndex)
+					node.values.push(...moveLeft)
 
-				// Replace the node pointer with the new rightSibling
-				const leftMost = parent.values[0].key === null
-				parent.values[0] = {
-					key: leftMost ? null : rightSibling.values[0].key,
-					value: rightSibling.id,
+					// Update parent keys.
+					if (parent.values[parentIndex].key !== null) {
+						parent.values[parentIndex].key = node.values[0].key
+					}
+					parent.values[parentIndex + 1].key = rightSibling.values[0].key
+				} else {
+					// Merge
+					rightSibling.values.unshift(...node.values)
+
+					// Remove the old pointer to rightSibling
+					parent.values.splice(1, 1)
+
+					// Replace the node pointer with the new rightSibling
+					const leftMost = parent.values[0].key === null
+					parent.values[0] = {
+						key: leftMost ? null : rightSibling.values[0].key,
+						value: rightSibling.id,
+					}
 				}
 			} else {
 				const leftSibling = this.nodes[parent.values[parentIndex - 1].value]
 				if (!leftSibling) throw new Error("Broken.")
-				leftSibling.values.push(...node.values)
-				// No need to update minKey because we added to the right.
-				// Just need to delete the old node.
-				parent.values.splice(parentIndex, 1)
+
+				const combinedSize = leftSibling.values.length + node.values.length
+				if (combinedSize > this.maxSize) {
+					// Redistribute
+					const splitIndex = Math.round(combinedSize / 2)
+
+					const moveRight = leftSibling.values.splice(splitIndex, this.maxSize)
+					node.values.unshift(...moveRight)
+
+					// Update parent keys.
+					parent.values[parentIndex].key = node.values[0].key
+				} else {
+					// Merge
+
+					leftSibling.values.push(...node.values)
+					// No need to update minKey because we added to the right.
+					// Just need to delete the old node.
+					parent.values.splice(parentIndex, 1)
+				}
 			}
 
 			// Recur
