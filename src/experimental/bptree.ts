@@ -7,9 +7,14 @@ so that we can later extend it to an interval tree and a range tree.
 
 TODO:
 - delete keys and compact.
+- add plenty more comments.
 - what to do about duplicate keys.
 - some basic performance analysis and comparison.
 -> interval tree!
+
+LATER:
+- batch insert.
+-
 
 */
 
@@ -102,52 +107,231 @@ export class BinaryPlusTree {
 		let node = nodePath.shift()
 		while (node) {
 			const size = node.values.length
+			if (size <= this.maxSize) break
 
-			if (size > this.maxSize) {
-				const splitIndex = Math.round(size / 2)
-				const rightNode: LeafNode | BranchNode = {
+			const splitIndex = Math.round(size / 2)
+			const rightNode: LeafNode | BranchNode = {
+				id: randomId(),
+				leaf: node.leaf,
+				values: node.values.splice(splitIndex),
+			}
+			this.nodes[rightNode.id] = rightNode
+			const rightMinKey = rightNode.values[0].key
+
+			// If we're splitting the root node.
+			if (node.id === "root") {
+				const leftNode: LeafNode | BranchNode = {
 					id: randomId(),
 					leaf: node.leaf,
-					values: node.values.splice(splitIndex),
+					values: node.values,
 				}
-				this.nodes[rightNode.id] = rightNode
-				const rightMinKey = rightNode.values[0].key
+				this.nodes[leftNode.id] = leftNode
 
-				// If we're splitting the root node.
-				if (node.id === "root") {
-					const leftNode: LeafNode | BranchNode = {
-						id: randomId(),
-						leaf: node.leaf,
-						values: node.values,
-					}
-					this.nodes[leftNode.id] = leftNode
-
-					this.nodes["root"] = {
-						id: "root",
-						values: [
-							{ key: null, value: leftNode.id },
-							{ key: rightMinKey, value: rightNode.id },
-						],
-					}
-					break
+				this.nodes["root"] = {
+					id: "root",
+					values: [
+						{ key: null, value: leftNode.id },
+						{ key: rightMinKey, value: rightNode.id },
+					],
 				}
+				break
+			}
 
-				// Insert right node into parent.
-				const parent = nodePath.shift()
-				const parentIndex = indexPath.shift()
-				if (!parent) throw new Error("Broken.")
-				if (parentIndex === undefined) throw new Error("Broken.")
-				parent.values.splice(parentIndex + 1, 0, {
-					key: rightMinKey,
-					value: rightNode.id,
-				})
+			// Insert right node into parent.
+			const parent = nodePath.shift()
+			const parentIndex = indexPath.shift()
+			if (!parent) throw new Error("Broken.")
+			if (parentIndex === undefined) throw new Error("Broken.")
+			parent.values.splice(parentIndex + 1, 0, {
+				key: rightMinKey,
+				value: rightNode.id,
+			})
 
-				// Recur
+			// Recur
+			node = parent
+		}
+	}
+
+	// If its too small, then merge with left or right.
+	// NOPE: If its too big, then re-split.
+	// Remove from parent values
+	// If the parent only has one item, then delete the parent
+
+	private merge(nodePath: (BranchNode | LeafNode)[], indexPath: number[]) {
+		// [null,6]
+		// [3,5] [6,10]
+		// 6 -
+		// [3,5,10]
+
+		// [null,14]
+		// [null,6] [14,22]
+		// [3,5] [6,10] [14,20] [22,24]
+		// 6 -
+		// [null,14,22]
+		// [3,5,10] [14,20] [22,24]
+
+		let child = nodePath.shift()!
+
+		while (child.values.length < this.minSize) {
+			if (child.id === "root") {
+				if (child.leaf) return
+			}
+
+			const parentIndex = indexPath.shift()
+			const parent = nodePath.shift()
+			if (!parent) throw new Error("Broken.")
+			if (parentIndex === undefined) throw new Error("Broken.")
+
+			if (parentIndex === 0) {
+				const rightSibling = this.nodes[parent.values[parentIndex + 1].value]
+				if (!rightSibling) throw new Error("Broken.")
+				rightSibling.values.unshift(...child.values)
+				// No need to update minKey because it should be null.
+				// Update parent pointers.
+				parent.values[0].value = rightSibling.id
+				parent.values.splice(1, 1)
+			} else {
+				const leftSibling = this.nodes[parent.values[parentIndex - 1].value]
+				if (!leftSibling) throw new Error("Broken.")
+				leftSibling.values.push(...child.values)
+				// No need to update minKey because we added to the right.
+				// Update parent pointers.
+				parent.values.splice(parentIndex, 1)
+			}
+
+			if (parent.values.length < this.minSize) {
+			}
+		}
+	}
+
+	delete = (key: Key) => {
+		const root = this.nodes["root"]
+		if (!root) return
+
+		// Delete from leaf node.
+		const nodePath = [root]
+		const indexPath: number[] = []
+		while (true) {
+			const node = nodePath[0]
+
+			if (node.leaf) {
+				const exists = remove(node.values, (x) => compare(x.key, key))
+				if (!exists) return
+				break
+			}
+
+			const result = binarySearch(node.values, (x) => compare(x.key, key))
+			const index =
+				result.found !== undefined ? result.found : result.closest - 1
+			const childId = node.values[index].value
+			const child = this.nodes[childId]
+			if (!child) throw Error("Missing child node.")
+			nodePath.unshift(child)
+			indexPath.unshift(index)
+		}
+
+		// Balance the tree, starting from the leaf.
+		/*
+
+		Example:
+
+		[null,10]
+		[null,5] [10,15]
+		[2,4] [5,7] [10,11] [15,24]
+
+		Removing 10 from the leaf
+
+		[null,10]
+		[null,5] [10,15]
+		[2,4] [5,7] [11] [15,24]
+
+		Update the parent minKey
+
+		[null,10]
+		[null,5] [11,15]
+		[2,4] [5,7] [11] [15,24]
+
+		Loop: Merge
+
+		[null,10]
+		[null,5] [11,15]
+		[2,4] [5,7] [11,15,24]
+
+		Remove parent key
+
+		[null,10]
+		[null,5] [11]
+		[2,4] [5,7] [11,15,24]
+
+		Recurse into parent -> Merge,etc.
+
+		[null]
+		[null,5,11]
+		[2,4] [5,7] [11,15,24]
+
+		Replace the root with child if there is only one key
+
+		*/
+
+		let node = nodePath.shift()
+		while (node) {
+			if (node.id === "root") {
+				if (node.leaf) return
+				if (node.values.length === 1) {
+					const newRoot = this.nodes[node.values[0].value]
+					if (!newRoot) throw new Error("Broken.")
+					this.nodes["root"] = { ...newRoot, id: "root" }
+				}
+				return
+			}
+
+			const parent = nodePath.shift()
+			const parentIndex = indexPath.shift()
+			if (!parent) throw new Error("Broken.")
+			if (parentIndex === undefined) throw new Error("Broken.")
+
+			// Update the minKey in the parent.
+			if (node.values.length >= this.minSize) {
+				const parentItem = parent.values[parentIndex]
+				// No need to recusively update the left-most branch.
+				if (parentItem.key === null) return
+
+				// No need to recursively update if the minKey didn't change.
+				if (parentItem.key === node.values[0].key) return
+
+				// Set the minKey and recur
+				parentItem.key = node.values[0].key
 				node = parent
 				continue
 			}
 
-			break
+			// Merge
+			if (parentIndex === 0) {
+				const rightSibling = this.nodes[parent.values[parentIndex + 1].value]
+				if (!rightSibling) throw new Error("Broken.")
+				rightSibling.values.unshift(...node.values)
+
+				// Remove the old pointer to rightSibling
+				parent.values.splice(1, 1)
+
+				// Replace the node pointer with the new rightSibling
+				const leftMost = parent.values[0].key === null
+				parent.values[0] = {
+					key: leftMost ? null : rightSibling.values[0].key,
+					value: rightSibling.id,
+				}
+			} else {
+				const leftSibling = this.nodes[parent.values[parentIndex - 1].value]
+				if (!leftSibling) throw new Error("Broken.")
+				leftSibling.values.push(...node.values)
+				// No need to update minKey because we added to the right.
+				// Just need to delete the old node.
+				parent.values.splice(parentIndex, 1)
+			}
+
+			// Recur
+			node = parent
+			continue
 		}
 	}
 

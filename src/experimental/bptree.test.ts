@@ -71,74 +71,244 @@ function parseTests(str: string) {
 			comment = lines[0].slice(3)
 			lines.splice(0, 1)
 		}
-		const n = parseInt(lines[0].split(" ")[0])
+		const [op, nStr] = lines[0].split(" ")
+		const n = parseInt(nStr)
 		const tree = lines.slice(1).join("\n")
-		return { comment, n, tree }
+		return { comment, n, tree, op: op as "+" | "-" }
 	})
 }
+
+const originalTests = `
++ 5
+[5]
+
++ 10
+[5,10]
+
++ 3
+[3,5,10]
+
+// First split
++ 6
+[null,6]
+[3,5] [6,10]
+
++ 14
+[null,6]
+[3,5] [6,10,14]
+
+// Second split
++ 24
+[null,6,14]
+[3,5] [6,10] [14,24]
+
++ 20
+[null,6,14]
+[3,5] [6,10] [14,20,24]
+
+// Double split
++ 22
+[null,14]
+[null,6] [14,22]
+[3,5] [6,10] [14,20] [22,24]
+
++ 12
+[null,14]
+[null,6] [14,22]
+[3,5] [6,10,12] [14,20] [22,24]
+
+// Split
++ 11
+[null,14]
+[null,6,11] [14,22]
+[3,5] [6,10] [11,12] [14,20] [22,24]
+
++ 2
+[null,14]
+[null,6,11] [14,22]
+[2,3,5] [6,10] [11,12] [14,20] [22,24]
+
++ 13
+[null,14]
+[null,6,11] [14,22]
+[2,3,5] [6,10] [11,12,13] [14,20] [22,24]
+`
+
+// Advisable that min <= max.
+// Then we never have to "resplit".
+// min = 2 // min >=2
+// max = 4 // max >= min*2
+const testsWithDelete = `
++ 5
+[5]
+
++ 10
+[5,10]
+
++ 3
+[3,5,10]
+
+// Delete from root leaf
+- 5
+[3,10]
+
++ 5
+[3,5,10]
+
++ 7
+[3,5,7,10]
+
+// Split
++ 6
+[null,7]
+[3,5,6] [7,10]
+
+// Merge right branch
+- 7
+[3,5,6,10]
+
++ 7
+[null,7]
+[3,5,6] [7,10]
+
+- 6
+[null,7]
+[3,5] [7,10]
+
+// Merge left branch
+- 5
+[3,7,10]
+
++ 5
+[3,5,7,10]
+
++ 6
+[null,7]
+[3,5,6] [7,10]
+
++ 14
+[null,7]
+[3,5,6] [7,10,14]
+
++ 23
+[null,7]
+[3,5,6] [7,10,14,23]
+
++ 24
+[null,7,23]
+[3,5,6] [7,10,14] [23,24]
+
+// Merge right branch
+- 23
+[null,7]
+[3,5,6] [7,10,14,24]
+
++ 23
+[null,7,23]
+[3,5,6] [7,10,14] [23,24]
+
+// Update parent minKey
+- 7
+[null,10,23]
+[3,5,6] [10,14] [23,24]
+
+// Merge middle branch
+- 14
+[null,23]
+[3,5,6,10] [23,24]
+
++ 14
+[null,10,23]
+[3,5,6] [10,14] [23,24]
+
+- 3
+[null,10,23]
+[5,6] [10,14] [23,24]
+
+// Merge left branch
+- 6
+[null,23]
+[5,10,14] [23,24]
+
++ 3
+[null,23]
+[3,5,10,14] [23,24]
+
++ 6
+[null,10,23]
+[3,5,6] [10,14] [23,24]
+
++ 7
+[null,10,23]
+[3,5,6,7] [10,14] [23,24]
+
++ 8
+[null,7,10,23]
+[3,5,6] [7,8] [10,14] [23,24]
+
++ 11
+[null,7,10,23]
+[3,5,6] [7,8] [10,11,14] [23,24]
+
++ 12
+[null,7,10,23]
+[3,5,6] [7,8] [10,11,12,14] [23,24]
+
+// Double split
++ 13
+[null,13]
+[null,7,10] [13,23]
+[3,5,6] [7,8] [10,11,12] [13,14] [23,24]
+
++ 15
+[null,13]
+[null,7,10] [13,23]
+[3,5,6] [7,8] [10,11,12] [13,14,15] [23,24]
+
+// Double update minKey
+- 13
+[null,14]
+[null,7,10] [14,23]
+[3,5,6] [7,8] [10,11,12] [14,15] [23,24]
+
+// Double merge mid-right branch
+- 14
+[null,7,10,15]
+[3,5,6] [7,8] [10,11,12] [15,23,24]
+
++ 2
+[null,7,10,15]
+[2,3,5,6] [7,8] [10,11,12] [15,23,24]
+
++ 4
+[null,10]
+[null,5,7] [10,15]
+[2,3,4] [5,6] [7,8] [10,11,12] [15,23,24]
+
+- 8
+[null,10]
+[null,5] [10,15]
+[2,3,4] [5,6,7] [10,11,12] [15,23,24]
+
+- 3
+[null,10]
+[null,5] [10,15]
+[2,4] [5,6,7] [10,11,12] [15,23,24]
+
+// Double merge left branch
+- 2
+[null,10,15]
+[4,5,6,7] [10,11,12] [15,23,24]
+`
 
 describe("BinaryPlusTree", () => {
 	it("inserts", () => {
 		const tree = new BinaryPlusTree(2, 3)
-		for (const test of parseTests(`
-			5 ->
-			[5]
-
-			10 ->
-			[5,10]
-
-			3 ->
-			[3,5,10]
-
-			// First split
-			6 ->
-			[null,6]
-			[3,5] [6,10]
-
-			14 ->
-			[null,6]
-			[3,5] [6,10,14]
-
-			// Second split
-			24 ->
-			[null,6,14]
-			[3,5] [6,10] [14,24]
-
-			20 ->
-			[null,6,14]
-			[3,5] [6,10] [14,20,24]
-
-			// Double split
-			22 ->
-			[null,14]
-			[null,6] [14,22]
-			[3,5] [6,10] [14,20] [22,24]
-
-			12 ->
-			[null,14]
-			[null,6] [14,22]
-			[3,5] [6,10,12] [14,20] [22,24]
-
-			// Split
-			11 ->
-			[null,14]
-			[null,6,11] [14,22]
-			[3,5] [6,10] [11,12] [14,20] [22,24]
-
-			2 ->
-			[null,14]
-			[null,6,11] [14,22]
-			[2,3,5] [6,10] [11,12] [14,20] [22,24]
-
-			13 ->
-			[null,14]
-			[null,6,11] [14,22]
-			[2,3,5] [6,10] [11,12,13] [14,20] [22,24]
-			`)) {
-			tree.set(test.n, null)
+		for (const test of parseTests(originalTests)) {
+			if (test.op === "+") tree.set(test.n, null)
+			if (test.op === "-") tree.delete(test.n)
 			assert.equal(inspect(tree), test.tree, test.comment)
 		}
-
 		assert.equal(tree.depth(), 3)
 	})
 
@@ -163,5 +333,14 @@ describe("BinaryPlusTree", () => {
 		for (const n of numbers) assert.equal(tree.get(n), n)
 		const expectedSize = Math.round(Math.log(size) / Math.log(10))
 		assert.ok(tree.depth() - expectedSize <= 1)
+	})
+
+	it("tests with delete", () => {
+		const tree = new BinaryPlusTree(2, 4)
+		for (const test of parseTests(testsWithDelete)) {
+			if (test.op === "+") tree.set(test.n, null)
+			if (test.op === "-") tree.delete(test.n)
+			assert.equal(inspect(tree), test.tree, test.comment)
+		}
 	})
 })
