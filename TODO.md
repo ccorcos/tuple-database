@@ -4,7 +4,18 @@ History...
 - kv
 - okv
 - tuple-okv
+- bptree
 
+NEXT:
+- bptree-kv
+- bptree list
+-> interval tree!
+
+
+LATER:
+- assert for more efficient runtime checks.
+	write a typescript function called assert(x) that throws an error if x is nullable with a type assertion as well that narrows the type
+- batch insert.
 
 
 OK & OKV...

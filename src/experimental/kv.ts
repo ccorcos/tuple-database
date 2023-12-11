@@ -2,17 +2,20 @@ import { ulid } from "ulid"
 
 export class ConflictError extends Error {}
 
-export class KeyValueDatabase {
-	private map: { [key: string]: { value: any; version: string } } = {}
+export class KeyValueDatabase<V = any> {
+	private map: { [key: string]: { value: V | undefined; version: string } } = {}
 
-	get = (key: string): { value: any; version: string } | undefined => {
+	get = (
+		key: string
+	): { value: V | undefined; version: string | undefined } => {
 		const existing = this.map[key]
 		if (existing) return existing
+		else return { value: undefined, version: undefined }
 	}
 
 	write(tx: {
-		check?: { key: string; version: string }[]
-		set?: { key: string; value: any }[]
+		check?: { key: string; version: string | undefined }[]
+		set?: { key: string; value: V }[]
 		delete?: string[]
 		sum?: { key: string; value: number }[]
 		min?: { key: string; value: number }[]
@@ -29,7 +32,7 @@ export class KeyValueDatabase {
 
 		const replace = (key: string, update: (value?: any) => number) => {
 			const existing = this.map[key]
-			this.map[key] = { value: update(existing?.value), version }
+			this.map[key] = { value: update(existing?.value) as any, version }
 		}
 
 		for (const { key, value } of tx.sum || [])
