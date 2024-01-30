@@ -35,6 +35,23 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 		return results
 	}
 
+	async *iterate(args: ScanStorageArgs = {}): AsyncGenerator<KeyValuePair> {
+		const dbArgs: any = {}
+		if (args.gt !== undefined) dbArgs.gt = encodeTuple(args.gt)
+		if (args.gte !== undefined) dbArgs.gte = encodeTuple(args.gte)
+		if (args.lt !== undefined) dbArgs.lt = encodeTuple(args.lt)
+		if (args.lte !== undefined) dbArgs.lte = encodeTuple(args.lte)
+		if (args.limit !== undefined) dbArgs.limit = args.limit
+		if (args.reverse !== undefined) dbArgs.reverse = args.reverse
+
+		for await (const [key, value] of this.db.iterator(dbArgs)) {
+			yield {
+				key: decodeTuple(key),
+				value: decodeValue(value),
+			} as KeyValuePair
+		}
+	}
+
 	async commit(writes: WriteOps): Promise<void> {
 		const ops = [
 			...(writes.remove || []).map(
