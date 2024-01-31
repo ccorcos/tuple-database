@@ -70,3 +70,13 @@ export function scan(data: KeyValuePair[], args: ScanArgs<Tuple, any> = {}) {
 		compareTupleValuePair
 	)
 }
+
+export function iterate(data: KeyValuePair[], args: ScanArgs<Tuple, any> = {}) {
+	const { limit, reverse, ...rest } = args
+	const bounds = normalizeTupleValuePairBounds(rest)
+	return sortedList.iterate(
+		data,
+		{ limit, reverse, ...bounds },
+		compareTupleValuePair
+	)
+}

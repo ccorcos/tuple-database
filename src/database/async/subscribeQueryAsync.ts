@@ -56,6 +56,14 @@ export async function subscribeQueryAsync<S extends KeyValuePair, T>(
 			const results = await db.scan(args)
 			return results
 		},
+		iterate: (args: any, txId) => {
+			const destroy = db.subscribe(args, async (_writes, txId) =>
+				recomputeQueue.enqueue(() => recompute(txId))
+			)
+			listeners.add(destroy)
+
+			return db.iterate(args)
+		},
 		cancel: async (txId) => {
 			await db.cancel(txId)
 		},

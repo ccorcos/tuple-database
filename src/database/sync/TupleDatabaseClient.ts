@@ -14,6 +14,7 @@ import {
 	prependPrefixToTuple,
 	prependPrefixToWriteOps,
 	removePrefixFromTuple,
+	removePrefixFromTupleValuePair,
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWriteOps,
 } from "../../helpers/subspaceHelpers"
@@ -49,6 +50,19 @@ export class TupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		const pairs = this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
+	}
+
+	*iterate<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {},
+		txId?: TxId
+	): Identity<Generator<FilterTupleValuePairByPrefix<S, P>>> {
+		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
+		for (const pair of this.db.iterate(storageScanArgs, txId)) {
+			yield removePrefixFromTupleValuePair(
+				this.subspacePrefix,
+				pair
+			) as FilterTupleValuePairByPrefix<S, P>
+		}
 	}
 
 	subscribe<T extends S["key"], P extends TuplePrefix<T>>(

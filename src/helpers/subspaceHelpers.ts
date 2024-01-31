@@ -75,7 +75,7 @@ function removePrefixFromTuples(prefix: Tuple, tuples: Tuple[]) {
 	return tuples.map((tuple) => removePrefixFromTuple(prefix, tuple))
 }
 
-function removePrefixFromTupleValuePair(
+export function removePrefixFromTupleValuePair(
 	prefix: Tuple,
 	pair: KeyValuePair
 ): KeyValuePair {

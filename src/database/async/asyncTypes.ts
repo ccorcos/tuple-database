@@ -10,6 +10,7 @@ import { ScanArgs, TxId, Unsubscribe } from "../types"
 /** The low-level API for implementing new storage layers. */
 export type AsyncTupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Promise<KeyValuePair[]>
+	iterate: (args?: ScanStorageArgs) => AsyncGenerator<KeyValuePair>
 	commit: (writes: WriteOps) => Promise<void>
 	close: () => Promise<void>
 }
@@ -17,6 +18,10 @@ export type AsyncTupleStorageApi = {
 /** Wraps AsyncTupleStorageApi with reactivity and MVCC */
 export type AsyncTupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Promise<KeyValuePair[]>
+	iterate: (
+		args?: ScanStorageArgs,
+		txId?: TxId
+	) => AsyncGenerator<KeyValuePair> | Generator<KeyValuePair>
 	commit: (writes: WriteOps, txId?: TxId) => Promise<void>
 	cancel: (txId: string) => Promise<void>
 	subscribe: (
@@ -36,6 +41,12 @@ export type AsyncTupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> =
 			args?: ScanArgs<T, P>,
 			txId?: TxId
 		) => Promise<FilterTupleValuePairByPrefix<S, P>[]>
+		iterate: <T extends S["key"], P extends TuplePrefix<T>>(
+			args?: ScanArgs<T, P>,
+			txId?: TxId
+		) =>
+			| AsyncGenerator<FilterTupleValuePairByPrefix<S, P>>
+			| Generator<FilterTupleValuePairByPrefix<S, P>>
 		subscribe: <T extends S["key"], P extends TuplePrefix<T>>(
 			args: ScanArgs<T, P>,
 			callback: AsyncCallback<FilterTupleValuePairByPrefix<S, P>>
