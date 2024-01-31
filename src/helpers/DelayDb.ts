@@ -15,6 +15,12 @@ export function DelayDb(
 			await sleep(delay)
 			return db.scan(...args)
 		},
+		iterate: async function* (...args) {
+			for await (const res of db.iterate(...args)) {
+				await sleep(delay)
+				yield res
+			}
+		},
 		commit: async (...args) => {
 			await sleep(delay)
 			return db.commit(...args)

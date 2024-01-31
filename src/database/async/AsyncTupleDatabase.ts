@@ -23,6 +23,15 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		return this.storage.scan({ ...bounds, reverse, limit })
 	}
 
+	iterate(
+		args: ScanStorageArgs = {},
+		txId?: TxId
+	): AsyncGenerator<KeyValuePair> | Generator<KeyValuePair> {
+		const { reverse, limit, ...bounds } = args
+		if (txId) this.log.read(txId, bounds)
+		return this.storage.iterate({ ...bounds, reverse, limit })
+	}
+
 	async subscribe(
 		args: ScanStorageArgs,
 		callback: AsyncCallback

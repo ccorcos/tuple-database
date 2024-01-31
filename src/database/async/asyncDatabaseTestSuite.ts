@@ -801,6 +801,584 @@ export function asyncDatabaseTestSuite(
 			}
 		})
 
+		it("iterate gt", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gt: ["a", "a", MAX],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate gt/lt", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gt: ["a", "a", MAX],
+				lt: ["a", "c", MIN],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+			])
+
+			const args2 = {
+				gt: ["a", "b", MIN],
+				lt: ["a", "b", MAX],
+			}
+			const result2: KeyValuePair[] = []
+			for await (const pair of store.iterate(args2)) {
+				result2.push(pair)
+			}
+
+			assertEqual(result2, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+			])
+		})
+
+		it("iterate prefix", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				prefix: ["a", "b"],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+			])
+		})
+
+		it("iterate prefix - issue with MAX being true", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: [2, true], value: 1 },
+				{ key: [2, true, 1], value: 1 },
+				{ key: [2, true, true], value: 1 },
+				{ key: [2, true, true, 1], value: 1 },
+				{ key: [2, true, true, true], value: 1 },
+				{ key: [2, true, true, true, 1], value: 1 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				prefix: [2],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, items)
+		})
+
+		it("iterate prefix gte/lte", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				prefix: ["a", "b"],
+				gte: ["b"],
+				lte: ["d"],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+			])
+		})
+
+		it("iterate prefix gte/lte with schema types", async () => {
+			type Schema =
+				| { key: ["a", "a", "a"]; value: 1 }
+				| { key: ["a", "a", "b"]; value: 2 }
+				| { key: ["a", "a", "c"]; value: 3 }
+				| { key: ["a", "b", "a"]; value: 4 }
+				| { key: ["a", "b", "b"]; value: 5 }
+				| { key: ["a", "b", "c"]; value: 6 }
+				| { key: ["a", "b", "d"]; value: 6.5 }
+				| { key: ["a", "c", "a"]; value: 7 }
+				| { key: ["a", "c", "b"]; value: 8 }
+				| { key: ["a", "c", "c"]; value: 9 }
+
+			const store = createStorage<Schema>(randomId())
+
+			const items: Schema[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate({
+				prefix: ["a", "b"],
+				gte: ["b"],
+				lte: ["d"],
+			})) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "b", "d"], value: 6.5 },
+			])
+		})
+
+		it("iterate gte", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gte: ["a", "b", "a"],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate gte/lte", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gte: ["a", "a", "c"],
+				lte: ["a", "c", MAX],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate gte/lte with schema types", async () => {
+			type Schema =
+				| { key: ["a", "a", "a"]; value: 1 }
+				| { key: ["a", "a", "b"]; value: 2 }
+				| { key: ["a", "a", "c"]; value: 3 }
+				| { key: ["a", "b", "a"]; value: 4 }
+				| { key: ["a", "b", "b"]; value: 5 }
+				| { key: ["a", "b", "c"]; value: 6 }
+				| { key: ["a", "c", "a"]; value: 7 }
+				| { key: ["a", "c", "b"]; value: 8 }
+				| { key: ["a", "c", "c"]; value: 9 }
+
+			const store = createStorage<Schema>(randomId())
+
+			const items: Schema[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate({
+				gte: ["a", "a", "c"],
+				lte: ["a", "c", MAX],
+			})) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate sorted gt", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gt: ["a", "b", MAX],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate sorted gt/lt", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gt: ["a", "a", MAX],
+				lt: ["a", "b", MAX],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+			])
+		})
+
+		it("iterate sorted gte", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gte: ["a", "b", MIN],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			])
+		})
+
+		it("iterate sorted gte/lte", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			const args = {
+				gte: ["a", "a", "c"],
+				lte: ["a", "b", MAX],
+			}
+			const result: KeyValuePair[] = []
+			for await (const pair of store.iterate(args)) {
+				result.push(pair)
+			}
+
+			assertEqual(result, [
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+			])
+		})
+
+		it("iterate invalid bounds", async () => {
+			const store = createStorage(randomId())
+
+			const items: KeyValuePair[] = [
+				{ key: ["a", "a", "a"], value: 1 },
+				{ key: ["a", "a", "b"], value: 2 },
+				{ key: ["a", "a", "c"], value: 3 },
+				{ key: ["a", "b", "a"], value: 4 },
+				{ key: ["a", "b", "b"], value: 5 },
+				{ key: ["a", "b", "c"], value: 6 },
+				{ key: ["a", "c", "a"], value: 7 },
+				{ key: ["a", "c", "b"], value: 8 },
+				{ key: ["a", "c", "c"], value: 9 },
+			]
+			const transaction = store.transact()
+			for (const { key, value } of _.shuffle(items)) {
+				transaction.set(key, value)
+			}
+			await transaction.commit()
+			const data = await store.scan()
+			assertEqual(data, items)
+
+			try {
+				const args = {
+					gte: ["a", "c"],
+					lte: ["a", "a"],
+				}
+				const result: KeyValuePair[] = []
+				for await (const pair of store.iterate(args)) {
+					result.push(pair)
+				}
+				assert.fail("Should fail.")
+			} catch (error) {
+				assert.ok(error)
+			}
+		})
+
 		it("stores all types of values", async () => {
 			const store = createStorage(randomId())
 			const items: KeyValuePair[] = sortedValues.map(

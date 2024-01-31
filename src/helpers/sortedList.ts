@@ -40,7 +40,7 @@ type ScanArgs<T> = {
 	reverse?: boolean
 }
 
-export function scan<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
+function getScanBounds<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
 	const start = args.gte || args.gt
 	const end = args.lte || args.lt
 
@@ -84,7 +84,27 @@ export function scan<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
 			? Math.min(lowerSearchBound + args.limit, upperSearchBound)
 			: upperSearchBound
 
+	return { lowerDataBound, upperDataBound }
+}
+
+export function scan<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
+	const { lowerDataBound, upperDataBound } = getScanBounds(list, args, cmp)
+
 	return args.reverse
 		? list.slice(lowerDataBound, upperDataBound).reverse()
 		: list.slice(lowerDataBound, upperDataBound)
+}
+
+export function* iterate<T>(list: T[], args: ScanArgs<T>, cmp: Compare<T>) {
+	const { lowerDataBound, upperDataBound } = getScanBounds(list, args, cmp)
+
+	if (args.reverse) {
+		for (let i = upperDataBound - 1; i >= lowerDataBound; i--) {
+			yield list[i]
+		}
+	} else {
+		for (let i = lowerDataBound; i < upperDataBound; i++) {
+			yield list[i]
+		}
+	}
 }

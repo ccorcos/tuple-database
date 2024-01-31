@@ -18,6 +18,7 @@ import { ScanArgs, TxId, Unsubscribe } from "../types"
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Identity<KeyValuePair[]>
+	iterate: (args?: ScanStorageArgs) => Identity<Generator<KeyValuePair>>
 	commit: (writes: WriteOps) => Identity<void>
 	close: () => Identity<void>
 }
@@ -25,6 +26,10 @@ export type TupleStorageApi = {
 /** Wraps TupleStorageApi with reactivity and MVCC */
 export type TupleDatabaseApi = {
 	scan: (args?: ScanStorageArgs, txId?: TxId) => Identity<KeyValuePair[]>
+	iterate: (
+		args?: ScanStorageArgs,
+		txId?: TxId
+	) => Identity<Generator<KeyValuePair>>
 	commit: (writes: WriteOps, txId?: TxId) => Identity<void>
 	cancel: (txId: string) => Identity<void>
 	subscribe: (
@@ -43,6 +48,10 @@ export type TupleDatabaseClientApi<S extends KeyValuePair = KeyValuePair> = {
 		args?: ScanArgs<T, P>,
 		txId?: TxId
 	) => Identity<FilterTupleValuePairByPrefix<S, P>[]>
+	iterate: <T extends S["key"], P extends TuplePrefix<T>>(
+		args?: ScanArgs<T, P>,
+		txId?: TxId
+	) => Identity<Generator<FilterTupleValuePairByPrefix<S, P>>>
 	subscribe: <T extends S["key"], P extends TuplePrefix<T>>(
 		args: ScanArgs<T, P>,
 		callback: Callback<FilterTupleValuePairByPrefix<S, P>>

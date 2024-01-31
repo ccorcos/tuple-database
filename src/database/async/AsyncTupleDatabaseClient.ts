@@ -6,6 +6,7 @@ import {
 	prependPrefixToTuple,
 	prependPrefixToWriteOps,
 	removePrefixFromTuple,
+	removePrefixFromTupleValuePair,
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWriteOps,
 } from "../../helpers/subspaceHelpers"
@@ -42,6 +43,19 @@ export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 		const pairs = await this.db.scan(storageScanArgs, txId)
 		const result = removePrefixFromTupleValuePairs(this.subspacePrefix, pairs)
 		return result as FilterTupleValuePairByPrefix<S, P>[]
+	}
+
+	async *iterate<T extends S["key"], P extends TuplePrefix<T>>(
+		args: ScanArgs<T, P> = {},
+		txId?: TxId
+	): AsyncGenerator<FilterTupleValuePairByPrefix<S, P>> {
+		const storageScanArgs = normalizeSubspaceScanArgs(this.subspacePrefix, args)
+		for await (const pair of this.db.iterate(storageScanArgs, txId)) {
+			yield removePrefixFromTupleValuePair(
+				this.subspacePrefix,
+				pair
+			) as FilterTupleValuePairByPrefix<S, P>
+		}
 	}
 
 	async subscribe<T extends S["key"], P extends TuplePrefix<T>>(

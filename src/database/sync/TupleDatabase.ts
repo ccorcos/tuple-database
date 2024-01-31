@@ -27,6 +27,15 @@ export class TupleDatabase implements TupleDatabaseApi {
 		return this.storage.scan({ ...bounds, reverse, limit })
 	}
 
+	iterate(
+		args: ScanStorageArgs = {},
+		txId?: TxId
+	): Identity<Generator<KeyValuePair>> {
+		const { reverse, limit, ...bounds } = args
+		if (txId) this.log.read(txId, bounds)
+		return this.storage.iterate({ ...bounds, reverse, limit })
+	}
+
 	subscribe(args: ScanStorageArgs, callback: Callback): Identity<Unsubscribe> {
 		return this.reactivity.subscribe(args, callback)
 	}

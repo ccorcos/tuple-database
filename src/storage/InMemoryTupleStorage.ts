@@ -13,6 +13,10 @@ export class InMemoryTupleStorage implements TupleStorageApi {
 		return tv.scan(this.data, args)
 	}
 
+	iterate(args?: ScanStorageArgs) {
+		return tv.iterate(this.data, args)
+	}
+
 	commit(writes: WriteOps) {
 		// Indexers run inside the tx so we don't need to do that here.
 		// And because of that, the order here should not matter.

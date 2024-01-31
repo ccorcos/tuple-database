@@ -64,6 +64,14 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 			const results = db.scan(args)
 			return results
 		},
+		iterate: (args: any, txId) => {
+			const destroy = db.subscribe(args, (_writes, txId) =>
+				recomputeQueue.enqueue(() => recompute(txId))
+			)
+			listeners.add(destroy)
+
+			return db.iterate(args)
+		},
 		cancel: (txId) => {
 			db.cancel(txId)
 		},

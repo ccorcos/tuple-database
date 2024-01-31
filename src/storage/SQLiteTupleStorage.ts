@@ -3,6 +3,48 @@ import { TupleStorageApi } from "../database/sync/types"
 import { decodeTuple, encodeTuple } from "../helpers/codec"
 import { KeyValuePair, ScanStorageArgs, Tuple, WriteOps } from "./types"
 
+function buildQuery(args: ScanStorageArgs = {}) {
+	// Bounds.
+	let start = args.gte ? encodeTuple(args.gte) : undefined
+	let startAfter: string | undefined = args.gt
+		? encodeTuple(args.gt)
+		: undefined
+	let end: string | undefined = args.lte ? encodeTuple(args.lte) : undefined
+	let endBefore: string | undefined = args.lt ? encodeTuple(args.lt) : undefined
+
+	const sqlArgs = {
+		start,
+		startAfter,
+		end,
+		endBefore,
+		limit: args.limit,
+	}
+
+	const where = [
+		start ? "key >= $start" : undefined,
+		startAfter ? "key > $startAfter" : undefined,
+		end ? "key <= $end" : undefined,
+		endBefore ? "key < $endBefore" : undefined,
+	]
+		.filter(Boolean)
+		.join(" and ")
+
+	let sqlQuery = `select * from data`
+	if (where) {
+		sqlQuery += " where "
+		sqlQuery += where
+	}
+	sqlQuery += " order by key"
+	if (args.reverse) {
+		sqlQuery += " desc"
+	}
+	if (args.limit) {
+		sqlQuery += ` limit $limit`
+	}
+
+	return { sqlArgs, sqlQuery }
+}
+
 export class SQLiteTupleStorage implements TupleStorageApi {
 	/**
 	 * import sqlite from "better-sqlite3"
@@ -45,45 +87,7 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 	private writeFactsQuery: Transaction
 
 	scan = (args: ScanStorageArgs = {}) => {
-		// Bounds.
-		let start = args.gte ? encodeTuple(args.gte) : undefined
-		let startAfter: string | undefined = args.gt
-			? encodeTuple(args.gt)
-			: undefined
-		let end: string | undefined = args.lte ? encodeTuple(args.lte) : undefined
-		let endBefore: string | undefined = args.lt
-			? encodeTuple(args.lt)
-			: undefined
-
-		const sqlArgs = {
-			start,
-			startAfter,
-			end,
-			endBefore,
-			limit: args.limit,
-		}
-
-		const where = [
-			start ? "key >= $start" : undefined,
-			startAfter ? "key > $startAfter" : undefined,
-			end ? "key <= $end" : undefined,
-			endBefore ? "key < $endBefore" : undefined,
-		]
-			.filter(Boolean)
-			.join(" and ")
-
-		let sqlQuery = `select * from data`
-		if (where) {
-			sqlQuery += " where "
-			sqlQuery += where
-		}
-		sqlQuery += " order by key"
-		if (args.reverse) {
-			sqlQuery += " desc"
-		}
-		if (args.limit) {
-			sqlQuery += ` limit $limit`
-		}
+		const { sqlArgs, sqlQuery } = buildQuery(args)
 
 		const results = this.db.prepare(sqlQuery).all(sqlArgs)
 
@@ -94,6 +98,17 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 					value: JSON.parse(value),
 				} as KeyValuePair)
 		)
+	};
+
+	*iterate(args: ScanStorageArgs = {}): Generator<KeyValuePair> {
+		const { sqlArgs, sqlQuery } = buildQuery(args)
+
+		for (const { key, value } of this.db.prepare(sqlQuery).iterate(sqlArgs)) {
+			yield {
+				key: decodeTuple(key) as Tuple,
+				value: JSON.parse(value),
+			} as KeyValuePair
+		}
 	}
 
 	commit = (writes: WriteOps) => {
